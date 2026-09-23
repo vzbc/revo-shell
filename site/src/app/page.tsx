@@ -5,15 +5,14 @@ import {
   type ParallaxProduct,
 } from "@/components/ui/hero-parallax";
 import { Terminal } from "@/components/ui/terminal";
-import { HoverBorderGradient } from "@/components/ui/hover-border-gradient";
+import { GatedDownload } from "@/components/ui/gated-download";
 import {
   AnimatedTooltip,
   type TooltipPerson,
 } from "@/components/ui/animated-tooltip";
 import { MacbookScroll } from "@/components/ui/macbook-scroll";
-import { SidebarDemo } from "@/components/ui/sidebar-demo";
+import { GoogleSignInButton } from "@/components/ui/google-signin";
 import {
-  InfoPanel,
   TextEffect,
   ImageComparison,
   Bubble,
@@ -111,21 +110,10 @@ export default function Home() {
           </div>
 
           <div className="mt-10 flex flex-col items-center gap-4">
-            <HoverBorderGradient
-              as="a"
-              href="/RevoShell-Installer.AppImage"
-              download="RevoShell-Installer.AppImage"
-              containerClassName="rounded-full"
-              className="dark:bg-black bg-white text-black dark:text-white"
-            >
+            <GatedDownload variant="cta">
               Download AppImage
-            </HoverBorderGradient>
-            <a
-              href="#download"
-              className="text-sm text-zinc-500 underline-offset-4 hover:text-white hover:underline"
-            >
-              Or continue below
-            </a>
+            </GatedDownload>
+            <GoogleSignInButton />
           </div>
 
           <div className="mt-14">
@@ -149,11 +137,6 @@ export default function Home() {
           }
           src="/shots/shot-2.png"
           showGradient={false}
-          badge={
-            <span className="inline-flex h-10 w-10 -rotate-12 items-center justify-center rounded-full bg-[#00AA45] text-[10px] font-bold text-white shadow-lg">
-              QS
-            </span>
-          }
         />
         <div className="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-6 pb-24 md:grid-cols-3">
           {[3, 5, 7, 8, 9, 4].map((n) => (
@@ -170,25 +153,6 @@ export default function Home() {
               />
             </div>
           ))}
-        </div>
-      </section>
-
-      {/* ========== SIDEBAR + INFO ========== */}
-      <section id="info" className="bg-black px-4 py-24 md:py-32">
-        <div className="mx-auto mb-12 max-w-3xl text-center">
-          <h2 className="text-3xl font-semibold tracking-tight text-white md:text-5xl">
-            <TextEffect per="word" preset="fade">
-              Everything in one panel
-            </TextEffect>
-          </h2>
-          <p className="mt-4 text-zinc-400">
-            Dots, shells, and the installer — documented and ready to ship.
-          </p>
-        </div>
-
-        <div className="mx-auto flex max-w-7xl flex-col items-center gap-10 lg:flex-row lg:items-start lg:justify-center">
-          <SidebarDemo />
-          <InfoPanel />
         </div>
       </section>
 
@@ -272,15 +236,10 @@ export default function Home() {
             install with backups — your dots land in minutes.
           </p>
           <div className="mt-8 flex flex-col items-center gap-4">
-            <HoverBorderGradient
-              as="a"
-              href="/RevoShell-Installer.AppImage"
-              download="RevoShell-Installer.AppImage"
-              containerClassName="rounded-full"
-              className="dark:bg-black bg-white text-black dark:text-white"
-            >
+            <GatedDownload variant="cta">
               Download AppImage — Free
-            </HoverBorderGradient>
+            </GatedDownload>
+            <GoogleSignInButton />
             <a
               href="https://github.com/X3jo/revo-shell"
               target="_blank"

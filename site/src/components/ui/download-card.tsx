@@ -1,7 +1,6 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -11,14 +10,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { GlareHover } from "@/components/ui/glare-hover";
+import { GatedDownload } from "@/components/ui/gated-download";
 
 const FEATURES = [
   "Full dots install — Hyprland + Quickshell",
   "Per-file backup before overwrite",
   "19 ready shells in one monorepo",
 ];
-
-const APPIMAGE_HREF = "/RevoShell-Installer.AppImage";
 
 export function DownloadCard() {
   return (
@@ -56,14 +54,9 @@ export function DownloadCard() {
           ))}
         </CardContent>
         <CardFooter>
-          <a
-            href={APPIMAGE_HREF}
-            download="RevoShell-Installer.AppImage"
-            className="w-full"
-            aria-label="Download Revo Shell Installer AppImage"
-          >
-            <Button className="w-full">Download AppImage</Button>
-          </a>
+          <GatedDownload variant="block" className="w-full">
+            Download AppImage
+          </GatedDownload>
         </CardFooter>
       </Card>
     </GlareHover>
