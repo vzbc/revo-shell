@@ -46,3 +46,7 @@ Thumbs.db
 dotfiles_repo/
 hyprland_configs_repo/
 quickshell_repo/
+
+# Next.js site
+site/.next/
+site/out/

@@ -32,6 +32,11 @@ Item {
             confirmed(selectedId, selectedPath)
     }
 
+    onShellsChanged: {
+        if (root.selectedId.length < 1 && root.shells.length > 0)
+            root.selectShell(root.shells[0].id, root.shells[0].path)
+    }
+
     Column {
         anchors.centerIn: parent
         width: Math.min(parent.width - 64, 880)
@@ -144,11 +149,6 @@ Item {
             if (root.selectedId.length < 1 && root.shells.length > 0)
                 root.selectShell(root.shells[0].id, root.shells[0].path)
         })
-
-        onShellsChanged: {
-            if (root.selectedId.length < 1 && root.shells.length > 0)
-                root.selectShell(root.shells[0].id, root.shells[0].path)
-        }
 
         // Confirm bar
         Row {
