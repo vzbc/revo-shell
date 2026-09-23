@@ -1,0 +1,17 @@
+configuration {
+    modi:                       "drun,filebrowser,window";
+    show-icons:                 true;
+    display-drun:               "";
+    display-window:             "";
+    display-filebrowser:        "";
+    drun-display-format:        "{name}";
+    window-format:              "{w} · {c} · {t}";
+    
+    hover-select:               true;
+    me-select-entry:            "";
+    me-accept-entry:            "MousePrimary";
+    case-sensitive: 		false;
+}
+
+@theme "~/.config/rofi/theme.rasi"
+

@@ -130,9 +130,9 @@ build_native() {
 fix_paths() {
   local home_esc
   home_esc="$(printf '%s' "$HOME" | sed 's/[\/&]/\\&/g')"
-  for dir in "$HOME/.config/hypr" "$HOME/.config/quickshell"; do
+  for dir in "$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/rofi" "$HOME/.config/kitty"; do
     [[ -d "$dir" ]] || continue
-    find "$dir" -type f \( -name '*.conf' -o -name '*.lua' -o -name '*.json' -o -name '*.sh' -o -name '*.qml' -o -name '*.py' \) -print0 2>/dev/null \
+    find "$dir" -type f \( -name '*.conf' -o -name '*.lua' -o -name '*.json' -o -name '*.sh' -o -name '*.qml' -o -name '*.py' -o -name '*.rasi' \) -print0 2>/dev/null \
       | while IFS= read -r -d '' f; do
           if grep -q '/home/revo/' "$f" 2>/dev/null; then
             sed -i "s|/home/revo/|${home_esc}/|g" "$f" 2>/dev/null || true
@@ -165,10 +165,46 @@ log "repo: $REPO_URL"
 install_packages
 install_python
 
+# Ensure rofi + kitty packages (install if user does not have them)
+ensure_term_apps() {
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log "DRY: would ensure rofi + kitty if missing"
+    return 0
+  fi
+  local need_rofi=0 need_kitty=0
+  command -v rofi >/dev/null 2>&1 || need_rofi=1
+  command -v kitty >/dev/null 2>&1 || need_kitty=1
+  if [[ $need_rofi -eq 0 && $need_kitty -eq 0 ]]; then
+    log "rofi + kitty already present"
+    return 0
+  fi
+  case "$PM" in
+    arch)
+      if [[ $need_rofi -eq 1 ]]; then
+        run "$SUDO pacman -S --noconfirm --needed rofi-wayland" \
+          || run "$SUDO pacman -S --noconfirm --needed rofi" || true
+      fi
+      if [[ $need_kitty -eq 1 ]]; then
+        run "$SUDO pacman -S --noconfirm --needed kitty" || true
+      fi
+      ;;
+    debian)
+      [[ $need_rofi -eq 1 ]] && run "$SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y rofi" || true
+      [[ $need_kitty -eq 1 ]] && run "$SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y kitty" || true
+      ;;
+    fedora)
+      [[ $need_kitty -eq 1 ]] && run "$SUDO dnf -y install kitty" || true
+      ;;
+  esac
+}
+
 # Deploy trees (from this checkout — works offline after clone)
 copy_tree "$ROOT/hypr" "$HOME/.config/hypr"
 copy_tree "$ROOT/quickshell" "$HOME/.config/quickshell"
 copy_tree "$ROOT/wallpapers" "$HOME/Pictures/Wallpapers"
+copy_tree "$ROOT/rofi" "$HOME/.config/rofi"
+copy_tree "$ROOT/kitty" "$HOME/.config/kitty"
+ensure_term_apps
 
 if [[ "$DRY_RUN" != "1" ]]; then
   find "$HOME/.config/hypr" -type f -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
@@ -180,7 +216,8 @@ fix_paths
 build_native
 enable_services
 
-log "done — all libraries installed and shells built"
+log "done — packages, rofi/kitty configs, shells built"
+log "deployed: hypr quickshell wallpapers rofi kitty"
 if [[ -d "$BACKUP_ROOT" ]]; then
   log "previous configs: $BACKUP_ROOT"
 fi

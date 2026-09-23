@@ -29,8 +29,19 @@ from typing import Dict, List, Optional, Callable
 from dataclasses import dataclass
 from enum import Enum
 
-# Configure logging early for import error handling
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# Logging (also write a file so failures are visible after GUI closes)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+log_dir = Path.home() / ".local" / "state" / "qs-gui-installer"
+try:
+    log_dir.mkdir(parents=True, exist_ok=True)
+    _fh = logging.FileHandler(log_dir / "install.log", encoding="utf-8")
+    _fh.setFormatter(logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s"))
+    logging.getLogger().addHandler(_fh)
+except Exception:
+    pass
 logger = logging.getLogger(__name__)
 
 # Try to import PySide6 modules
@@ -81,6 +92,8 @@ class InstallerConfig:
     HOME_QUICKSHELL_PATH = "~/.config/quickshell"
     HOME_HYPR_PATH = "~/.config/hypr"
     HOME_WALLPAPERS_PATH = "~/Pictures/Wallpapers"
+    HOME_ROFI_PATH = "~/.config/rofi"
+    HOME_KITTY_PATH = "~/.config/kitty"
     BACKUP_DIR = "/tmp/dotfiles_backup"
 
     # Version
@@ -126,8 +139,8 @@ class InstallerConfig:
         # theming / wallpaper
         "matugen", "swww", "hyprpaper", "swaybg", "mpvpaper", "python-pywal",
         "swaync", "swayosd", "easyeffects",
-        # desktop apps used by shells
-        "kitty", "nautilus", "thunar", "rofi-wayland", "wofi",
+        # desktop apps used by shells (install if missing — GUI verifies later)
+        "kitty", "nautilus", "thunar", "rofi-wayland", "rofi", "wofi",
         "fastfetch", "starship", "fish", "gnome-calculator",
         "papirus-icon-theme", "adwaita-cursors", "ttf-dejavu",
         "xdg-desktop-portal-gtk", "qt5compat",
@@ -215,6 +228,7 @@ class InstallationWorker(QObject):
         self.current_shell = None
         self.sudo_password: str = ""
         self._staged_repo: Optional[Path] = None
+        self._staged_is_local: bool = False
 
     def run_installation(self, shell_id: str = None, password: str = ""):
         """Full install: packages → clone → deploy → build → python → services."""
@@ -287,8 +301,11 @@ class InstallationWorker(QObject):
             self.progress_changed.emit(65, "Installing Hyprland configurations…")
             hyprland_result = self._install_hyprland_configs()
 
-            self.progress_changed.emit(75, "Installing Quickshell shells…")
+            self.progress_changed.emit(72, "Installing Quickshell shells…")
             quickshell_result = self._install_quickshell(shell_id)
+
+            self.progress_changed.emit(76, "Installing rofi & kitty configs…")
+            desk_result = self._install_desktop_configs()
 
             # 4) Rewrite absolute /home/revo paths → current $HOME
             self.progress_changed.emit(80, "Fixing home paths…")
@@ -311,11 +328,22 @@ class InstallationWorker(QObject):
                 dotfiles_result.get('files_installed', 0)
                 + hyprland_result.get('files_installed', 0)
                 + quickshell_result.get('files_installed', 0)
+                + desk_result.get('files_installed', 0)
             )
+            # Fail loudly if nothing was deployed (typical: clone/preflight issue)
+            if total == 0 and not dotfiles_result.get('success'):
+                self.installation_result.emit(InstallationResult(
+                    success=False,
+                    message="Installation failed — no files deployed. Check network / repo URL.",
+                    files_installed=0,
+                    backup_created=backup_result['success'],
+                    errors=[pkg_err or "deploy produced 0 files"]
+                ))
+                return
             self.progress_changed.emit(100, "Installation complete.")
             self.installation_result.emit(InstallationResult(
                 success=True,
-                message="Installation completed successfully!",
+                message=f"Installation completed — {total} files installed.",
                 files_installed=total,
                 backup_created=backup_result['success'],
                 errors=[pkg_err] if pkg_err else []
@@ -332,8 +360,15 @@ class InstallationWorker(QObject):
                 errors=[str(e)]
             ))
         finally:
-            if self._staged_repo and self._staged_repo.exists():
+            # Never delete a local monorepo checkout
+            if (
+                self._staged_repo
+                and self._staged_repo.exists()
+                and not self._staged_is_local
+                and self._staged_repo.name == "revo_shell_repo"
+            ):
                 shutil.rmtree(self._staged_repo, ignore_errors=True)
+            if not self._staged_is_local:
                 self._staged_repo = None
 
     def _sudo_run(self, cmd: List[str], timeout: int = 1800) -> subprocess.CompletedProcess:
@@ -360,7 +395,7 @@ class InstallationWorker(QObject):
         dist = (self.system_info.distribution if self.system_info else "").lower()
 
         # Arch family → pacman + yay/paru
-        if any(x in dist for x in ("arch", "cachyos", "manjaro", "garuda", "endeavour", "artix", "arcolinux")):
+        if any(x in dist for x in ("arch", "cachyos", "cachy", "manjaro", "garuda", "endeavour", "artix", "arcolinux")) or shutil.which("pacman"):
             pkgs = list(self.config.PACMAN_PACKAGES)
             # filter already-installed
             try:
@@ -457,7 +492,11 @@ class InstallationWorker(QObject):
             else:
                 errors.append("no AUR helper (yay/paru) for quickshell-git")
 
-        elif any(x in dist for x in ("ubuntu", "debian", "pop", "zorin")):
+            # Critical apps even if batch install partially failed
+            self.progress_changed.emit(36, "Checking rofi & kitty…")
+            self._ensure_desktop_packages()
+
+        elif any(x in dist for x in ("ubuntu", "debian", "pop", "zorin")) or shutil.which("apt-get"):
             try:
                 env = os.environ.copy()
                 env["DEBIAN_FRONTEND"] = "noninteractive"
@@ -561,14 +600,14 @@ class InstallationWorker(QObject):
             )
 
     def _pre_flight_check(self) -> bool:
-        """Run pre-flight safety checks"""
+        """Run pre-flight safety checks (never abort for soft requirements)."""
         checks = [
             ("Check distribution compatibility", self._check_distribution_compatibility),
             ("Check minimum memory", lambda: self.system_info.memory_gb >= 4),
-            ("Check minimum CPU cores", lambda: self.system_info.cpu_cores >= 2),
-            ("Check kernel version", lambda: int(self.system_info.kernel.split('.')[0]) >= 5),
+            ("Check minimum CPU cores", lambda: (self.system_info.cpu_cores or 0) >= 2),
+            ("Check kernel version", lambda: int(str(self.system_info.kernel).split('.')[0]) >= 5),
         ]
-        
+
         failed_checks = []
         for check_name, check_func in checks:
             try:
@@ -576,11 +615,11 @@ class InstallationWorker(QObject):
                     failed_checks.append(check_name)
             except Exception as e:
                 failed_checks.append(f"{check_name} (error: {e})")
-        
+
+        # Soft: log only — FORCE_FULL_INSTALL always continues.
+        # Hard fail only if distro is completely unknown (no package manager path).
         if failed_checks:
-            logger.warning(f"Failed checks: {failed_checks}")
-            return False
-        
+            logger.warning(f"Pre-flight soft failures (continuing): {failed_checks}")
         return True
 
     def _safety_verification(self) -> bool:
@@ -610,7 +649,9 @@ class InstallationWorker(QObject):
             # Copy existing configs if they exist
             config_dirs = [
                 Path.home() / ".config" / "quickshell",
-                Path.home() / ".config" / "hypr"
+                Path.home() / ".config" / "hypr",
+                Path.home() / ".config" / "rofi",
+                Path.home() / ".config" / "kitty",
             ]
             
             files_backed_up = 0
@@ -635,17 +676,42 @@ class InstallationWorker(QObject):
             }
 
     def _check_distribution_compatibility(self) -> bool:
-        """Check if the current distribution is supported"""
-        supported_dists = [
-            "Ubuntu", "Debian", "Fedora", "Arch", "Manjaro", "Pop!", "Zorin",
-            "CachyOS", "Garuda", "EndeavourOS", "Artix", "ArcoLinux",
+        """Match NAME / pretty NAME / ID / ID_LIKE — not exact full name only."""
+        if not self.system_info:
+            return True
+        fields = [
+            self.system_info.distribution or "",
+            distro.os_release_info().get("pretty_name", ""),
+            distro.os_release_info().get("name", ""),
+            distro.id() or "",
+            distro.id_like() or "",
         ]
-        return any(dist.lower() in [d.lower() for d in supported_dists] for dist in [self.system_info.distribution])
+        blob = " ".join(fields).lower()
+        needles = (
+            "ubuntu", "debian", "fedora", "arch", "cachy", "manjaro",
+            "pop", "zorin", "garuda", "endeavour", "artix", "arcolinux",
+            "nixos", "unknown", "raspbian", "linuxmint", "elementary",
+        )
+        if any(n in blob for n in needles):
+            return True
+        # Unknown distro: still allow — install.sh / pacman path may fail later with logs
+        logger.warning(f"Unknown distro fields={fields!r} — continuing anyway")
+        return True
 
     def _clone_monorepo(self) -> Optional[Path]:
-        """Clone monorepo into a staged dir. Reuses self._staged_repo if set."""
+        """Clone monorepo into a staged dir. Reuses self._staged_repo if set.
+        Offline fallback: monorepo sitting next to qs-gui-installer/ (local checkout)."""
         if self._staged_repo and self._staged_repo.is_dir() and (self._staged_repo / "hypr").is_dir():
             return self._staged_repo
+
+        # Local monorepo checkout (this installer lives inside revo-shell/)
+        local_root = Path(__file__).resolve().parent.parent
+        if (local_root / "hypr").is_dir() and (local_root / "quickshell").is_dir():
+            logger.info(f"Using local monorepo at {local_root}")
+            self._staged_repo = local_root
+            self._staged_is_local = True
+            return local_root
+
         repo_dir = Path.home() / "revo_shell_repo"
         if repo_dir.exists():
             shutil.rmtree(repo_dir, ignore_errors=True)
@@ -654,14 +720,18 @@ class InstallationWorker(QObject):
             logger.error(f"DOTFILES_REPO_URL not configured: {url}")
             return None
         logger.info(f"Cloning monorepo from {url}")
-        subprocess.run(
+        r = subprocess.run(
             ["git", "clone", "--depth", "1", url, str(repo_dir)],
-            check=True,
             capture_output=True,
             text=True,
             timeout=600,
         )
+        if r.returncode != 0 or not (repo_dir / "hypr").is_dir():
+            logger.error(f"git clone failed rc={r.returncode}: {(r.stderr or r.stdout)[-500:]}")
+            shutil.rmtree(repo_dir, ignore_errors=True)
+            return None
         self._staged_repo = repo_dir
+        self._staged_is_local = False
         return repo_dir
 
     @staticmethod
@@ -788,12 +858,93 @@ class InstallationWorker(QObject):
             logger.error(f"Quickshell installation failed: {e}")
             return {'success': False, 'files_installed': 0}
 
+    def _install_desktop_configs(self) -> Dict:
+        """Deploy monorepo rofi/ and kitty/ → ~/.config/{rofi,kitty}.
+        Also ensure the packages themselves are present (install if missing)."""
+        try:
+            repo_dir = self._staged_repo or self._clone_monorepo()
+            if repo_dir is None:
+                return {'success': False, 'files_installed': 0}
+
+            files_installed = 0
+            pairs = [
+                (repo_dir / "rofi", Path.home() / ".config" / "rofi"),
+                (repo_dir / "kitty", Path.home() / ".config" / "kitty"),
+            ]
+            for src, dest in pairs:
+                if src.is_dir():
+                    files_installed += self._copy_tree(src, dest)
+                    logger.info(f"Deployed {src.name} → {dest} ({files_installed} total)")
+
+            self._ensure_desktop_packages()
+            return {'success': True, 'files_installed': files_installed}
+        except Exception as e:
+            logger.error(f"Desktop configs (rofi/kitty) install failed: {e}")
+            return {'success': False, 'files_installed': 0}
+
+    def _ensure_desktop_packages(self) -> None:
+        """Install rofi + kitty if the user does not already have them."""
+        need_rofi = shutil.which("rofi") is None
+        need_kitty = shutil.which("kitty") is None
+        if not need_rofi and not need_kitty:
+            logger.info("rofi + kitty already present — skip package install")
+            return
+
+        dist = (self.system_info.distribution if self.system_info else "").lower()
+        self.progress_changed.emit(77, "Ensuring rofi & kitty packages…")
+        try:
+            if any(x in dist for x in ("arch", "cachy", "manjaro", "garuda", "endeavour", "artix")) or shutil.which("pacman"):
+                want = []
+                if need_rofi:
+                    # prefer rofi-wayland on Arch, fall back to rofi
+                    want.append("rofi-wayland")
+                if need_kitty:
+                    want.append("kitty")
+                if want:
+                    r = self._sudo_run(
+                        ["pacman", "-S", "--noconfirm", "--needed", *want],
+                        timeout=900,
+                    )
+                    if r.returncode != 0 and need_rofi:
+                        self._sudo_run(
+                            ["pacman", "-S", "--noconfirm", "--needed", "rofi"],
+                            timeout=600,
+                        )
+            elif shutil.which("apt-get"):
+                want = []
+                if need_rofi:
+                    want.append("rofi")
+                if need_kitty:
+                    want.append("kitty")
+                if want:
+                    self._sudo_run(
+                        ["apt-get", "install", "-y", *want],
+                        timeout=900,
+                    )
+            elif shutil.which("dnf"):
+                want = []
+                if need_kitty:
+                    want.append("kitty")
+                if want:
+                    self._sudo_run(["dnf", "-y", "install", *want], timeout=900)
+                if need_rofi:
+                    logger.warning("rofi not always in dnf repos — install manually if missing")
+        except Exception as e:
+            logger.warning(f"ensure rofi/kitty packages: {e}")
+
+        logger.info(
+            f"after ensure: rofi={'yes' if shutil.which('rofi') else 'NO'} "
+            f"kitty={'yes' if shutil.which('kitty') else 'NO'}"
+        )
+
     def _fix_home_paths(self) -> None:
         """Rewrite hardcoded /home/revo → current $HOME in deployed configs."""
         home = str(Path.home())
         roots = [
             Path.home() / ".config" / "hypr",
             Path.home() / ".config" / "quickshell",
+            Path.home() / ".config" / "rofi",
+            Path.home() / ".config" / "kitty",
         ]
         text_exts = {".conf", ".lua", ".json", ".sh", ".qml", ".py", ".js", ".ts", ".md", ".ini"}
         changed = 0
@@ -1190,9 +1341,9 @@ if __name__ == "__main__":
             result.wait()
         sys.exit(0)
     
-    # Create and show main window
+    # Create and show main window (fullscreen)
     window = MainWindow()
-    window.show()
+    window.showFullScreen()
 
     # Start event loop
     sys.exit(app.exec())

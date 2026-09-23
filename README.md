@@ -11,6 +11,8 @@ if you share any video to this dot files in tik tok or insta pleas mention me : 
 | `hypr/` | `~/.config/hypr` |
 | `quickshell/` | `~/.config/quickshell` |
 | `wallpapers/` | `~/Pictures/Wallpapers` |
+| `rofi/` | `~/.config/rofi` |
+| `kitty/` | `~/.config/kitty` |
 | `qs-gui-installer/` | **run this (GUI)** |
 
 ## Install (GUI — recommended)
@@ -25,13 +27,16 @@ python main.py
 The GUI **full install** does everything:
 
 1. System packages (pacman/apt/dnf) for **every** shell  
-2. AUR (`quickshell-git`, `awww`, fonts, …) when available  
-3. Python deps (`pip --user`, Q1/nibrasshell requirements)  
-4. `git clone` monorepo → deploy `hypr/`, `quickshell/`, `wallpapers/`  
-5. Rewrite hardcoded `/home/revo` → `$HOME`  
-6. **Build** CMake shells (`shell` caelestia + `imported-1789667132` Clavis)  
-7. Enable pipewire / NetworkManager / bluetooth  
-8. Per-file backup — existing configs are never blindly deleted  
+2. **rofi + kitty** installed if missing (`--needed`)  
+3. AUR (`quickshell-git`, `awww`, fonts, …) when available  
+4. Python deps (`pip --user`, Q1/nibrasshell requirements)  
+5. `git clone` monorepo → deploy `hypr/`, `quickshell/`, `wallpapers/`, **`rofi/`, `kitty/`**  
+6. Rewrite hardcoded `/home/revo` → `$HOME`  
+7. **Build** CMake shells (`shell` caelestia + `imported-1789667132` Clavis)  
+8. Enable pipewire / NetworkManager / bluetooth  
+9. Per-file backup — existing configs are never blindly deleted  
+
+Logs: `~/.local/state/qs-gui-installer/install.log`
 
 Enter your sudo password in Stage 4 → **Install Now**.
 
