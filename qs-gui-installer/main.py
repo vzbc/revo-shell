@@ -241,6 +241,18 @@ class InstallationWorker(QObject):
             self.system_info = self._get_system_info()
             self.system_info_ready.emit(self.system_info)
 
+            # Validate sudo password immediately so a wrong password fails
+            # with a clear GUI message instead of mid-install errors.
+            if not self._verify_sudo():
+                self.installation_result.emit(InstallationResult(
+                    success=False,
+                    message="Sudo password rejected — installation stopped before any changes.",
+                    files_installed=0,
+                    backup_created=False,
+                    errors=["sudo authentication failed (wrong password?)"]
+                ))
+                return
+
             self.progress_changed.emit(8, "Running pre-flight checks...")
             if not self._pre_flight_check():
                 self.installation_result.emit(InstallationResult(
@@ -370,6 +382,52 @@ class InstallationWorker(QObject):
                 shutil.rmtree(self._staged_repo, ignore_errors=True)
             if not self._staged_is_local:
                 self._staged_repo = None
+
+    def _verify_sudo(self) -> bool:
+        """Check sudo auth early. True if passwordless sudo works or -S accepts the password."""
+        password = self.sudo_password or ""
+        # Passwordless / cached: no password needed.
+        try:
+            r = subprocess.run(
+                ["sudo", "-n", "true"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if r.returncode == 0:
+                logger.info("sudo: passwordless/cached — OK")
+                return True
+        except Exception as e:
+            logger.debug(f"sudo -n check: {e}")
+        if not password:
+            # No password provided — cannot authenticate non-interactive sudo.
+            logger.warning("sudo: no password and passwordless sudo unavailable")
+            return False
+        try:
+            env = os.environ.copy()
+            env.setdefault("SUDO_ASKPASS", "/bin/true")
+            # -k forces a fresh password check (not a stale timestamp).
+            r = subprocess.run(
+                ["sudo", "-k", "-S", "-p", "", "true"],
+                input=password + "\n",
+                text=True,
+                capture_output=True,
+                timeout=30,
+                env=env,
+            )
+            ok = r.returncode == 0
+            # Log only length — never the password value.
+            logger.info(
+                f"sudo -k -S true rc={r.returncode} (password length={len(password)})"
+            )
+            if not ok:
+                err = (r.stderr or "").strip()
+                if err:
+                    logger.error(f"sudo stderr: {err[-300:]}")
+            return ok
+        except Exception as e:
+            logger.error(f"sudo verify failed: {e}")
+            return False
 
     def _sudo_run(self, cmd: List[str], timeout: int = 1800) -> subprocess.CompletedProcess:
         """Run command with sudo, feeding OTP password on stdin when needed."""
@@ -720,14 +778,50 @@ class InstallationWorker(QObject):
             logger.error(f"DOTFILES_REPO_URL not configured: {url}")
             return None
         logger.info(f"Cloning monorepo from {url}")
-        r = subprocess.run(
-            ["git", "clone", "--depth", "1", url, str(repo_dir)],
-            capture_output=True,
-            text=True,
-            timeout=600,
-        )
+        # Never hang on interactive username/password prompts.
+        # Keep system/credential helpers (e.g. gh) so an authed machine still works;
+        # GIT_TERMINAL_PROMPT=0 only blocks the interactive fallback.
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        env["GIT_ASKPASS"] = "/bin/true"
+        env["SSH_ASKPASS"] = "/bin/true"
+        env["GCM_INTERACTIVE"] = "never"
+        clone_cmd = ["git", "clone", "--depth", "1", url, str(repo_dir)]
+        try:
+            r = subprocess.run(
+                clone_cmd,
+                capture_output=True,
+                text=True,
+                timeout=600,
+                env=env,
+            )
+            if r.returncode != 0:
+                # Retry anonymous (no credential helpers) — fail fast, no prompt hang.
+                shutil.rmtree(repo_dir, ignore_errors=True)
+                r = subprocess.run(
+                    ["git", "-c", "credential.helper=", *clone_cmd[1:]],
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                    env=env,
+                )
+        except subprocess.TimeoutExpired:
+            logger.error("git clone timed out")
+            shutil.rmtree(repo_dir, ignore_errors=True)
+            return None
         if r.returncode != 0 or not (repo_dir / "hypr").is_dir():
-            logger.error(f"git clone failed rc={r.returncode}: {(r.stderr or r.stdout)[-500:]}")
+            err = (r.stderr or r.stdout or "").strip()
+            logger.error(f"git clone failed rc={r.returncode}: {err[-500:]}")
+            low = err.lower()
+            if (
+                "could not read username" in low
+                or "authentication failed" in low
+                or "repository not found" in low
+            ):
+                logger.error(
+                    "Repo rejected anonymous clone (private / spam-flagged / wrong URL). "
+                    "Share a public repo or clone the monorepo next to this installer."
+                )
             shutil.rmtree(repo_dir, ignore_errors=True)
             return None
         self._staged_repo = repo_dir

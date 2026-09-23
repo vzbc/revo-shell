@@ -73,13 +73,16 @@ Item {
     }
 
     function beginInstall() {
-        if (!passwordReady || installing)
+        if (installing)
             return
+        // Prefer live field value — passwordReady can lag after focus games.
         var pw = otp.value
         if (pw.length < 1) {
             statusText = "Enter your password."
+            otp.forceFocus()
             return
         }
+        passwordReady = true
         installing = true
         completed = false
         backendFailed = false
@@ -220,10 +223,11 @@ Item {
                 maxLength: 64
                 secret: true
                 enabled: !root.installing
+                onPasswordReadyChanged: root.passwordReady = passwordReady
+                onValueChanged: root.passwordReady = value.length >= 1
                 onCompleted: function(v) {
                     root.passwordReady = v.length >= 1
                 }
-                onValueChanged: root.passwordReady = value.length >= 1
             }
 
             Label {
@@ -369,6 +373,7 @@ Item {
                     hoverEnabled: true
                     enabled: parent.enabled
                     cursorShape: Qt.PointingHandCursor
+                    onPressed: otp.forceFocus()
                     onClicked: root.beginInstall()
                 }
             }

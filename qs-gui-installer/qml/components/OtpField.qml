@@ -19,6 +19,9 @@ Item {
     signal submitted(string value)
     signal completed(string value)
 
+    // Mirror of Stage4.passwordReady — true once any character is typed.
+    property bool passwordReady: false
+
     readonly property int slotSize: 44
     readonly property int slotGap: 8
     // Grow with password length; caret slot while focused
@@ -40,8 +43,10 @@ Item {
         anchors.fill: parent
         opacity: 0
         focus: true
+        activeFocusOnTab: true
         enabled: root.enabled
-        echoMode: TextInput.Normal
+        echoMode: root.secret ? TextInput.Password : TextInput.Normal
+        passwordMaskDelay: 0
         passwordCharacter: "•"
         maximumLength: root.maxLength
         font.family: root.fontFamily
@@ -52,11 +57,16 @@ Item {
         }
         onTextChanged: {
             root.value = text
+            root.passwordReady = text.length >= 1
             if (text.length >= root.minSlots && text.length > 0)
                 root.completed(text)
         }
         Keys.onReturnPressed: root.submitted(text)
         Keys.onEnterPressed: root.submitted(text)
+        Keys.onEscapePressed: {
+            // Keep typed password; just drop focus so buttons can be clicked.
+            input.focus = false
+        }
     }
 
     Row {
@@ -122,6 +132,8 @@ Item {
     MouseArea {
         anchors.fill: parent
         cursorShape: Qt.IBeamCursor
+        // Steal focus from the Install button so typing always lands in the field.
+        onPressed: input.forceActiveFocus()
         onClicked: input.forceActiveFocus()
     }
 
@@ -132,6 +144,14 @@ Item {
     function clear() {
         input.text = ""
         root.value = ""
+        root.passwordReady = false
+    }
+
+    // Re-assert focus whenever this control becomes enabled/visible again
+    // (e.g. after Install button click tried to move focus away).
+    onEnabledChanged: {
+        if (enabled)
+            Qt.callLater(forceFocus)
     }
 
     Component.onCompleted: Qt.callLater(forceFocus)

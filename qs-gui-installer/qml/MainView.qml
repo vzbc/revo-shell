@@ -261,8 +261,14 @@ Rectangle {
                 root.installCompleted = false
                 root.installFailed = false
                 var b = root.installBackend
-                if (!b)
+                if (!b) {
+                    root.installRunning = false
+                    root.installFailed = true
+                    root.installStatus = "Installer backend not connected (Python hook missing)."
+                    if (stage === 3 && stack.currentItem)
+                        stack.currentItem.applyBackendFailed(root.installStatus)
                     return
+                }
                 if (typeof b === "function")
                     b(pw)
                 else if (b.install)
