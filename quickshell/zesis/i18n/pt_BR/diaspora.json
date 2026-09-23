@@ -1,0 +1,15 @@
+{
+  "network": "Rede",
+  "offline": "Offline",
+  "loadingNetworkStats": "Carregando estatísticas da rede...",
+  "dotsOnTheMap": "pontos no mapa",
+  "verified": "verificados",
+  "active": "ativos",
+  "shells": "Shells",
+  "trend": "Tendência",
+  "cadence5Min": "A cada 5 minutos",
+  "cadence15Min": "A cada 15 minutos",
+  "cadence30Min": "A cada 30 minutos",
+  "cadence1Hour": "A cada hora",
+  "cadence2Hours": "A cada 2 horas"
+}

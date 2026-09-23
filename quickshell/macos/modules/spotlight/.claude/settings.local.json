@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rtk ls *)",
+      "Bash(qmlscene /home/revo/.config/quickshell/macos/modules/spotlight/Spotlight.qml)",
+      "Bash(rtk grep *)"
+    ]
+  }
+}

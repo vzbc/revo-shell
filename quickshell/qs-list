@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  qs-list — List & Run Installed Quickshell Configs
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+set -euo pipefail
+
+QS_DIR="$HOME/.config/quickshell"
+
+# Colors
+GREEN='\033[0;32m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+YELLOW='\033[0;33m'
+BOLD='\033[1m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+echo -e "${MAGENTA}${BOLD}"
+echo "  ╔══════════════════════════════════════╗"
+echo "  ║    Quickshell Installed Configs      ║"
+echo "  ╚══════════════════════════════════════╝"
+echo -e "${RESET}"
+
+configs=()
+for d in "$QS_DIR"/*/; do
+    if [[ -f "$d/shell.qml" ]]; then
+        configs+=("$(basename "$d")")
+    fi
+done
+
+if [[ ${#configs[@]} -eq 0 ]]; then
+    echo -e "  ${YELLOW}No Quickshell configs found in $QS_DIR${RESET}"
+    exit 0
+fi
+
+echo -e "  ${BOLD}Found ${#configs[@]} config(s):${RESET}\n"
+
+for i in "${!configs[@]}"; do
+    cfg="${configs[$i]}"
+    size=$(du -sh "$QS_DIR/$cfg" | cut -f1)
+    qml_count=$(find "$QS_DIR/$cfg" -name "*.qml" | wc -l)
+    echo -e "  ${BOLD}[$((i+1))]${RESET} ${CYAN}${BOLD}$cfg${RESET} ${DIM}($size, $qml_count QML files)${RESET}"
+done
+
+echo ""
+echo -en "  ${BOLD}Enter number to run config (or press Enter to exit): ${RESET}"
+read -r choice
+
+if [[ -n "$choice" && "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -ge 1 && "$choice" -le ${#configs[@]} ]]; then
+    selected="${configs[$((choice-1))]}"
+    echo -e "\n  ${GREEN}🚀 Launching quickshell config: $selected...${RESET}"
+    quickshell -c "$selected" &
+fi

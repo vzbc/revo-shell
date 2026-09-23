@@ -1,0 +1,138 @@
+pragma ComponentBehavior: Bound
+
+import QtQuick
+import QtQuick.Layouts
+
+import qs.Components.Base
+import qs.Core.Configs
+import qs.Core.Utils
+import qs.Services
+
+Column {
+    id: root
+
+    required property var modelData
+    property bool isShowMoreBody: false
+
+    spacing: Appearance.spacing.small
+
+    RowLayout {
+        width: parent.width
+        spacing: Appearance.spacing.small
+
+        StyledText {
+            Layout.fillWidth: true
+            text: root.modelData.appName
+            font.pixelSize: Appearance.fonts.size.large
+            font.weight: Font.Medium
+            color: Colours.m3Colors.m3OnSurfaceVariant
+            elide: Text.ElideRight
+        }
+
+        StyledText {
+            text: "•"
+            color: Colours.m3Colors.m3OnSurfaceVariant
+            font.pixelSize: Appearance.fonts.size.large
+            Layout.preferredWidth: implicitWidth
+        }
+
+        StyledText {
+            id: timeText
+
+            color: Colours.m3Colors.m3OnSurfaceVariant
+            Layout.preferredWidth: implicitWidth
+            Component.onCompleted: text = TimeAgo.timeAgoWithIfElse(root.modelData.time)
+
+            Timer {
+                interval: 60000
+                running: root.visible
+                repeat: true
+                onTriggered: timeText.text = TimeAgo.timeAgoWithIfElse(root.modelData.time)
+            }
+        }
+
+        StyledRect {
+            id: expandButton
+
+            Layout.preferredWidth: 32
+            Layout.preferredHeight: 32
+            Layout.alignment: Qt.AlignVCenter
+            radius: Appearance.rounding.large
+            color: "transparent"
+
+            Icon {
+                anchors.centerIn: parent
+                icon: root.isShowMoreBody ? "expand_less" : "expand_more"
+                font.pixelSize: Appearance.fonts.size.extraLarge
+                color: Colours.m3Colors.m3OnSurfaceVariant
+            }
+
+            MArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.isShowMoreBody = !root.isShowMoreBody
+            }
+        }
+    }
+
+    StyledText {
+        width: parent.width
+        text: root.modelData.summary
+        font.pixelSize: Appearance.fonts.size.medium
+        font.weight: Font.DemiBold
+        color: Colours.m3Colors.m3OnSurface
+        wrapMode: Text.Wrap
+        maximumLineCount: 2
+        elide: Text.ElideRight
+    }
+
+    StyledText {
+        width: parent.width
+        text: root.modelData.body || ""
+        font.pixelSize: Appearance.fonts.size.medium
+        color: Colours.m3Colors.m3OnSurface
+        textFormat: Text.StyledText
+        wrapMode: Text.Wrap
+        maximumLineCount: root.isShowMoreBody ? 0 : 1
+    }
+
+    Row {
+        width: parent.width
+        topPadding: 8
+        spacing: Appearance.spacing.normal
+        visible: root.modelData?.actions && root.modelData.actions.length > 0
+
+        Repeater {
+            model: root.modelData?.actions
+
+            delegate: StyledRect {
+                id: actionButton
+
+                required property var modelData
+                required property int index
+
+                implicitWidth: (parent.width - (root.modelData.actions.length - 1) * Appearance.spacing.normal) / root.modelData.actions.length
+                implicitHeight: 40
+                radius: Appearance.rounding.full
+                color: Colours.m3Colors.m3SurfaceContainerHigh
+
+                MArea {
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: actionButton.modelData.invoke()
+                }
+
+                StyledText {
+                    anchors.centerIn: parent
+                    text: actionButton.modelData.text
+                    font.pixelSize: Appearance.fonts.size.medium
+                    font.weight: Font.Medium
+                    color: Colours.m3Colors.m3OnBackground
+                    elide: Text.ElideRight
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,6 @@
+.cache/
+*.jsc
+*.qmlc
+*.qmltypes
+result
+

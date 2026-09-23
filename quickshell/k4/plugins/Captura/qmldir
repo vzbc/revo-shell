@@ -1,0 +1,31 @@
+#  Generado: los tipos de esta carpeta, para que se resuelvan
+#  también cargando el plugin por URL (esquema qs:), donde la
+#  resolución implícita de hermanos no existe.
+#  `python3 tools/plugins.py` comprueba que esté completo.
+
+AspectoCapa 1.0 AspectoCapa.qml
+AudioExtra 1.0 AudioExtra.qml
+BloqueTiempo 1.0 BloqueTiempo.qml
+BotonAccion 1.0 BotonAccion.qml
+CabeceraPista 1.0 CabeceraPista.qml
+CapasLienzo 1.0 CapasLienzo.qml
+CapturaPlugin 1.0 CapturaPlugin.qml
+CapturaView 1.0 CapturaView.qml
+CuerpoEditor 1.0 CuerpoEditor.qml
+EditorGrande 1.0 EditorGrande.qml
+EditorZoom 1.0 EditorZoom.qml
+LineaTiempo 1.0 LineaTiempo.qml
+Pista 1.0 Pista.qml
+PistaBanda 1.0 PistaBanda.qml
+PistaClips 1.0 PistaClips.qml
+Reproductor 1.0 Reproductor.qml
+Seccion 1.0 Seccion.qml
+SelectorRegion 1.0 SelectorRegion.qml
+SelectorVideo 1.0 SelectorVideo.qml
+FichaAnadir 1.0 FichaAnadir.qml
+FichaAspecto 1.0 FichaAspecto.qml
+FichaCapa 1.0 FichaCapa.qml
+FichaClip 1.0 FichaClip.qml
+FichaFundidos 1.0 FichaFundidos.qml
+FichaPistas 1.0 FichaPistas.qml
+FichaTranscripcion 1.0 FichaTranscripcion.qml

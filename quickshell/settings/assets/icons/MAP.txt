@@ -1,0 +1,36 @@
+source: Settings.app Assets.car via LZFSE decode
+total images=32 (raw-rgba icons=32)
+
+file                                   ext    bytes   block frame name
+icon_NSAppearanceNameAqua_0057_0_128.png rgba    65536   0057  NSAppearanceNameAqua
+icon_NSAppearanceNameAqua_0059_1_64.png rgba    16384   0059  NSAppearanceNameAqua
+icon_NSAppearanceNameAqua_0059_2_32.png rgba     4096   0059  NSAppearanceNameAqua
+icon_NSAppearanceNameAqua_0059_3_32.png rgba     4096   0059  NSAppearanceNameAqua
+icon__0059_4_32.png                     rgba     4096   0059  
+icon__0063_3_256.png                    rgba   262144   0063  
+icon_dlg_icloud_0063_4_64.png           rgba    16384   0063  dlg_icloud
+icon_dlg_icloud_0063_5_128.png          rgba    65536   0063  dlg_icloud
+icon_dlg_icloud_0063_6_32.png           rgba     4096   0063  dlg_icloud
+icon_dlg_icloud_0063_7_32.png           rgba     4096   0063  dlg_icloud
+icon_dlg_icloud_0063_8_64.png           rgba    16384   0063  dlg_icloud
+icon_dlg_icloud_0075_11_128.png         rgba    65536   0075  dlg_icloud
+icon_dlg_icloud_0083_12_64.png          rgba    16384   0083  dlg_icloud
+icon__0109_0_512.png                    rgba  1048576   0109  
+icon_2x.png_0109_4_32.png               rgba     4096   0109  2x.png
+icon_2x.png_0109_5_256.png              rgba   262144   0109  2x.png
+icon_2x.png_0109_6_256.png              rgba   262144   0109  2x.png
+icon_2x.png_0109_7_256.png              rgba   262144   0109  2x.png
+icon_icon_256x256.png_0109_8_64.png     rgba    16384   0109  icon_256x256.png
+icon_icon_256x256.png_0109_9_64.png     rgba    16384   0109  icon_256x256.png
+icon_icon_256x256.png_0109_10_64.png    rgba    16384   0109  icon_256x256.png
+icon_icon_256x256.png_0109_14_128.png   rgba    65536   0109  icon_256x256.png
+icon_icon_256x256.png_0109_15_128.png   rgba    65536   0109  icon_256x256.png
+icon_icon_256x256.png_0109_16_128.png   rgba    65536   0109  icon_256x256.png
+icon_2x.png_0109_20_256.png             rgba   262144   0109  2x.png
+icon__0109_21_256.png                   rgba   262144   0109  
+icon__0109_24_256.png                   rgba   262144   0109  
+icon_SystemSettings128x128_NSAppearanceNameSy_0109_27_128.png rgba    65536   0109  SystemSettings128x128_NSAppearanceNameSystem_120
+icon_SystemSettings128x128_NSAppearanceNameSy_0109_28_128.png rgba    65536   0109  SystemSettings128x128_NSAppearanceNameSystem_120
+icon_SystemSettings1024x1024_NSAppearanceName_0109_29_128.png rgba    65536   0109  SystemSettings1024x1024_NSAppearanceNameSystem_1
+icon_SystemSettings1024x1024_NSAppearanceName_0109_30_512.png rgba  1048576   0109  SystemSettings1024x1024_NSAppearanceNameSystem_1
+icon__0110_16_512.png                   rgba  1048576   0110  

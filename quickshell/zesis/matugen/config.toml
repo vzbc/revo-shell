@@ -1,0 +1,7 @@
+[config]
+caching = false
+version_check = false
+
+[templates.quickshell]
+input_path = "templates/quickshell.json"
+output_path = "~/.cache/theme/zesis/colors.json"

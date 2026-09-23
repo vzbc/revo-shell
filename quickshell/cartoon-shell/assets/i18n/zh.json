@@ -1,0 +1,233 @@
+{
+  "settings": {
+    "title": "设置",
+    "general": "通用",
+    "appearance": "外观",
+    "wallpapers": "壁纸",
+    "network": "网络",
+    "audio": "音频",
+    "performance": "性能",
+    "shortcuts": "快捷键",
+    "system": "系统",
+    "language": "语言"
+  },
+  "dateFormat": {
+    "today": "今天",
+    "tomorrow": "明天",
+    "day": {
+      "monday": "星期一",
+      "tuesday": "星期二",
+      "wednesday": "星期三",
+      "thursday": "星期四",
+      "friday": "星期五",
+      "saturday": "星期六",
+      "sunday": "星期日"
+    },
+    "month": {
+      "january": "1月",
+      "february": "2月",
+      "march": "3月",
+      "april": "4月",
+      "may": "5月",
+      "june": "6月",
+      "july": "7月",
+      "august": "8月",
+      "september": "9月",
+      "october": "10月",
+      "november": "11月",
+      "december": "12月"
+    }
+  },
+  "general": {
+    "title": "通用设置",
+    "language_label": "语言：",
+    "autostart_label": "自动启动：",
+    "notification_label": "通知：",
+    "notification_system": "显示系统通知",
+    "notification_sound": "通知声音",
+    "notification_performance": "性能通知"
+  },
+  "appearance": {
+    "title": "外观",
+    "theme_label": "主题：",
+    "theme_light": "浅色",
+    "theme_dark": "深色",
+    "clock_panel_label": "时钟面板：",
+    "panel_position_label": "面板位置：",
+    "position_top": "顶部",
+    "position_bottom": "底部",
+    "clock_position_label": "时钟位置：",
+    "panel_height_label": "面板高度："
+  },
+  "system": {
+    "application": "应用程序",
+    "sleep": "睡眠模式",
+    "logout": "退出登录",
+    "shutdown": "关机",
+    "restart": "重新启动",
+    "lock": "锁定屏幕"
+  },
+  "mixer": {
+    "title": "音频混音器",
+    "subtitle": "管理音频流和音量",
+    "output_device": "输出设备",
+    "application_streams": "应用程序音频流",
+    "no_streams": "没有活动的音频流",
+    "active_streams": "活动流：%{count}"
+  },
+  "entry": {
+    "unknown_app": "未知应用程序",
+    "unmute": "取消静音",
+    "mute": "静音",
+    "volume_percent": "%{volume}%",
+    "media_name": "媒体名称",
+    "volume_slider_tooltip": "调整音量",
+    "muted": "已静音",
+    "overdrive": "音量超限"
+  },
+  "calendar": {
+    "title": "日历",
+    "weekdays": {
+      "sunday": "日",
+      "monday": "一",
+      "tuesday": "二",
+      "wednesday": "三",
+      "thursday": "四",
+      "friday": "五",
+      "saturday": "六"
+    }
+  },
+  "wallpapers": {
+    "title": "图片管理",
+    "total_images": "图片总数:",
+    "path": "路径:",
+    "loading": "加载中...",
+    "loading_info": "正在加载信息...",
+    "no_images": "在~/Pictures/Wallpapers文件夹中未找到图片",
+    "set_wallpaper": "设置",
+    "already_set": "已设置",
+    "delete": "删除",
+    "delete_confirm": "确认删除",
+    "cancel": "取消",
+    "success_set": "壁纸设置成功！",
+    "success_delete": "图片删除成功！"
+  },
+  "confirm": {
+    "title": "确认",
+    "message": "您确定要{action}吗？",
+    "yes": "是",
+    "no": "否",
+    "sleep": "进入睡眠模式",
+    "lock": "锁定屏幕",
+    "logout": "退出登录",
+    "restart": "重新启动",
+    "shutdown": "关机"
+  },
+  "ram": {
+    "title": "进程管理器",
+    "panel_title": "内存管理",
+    "memory_monitor": "内存监控",
+    "used": "已用",
+    "free": "空闲",
+    "available": "可用",
+    "no_swap": "无交换分区",
+    "loading_memory": "正在加载内存数据...",
+    "loading": {
+      "title": "⏳",
+      "message": "正在加载进程列表..."
+    },
+    "headers": {
+      "pid": "进程ID",
+      "name": "进程名称",
+      "ram_percent": "内存百分比",
+      "memory": "内存"
+    },
+    "footer": {
+      "process_count_label": "进程数量",
+      "total_ram_label": "总内存使用",
+      "memory_distribution_label": "内存分布",
+      "process_count_unit": "",
+      "total_ram_unit": "MB"
+    },
+    "header_bar": {
+      "main_title": "进程监控",
+      "last_update": "最后更新"
+    },
+    "status_colors": {
+      "critical": "严重",
+      "warning": "警告",
+      "normal": "正常",
+      "low": "低"
+    },
+    "distribution": {
+      "na": "无可用数据",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "脚本未返回数据",
+      "parse_error": "解析输出数据错误"
+    }
+  },
+  "volume": {
+    "title": "音量",
+    "muted": "已静音"
+  },
+  "bluetooth": {
+    "title": "蓝牙",
+    "enabled": "蓝牙已开启",
+    "disabled": "蓝牙已关闭",
+    "devices_connected": "设备已连接",
+    "pairing": "配对中...",
+    "connecting": "连接中...",
+    "connected": "已连接",
+    "paired": "已配对",
+    "not_connected": "未连接",
+    "searching": "搜索设备中...",
+    "no_devices": "未找到设备",
+    "turn_on": "开启蓝牙以连接设备",
+    "pair_error": "无法与设备配对"
+  },
+  "wifi": {
+    "title": "WiFi",
+    "enabled": "WiFi已开启",
+    "disabled": "WiFi已关闭",
+    "not_connected": "未连接",
+    "available_networks": "可用网络",
+    "searching": "搜索网络中...",
+    "no_networks": "未找到网络",
+    "turn_on": "开启WiFi以查看可用网络",
+    "forget": "忘记",
+    "connect": "连接",
+    "no_password": "无需密码",
+    "enter_password": "输入密码",
+    "password_required": "请输入密码",
+    "wrong_password": "密码错误"
+  },
+  "infoSection": {
+    "name": "CPU名称",
+    "vendor": "制造商",
+    "architecture": "架构",
+    "socket": "插槽",
+    "loading": "加载中...",
+    "undefined": "未定义"
+  },
+  "CpuPane": {
+    "title": "CPU信息"
+  },
+  "cpuStats": {
+    "totalUsage": "总使用率",
+    "maxCore": "最高核心",
+    "timeLabel": "⏱️ 时间",
+    "dataPoints": "点"
+  },
+  "weather": {
+    "title": "天气",
+    "apiKeyLabel": "API密钥 (weatherapi.com)",
+    "apiKeyPlaceholder": "输入您的API密钥...",
+    "apiKeyHint": "在此获取免费API密钥：weatherapi.com\nAPI密钥将自动保存和验证",
+    "locationLabel": "位置",
+    "locationPlaceholder": "搜索城市...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}

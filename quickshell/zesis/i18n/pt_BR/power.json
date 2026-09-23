@@ -1,0 +1,17 @@
+{
+  "lock": "Bloquear",
+  "logOut": "Sair",
+  "reboot": "Reiniciar",
+  "shutDown": "Desligar",
+  "vendingCorner": "CANTINHO DAS GULOSEIMAS",
+  "fillerItems": "BATATINHA|REFRIGERANTE|CHICLETE|BALINHA|CHOCOLATE|ÁGUA|CHÁ|BISCOITO|CARNE SECA|PRETZEL|AMENDOIM|BALA|SUCO|CAFÉ|BOLACHA|MIX DE CASTANHAS",
+  "enterCode": "DIGITE O CÓDIGO",
+  "codePrefix": "CÓDIGO: ",
+  "dispensing": "LIBERANDO",
+  "dropping": "CAINDO...",
+  "stuckTapGlass": "PRESO - BATA NO VIDRO",
+  "liftTheFlap": "LEVANTE A TAMPA",
+  "pressItemToConfirm": "APERTE O ITEM PARA CONFIRMAR",
+  "invalidCode": "CÓDIGO INVÁLIDO",
+  "soldOut": "ESGOTADO"
+}

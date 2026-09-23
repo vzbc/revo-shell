@@ -1,0 +1,15 @@
+{
+  "breadcrumb": "CONFIGURAÇÕES / ALTERNADOR DE APPS",
+  "title": "Alternador de Apps",
+  "defaultView": "Visualização padrão",
+  "windowCards": "Cartões de janelas",
+  "workspaceGrid": "Grade de áreas de trabalho",
+  "confirmOnRelease": "Confirmar ao soltar a tecla",
+  "rememberLastView": "Lembrar da última visualização nesta sessão",
+  "followMovedWindow": "Seguir janela movida",
+  "newWorkspace": "Nova área de trabalho",
+  "fillGaps": "Preencher vãos",
+  "append": "Adicionar ao final",
+  "switchToWorkspaceView": "Mudar para visualização de áreas de trabalho",
+  "switchToWindowView": "Mudar para visualização de janelas"
+}

@@ -1,0 +1,12 @@
+{
+  "breadcrumb": "WIDGETS / GRAVAÇÃO",
+  "title": "Gravação",
+  "encodeDevice": "DISPOSITIVO DE CODIFICAÇÃO",
+  "autoRecommended": "Automático (recomendado)",
+  "softwareCpu": "Software (CPU)",
+  "quality": "QUALIDADE (QP)",
+  "qualityHint": "Quanto menor, maior a qualidade / arquivos maiores. Ignorado ao usar codificação por software.",
+  "framerateCap": "LIMITE DE QUADROS",
+  "uncapped": "Sem limite",
+  "recordRegion": "Gravar Região..."
+}

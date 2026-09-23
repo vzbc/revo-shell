@@ -1,0 +1,355 @@
+#!/usr/bin/env bash
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  qs-install — Quickshell Dots Installer
+#  Installs any quickshell config into ~/.config/quickshell/
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+set -euo pipefail
+
+# ─── Colors ───────────────────────────────────────────────
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+RESET='\033[0m'
+
+QS_DIR="$HOME/.config/quickshell"
+
+# ─── Helpers ──────────────────────────────────────────────
+info()    { echo -e "${CYAN}${BOLD}  ℹ${RESET}  $*"; }
+success() { echo -e "${GREEN}${BOLD}  ✔${RESET}  $*"; }
+warn()    { echo -e "${YELLOW}${BOLD}  ⚠${RESET}  $*"; }
+error()   { echo -e "${RED}${BOLD}  ✖${RESET}  $*"; }
+header()  { echo -e "\n${MAGENTA}${BOLD}$*${RESET}"; }
+dim()     { echo -e "${DIM}    $*${RESET}"; }
+
+banner() {
+    echo -e "${MAGENTA}${BOLD}"
+    echo "  ╔══════════════════════════════════════╗"
+    echo "  ║    qs-install · Dots Installer       ║"
+    echo "  ╚══════════════════════════════════════╝"
+    echo -e "${RESET}"
+}
+
+usage() {
+    echo -e "${BOLD}Usage:${RESET} qs-install <source> [options]"
+    echo ""
+    echo -e "${BOLD}Source:${RESET}"
+    echo "  Local path     /path/to/quickshell-dots"
+    echo "  Git URL        https://github.com/user/repo.git"
+    echo "  Git URL        git@github.com:user/repo.git"
+    echo ""
+    echo -e "${BOLD}Options:${RESET}"
+    echo "  -n, --name NAME     Custom install name (default: auto-detect)"
+    echo "  -s, --subdir PATH   Subdirectory inside repo containing shell.qml"
+    echo "  -f, --force         Overwrite existing installation"
+    echo "  -d, --dry-run       Inspect only, don't install"
+    echo "  -h, --help          Show this help"
+    echo ""
+    echo -e "${BOLD}Examples:${RESET}"
+    echo "  qs-install ./my-dots"
+    echo "  qs-install https://github.com/end-4/dots-hyprland.git -s .config/ags"
+    echo "  qs-install /tmp/cool-bar --name coolbar --force"
+    echo ""
+    echo -e "${DIM}Installed configs live in: $QS_DIR/<name>/${RESET}"
+    echo -e "${DIM}Run with: qs -c <name>  or  qs -p $QS_DIR/<name>${RESET}"
+}
+
+# ─── Parse Arguments ─────────────────────────────────────
+SOURCE=""
+CUSTOM_NAME=""
+SUBDIR=""
+FORCE=false
+DRY_RUN=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -n|--name)    CUSTOM_NAME="$2"; shift 2 ;;
+        -s|--subdir)  SUBDIR="$2"; shift 2 ;;
+        -f|--force)   FORCE=true; shift ;;
+        -d|--dry-run) DRY_RUN=true; shift ;;
+        -h|--help)    banner; usage; exit 0 ;;
+        -*)           error "Unknown option: $1"; usage; exit 1 ;;
+        *)            SOURCE="$1"; shift ;;
+    esac
+done
+
+if [[ -z "$SOURCE" ]]; then
+    banner
+    error "No source specified."
+    echo ""
+    usage
+    exit 1
+fi
+
+banner
+
+# ─── Resolve Source ───────────────────────────────────────
+TEMP_DIR=""
+SOURCE_DIR=""
+IS_GIT=false
+
+cleanup() {
+    if [[ -n "$TEMP_DIR" && -d "$TEMP_DIR" ]]; then
+        rm -rf "$TEMP_DIR"
+    fi
+}
+trap cleanup EXIT
+
+# Check if source is a git URL
+if [[ "$SOURCE" =~ ^(https?://|git@|git://|ssh://) ]] || [[ "$SOURCE" == *.git ]]; then
+    IS_GIT=true
+    header "📥 Cloning repository..."
+    TEMP_DIR=$(mktemp -d /tmp/qs-install.XXXXXX)
+
+    if ! git clone --depth 1 "$SOURCE" "$TEMP_DIR/repo" 2>&1; then
+        error "Failed to clone: $SOURCE"
+        exit 1
+    fi
+    success "Cloned successfully"
+
+    if [[ -n "$SUBDIR" ]]; then
+        SOURCE_DIR="$TEMP_DIR/repo/$SUBDIR"
+    else
+        SOURCE_DIR="$TEMP_DIR/repo"
+    fi
+elif [[ -d "$SOURCE" ]]; then
+    SOURCE_DIR="$(realpath "$SOURCE")"
+    if [[ -n "$SUBDIR" ]]; then
+        SOURCE_DIR="$SOURCE_DIR/$SUBDIR"
+    fi
+else
+    error "Source not found: $SOURCE"
+    exit 1
+fi
+
+# ─── Find shell.qml ──────────────────────────────────────
+header "🔍 Inspecting source..."
+
+SHELL_QML=""
+SEARCH_ROOT="$SOURCE_DIR"
+
+# Direct shell.qml
+if [[ -f "$SOURCE_DIR/shell.qml" ]]; then
+    SHELL_QML="$SOURCE_DIR/shell.qml"
+    info "Found shell.qml at root"
+else
+    # Search recursively for shell.qml
+    info "Searching for shell.qml..."
+    FOUND_SHELLS=()
+    while IFS= read -r -d '' f; do
+        FOUND_SHELLS+=("$f")
+    done < <(find "$SOURCE_DIR" -name "shell.qml" -print0 2>/dev/null)
+
+    if [[ ${#FOUND_SHELLS[@]} -eq 0 ]]; then
+        error "No shell.qml found in source!"
+        error "This doesn't look like a valid Quickshell config."
+        echo ""
+        dim "A Quickshell config needs at least a shell.qml entry point."
+        dim "If shell.qml is in a subdirectory, use: --subdir <path>"
+        exit 1
+    elif [[ ${#FOUND_SHELLS[@]} -eq 1 ]]; then
+        SHELL_QML="${FOUND_SHELLS[0]}"
+        SEARCH_ROOT="$(dirname "$SHELL_QML")"
+        info "Found shell.qml at: ${SHELL_QML#$SOURCE_DIR/}"
+    else
+        warn "Multiple shell.qml files found:"
+        for i in "${!FOUND_SHELLS[@]}"; do
+            dim "  [$i] ${FOUND_SHELLS[$i]#$SOURCE_DIR/}"
+        done
+        echo ""
+        echo -en "  ${BOLD}Select one (0-$((${#FOUND_SHELLS[@]}-1))): ${RESET}"
+        read -r choice
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [[ "$choice" -lt ${#FOUND_SHELLS[@]} ]]; then
+            SHELL_QML="${FOUND_SHELLS[$choice]}"
+            SEARCH_ROOT="$(dirname "$SHELL_QML")"
+        else
+            error "Invalid choice"
+            exit 1
+        fi
+    fi
+fi
+
+CONFIG_ROOT="$(dirname "$SHELL_QML")"
+
+# ─── Auto-detect Name ────────────────────────────────────
+if [[ -z "$CUSTOM_NAME" ]]; then
+    if $IS_GIT; then
+        # Extract from git URL
+        CUSTOM_NAME=$(basename "$SOURCE" .git)
+        CUSTOM_NAME=$(echo "$CUSTOM_NAME" | sed 's/[^a-zA-Z0-9_-]/_/g' | tr '[:upper:]' '[:lower:]')
+    else
+        CUSTOM_NAME=$(basename "$CONFIG_ROOT")
+        CUSTOM_NAME=$(echo "$CUSTOM_NAME" | sed 's/[^a-zA-Z0-9_-]/_/g' | tr '[:upper:]' '[:lower:]')
+    fi
+    # Avoid conflicts with common names
+    if [[ "$CUSTOM_NAME" == "quickshell" || "$CUSTOM_NAME" == ".config" || "$CUSTOM_NAME" == "repo" ]]; then
+        CUSTOM_NAME="imported-$(date +%s)"
+    fi
+fi
+
+INSTALL_DIR="$QS_DIR/$CUSTOM_NAME"
+
+# ─── Analyze Config ──────────────────────────────────────
+header "📋 Config Analysis"
+
+# Count files
+QML_COUNT=$(find "$CONFIG_ROOT" -name "*.qml" 2>/dev/null | wc -l)
+JS_COUNT=$(find "$CONFIG_ROOT" -name "*.js" -o -name "*.mjs" 2>/dev/null | wc -l)
+IMG_COUNT=$(find "$CONFIG_ROOT" \( -name "*.png" -o -name "*.svg" -o -name "*.jpg" -o -name "*.webp" \) 2>/dev/null | wc -l)
+SCRIPT_COUNT=$(find "$CONFIG_ROOT" -name "*.sh" -o -name "*.py" 2>/dev/null | wc -l)
+TOTAL_SIZE=$(du -sh "$CONFIG_ROOT" 2>/dev/null | cut -f1)
+
+echo ""
+echo -e "  ${BOLD}Name:${RESET}         $CUSTOM_NAME"
+echo -e "  ${BOLD}Source:${RESET}       $SOURCE"
+echo -e "  ${BOLD}Install to:${RESET}   $INSTALL_DIR"
+echo -e "  ${BOLD}Size:${RESET}         $TOTAL_SIZE"
+echo ""
+echo -e "  ${BOLD}Files:${RESET}"
+echo -e "    ${CYAN}QML:${RESET}        $QML_COUNT files"
+[[ "$JS_COUNT" -gt 0 ]]     && echo -e "    ${CYAN}JS:${RESET}         $JS_COUNT files"
+[[ "$IMG_COUNT" -gt 0 ]]    && echo -e "    ${CYAN}Assets:${RESET}     $IMG_COUNT images"
+[[ "$SCRIPT_COUNT" -gt 0 ]] && echo -e "    ${CYAN}Scripts:${RESET}    $SCRIPT_COUNT files"
+
+# Detect modules
+echo ""
+if [[ -d "$CONFIG_ROOT/modules" ]]; then
+    echo -e "  ${BOLD}Modules:${RESET}"
+    for mod in "$CONFIG_ROOT"/modules/*/; do
+        [[ -d "$mod" ]] && echo -e "    ${GREEN}●${RESET} $(basename "$mod")"
+    done
+fi
+
+# Detect services
+if [[ -d "$CONFIG_ROOT/services" ]]; then
+    echo ""
+    echo -e "  ${BOLD}Services:${RESET}"
+    for svc in "$CONFIG_ROOT"/services/*.qml; do
+        [[ -f "$svc" ]] && echo -e "    ${BLUE}◆${RESET} $(basename "$svc" .qml)"
+    done
+fi
+
+# Detect external dependencies
+echo ""
+echo -e "  ${BOLD}External Dependencies:${RESET}"
+DEPS_FOUND=false
+
+# Check for common tools referenced in scripts/configs
+check_dep() {
+    local tool="$1"
+    local label="${2:-$1}"
+    if grep -rq "$tool" "$CONFIG_ROOT" --include="*.qml" --include="*.sh" --include="*.js" 2>/dev/null; then
+        if command -v "$tool" &>/dev/null; then
+            echo -e "    ${GREEN}✔${RESET} $label ${DIM}(installed)${RESET}"
+        else
+            echo -e "    ${RED}✖${RESET} $label ${YELLOW}(missing!)${RESET}"
+        fi
+        DEPS_FOUND=true
+    fi
+}
+
+check_dep "hyprctl"    "Hyprland"
+check_dep "matugen"    "Matugen"
+check_dep "swww"       "SWWW"
+check_dep "wpctl"      "WirePlumber"
+check_dep "brightnessctl" "Brightnessctl"
+check_dep "playerctl"  "Playerctl"
+check_dep "nmcli"      "NetworkManager"
+check_dep "bluetoothctl" "Bluez"
+check_dep "cava"       "Cava"
+check_dep "rofi"       "Rofi"
+check_dep "wl-copy"    "wl-clipboard"
+check_dep "cliphist"   "Cliphist"
+check_dep "grim"       "Grim"
+check_dep "slurp"      "Slurp"
+check_dep "wlogout"    "Wlogout"
+check_dep "swaylock"   "Swaylock"
+check_dep "hyprlock"   "Hyprlock"
+
+if ! $DEPS_FOUND; then
+    echo -e "    ${DIM}No external dependencies detected${RESET}"
+fi
+
+# Check Quickshell imports
+echo ""
+echo -e "  ${BOLD}Quickshell Imports:${RESET}"
+grep -roh "import Quickshell\.[A-Za-z.]*" "$CONFIG_ROOT" --include="*.qml" 2>/dev/null \
+    | sort -u | while read -r imp; do
+    echo -e "    ${MAGENTA}→${RESET} $imp"
+done
+
+# ─── Dry Run Exit ─────────────────────────────────────────
+if $DRY_RUN; then
+    echo ""
+    header "🏁 Dry run complete"
+    info "No files were modified."
+    info "To install, run without --dry-run"
+    exit 0
+fi
+
+# ─── Check Existing ──────────────────────────────────────
+if [[ -d "$INSTALL_DIR" ]]; then
+    if $FORCE; then
+        warn "Overwriting existing: $CUSTOM_NAME"
+        rm -rf "$INSTALL_DIR"
+    else
+        echo ""
+        error "Config '$CUSTOM_NAME' already exists at: $INSTALL_DIR"
+        dim "Use --force to overwrite, or --name to pick a different name"
+        exit 1
+    fi
+fi
+
+# ─── Confirm ─────────────────────────────────────────────
+echo ""
+echo -en "  ${BOLD}Install '$CUSTOM_NAME' to $QS_DIR? [Y/n]: ${RESET}"
+read -r confirm
+if [[ "$confirm" =~ ^[Nn] ]]; then
+    info "Cancelled."
+    exit 0
+fi
+
+# ─── Install ─────────────────────────────────────────────
+header "📦 Installing..."
+
+# Copy files
+cp -r "$CONFIG_ROOT" "$INSTALL_DIR"
+success "Copied files to $INSTALL_DIR"
+
+# Fix permissions
+chmod -R u+rw "$INSTALL_DIR"
+find "$INSTALL_DIR" -name "*.sh" -exec chmod +x {} \;
+success "Set permissions"
+
+# ─── Post-install Summary ────────────────────────────────
+header "✅ Installation Complete!"
+echo ""
+echo -e "  ${BOLD}Installed:${RESET}  $CUSTOM_NAME"
+echo -e "  ${BOLD}Location:${RESET}   $INSTALL_DIR"
+echo ""
+echo -e "  ${BOLD}Run it:${RESET}"
+echo -e "    ${CYAN}qs -c $CUSTOM_NAME${RESET}        ${DIM}# by config name${RESET}"
+echo -e "    ${CYAN}qs -p $INSTALL_DIR${RESET}  ${DIM}# by path${RESET}"
+echo ""
+echo -e "  ${BOLD}Uninstall:${RESET}"
+echo -e "    ${CYAN}rm -rf $INSTALL_DIR${RESET}"
+echo ""
+
+# List all installed configs
+echo -e "  ${BOLD}All installed configs:${RESET}"
+for d in "$QS_DIR"/*/; do
+    [[ -f "$d/shell.qml" ]] || continue
+    name=$(basename "$d")
+    if [[ "$name" == "$CUSTOM_NAME" ]]; then
+        echo -e "    ${GREEN}● $name${RESET} ${GREEN}(new)${RESET}"
+    else
+        echo -e "    ${DIM}● $name${RESET}"
+    fi
+done
+
+echo ""

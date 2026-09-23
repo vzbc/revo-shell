@@ -1,0 +1,237 @@
+{
+  "settings": {
+    "title": "Impostazioni",
+    "general": "Generale",
+    "appearance": "Aspetto",
+    "wallpapers": "Sfondi",
+    "network": "Rete",
+    "audio": "Audio",
+    "performance": "Prestazioni",
+    "shortcuts": "Scorciatoie",
+    "system": "Sistema",
+    "language": "Lingua"
+  },
+  "dateFormat": {
+    "today": "Oggi",
+    "tomorrow": "Domani",
+    "day": {
+      "monday": "Lunedì",
+      "tuesday": "Martedì",
+      "wednesday": "Mercoledì",
+      "thursday": "Giovedì",
+      "friday": "Venerdì",
+      "saturday": "Sabato",
+      "sunday": "Domenica"
+    },
+    "month": {
+      "january": "Gennaio",
+      "february": "Febbraio",
+      "march": "Marzo",
+      "april": "Aprile",
+      "may": "Maggio",
+      "june": "Giugno",
+      "july": "Luglio",
+      "august": "Agosto",
+      "september": "Settembre",
+      "october": "Ottobre",
+      "november": "Novembre",
+      "december": "Dicembre"
+    }
+  },
+  "general": {
+    "title": "Impostazioni generali",
+    "language_label": "Lingua:",
+    "autostart_label": "Avvio automatico:",
+    "notification_label": "Notifiche:",
+    "notification_system": "Mostra notifiche di sistema",
+    "notification_sound": "Suoni di notifica",
+    "notification_performance": "Notifiche di prestazioni"
+  },
+  "appearance": {
+    "title": "Aspetto",
+    "theme_label": "Tema:",
+    "theme_light": "Chiaro",
+    "theme_dark": "Scuro",
+    "clock_panel_label": "Pannello orologio:",
+    "panel_position_label": "Posizione pannello:",
+    "position_top": "Superiore",
+    "position_bottom": "Inferiore",
+    "clock_position_label": "Posizione orologio:",
+    "panel_height_label": "Altezza pannello:"
+  },
+  "system": {
+    "application": "Applicazione",
+    "sleep": "Modalità sleep",
+    "logout": "Disconnetti",
+    "shutdown": "Spegni",
+    "restart": "Riavvia",
+    "lock": "Blocca schermo"
+  },
+  "mixer": {
+    "title": "Mixer audio",
+    "subtitle": "Gestisci flussi audio e volume",
+    "output_device": "Dispositivo di uscita",
+    "application_streams": "Flussi audio applicazioni",
+    "no_streams": "Nessun flusso audio attivo",
+    "active_streams": "Flussi attivi: %{count}"
+  },
+  "entry": {
+    "unknown_app": "Applicazione sconosciuta",
+    "unmute": "Attiva audio",
+    "mute": "Disattiva audio",
+    "volume_percent": "%{volume}%",
+    "media_name": "Nome media",
+    "volume_slider_tooltip": "Regola volume",
+    "muted": "Audio disattivato",
+    "overdrive": "Volume amplificato"
+  },
+  "music": {
+    "nowPlaying": "In riproduzione",
+    "paused": "In pausa"
+  },
+  "calendar": {
+    "title": "Calendario",
+    "weekdays": {
+      "sunday": "Dom",
+      "monday": "Lun",
+      "tuesday": "Mar",
+      "wednesday": "Mer",
+      "thursday": "Gio",
+      "friday": "Ven",
+      "saturday": "Sab"
+    }
+  },
+  "wallpapers": {
+    "title": "Gestione immagini",
+    "total_images": "Immagini totali:",
+    "path": "Percorso:",
+    "loading": "Caricamento...",
+    "loading_info": "Caricamento informazioni...",
+    "no_images": "Nessuna immagine trovata nella cartella ~/Pictures/Wallpapers",
+    "set_wallpaper": "Imposta",
+    "already_set": "Impostato",
+    "delete": "Elimina",
+    "delete_confirm": "Conferma eliminazione",
+    "cancel": "Annulla",
+    "success_set": "Sfondo impostato con successo!",
+    "success_delete": "Immagine eliminata con successo!"
+  },
+  "confirm": {
+    "title": "Conferma",
+    "message": "Sei sicuro di voler {action}?",
+    "yes": "Sì",
+    "no": "No",
+    "sleep": "attivare la modalità sleep",
+    "lock": "bloccare lo schermo",
+    "logout": "disconnetterti",
+    "restart": "riavviare",
+    "shutdown": "spegnere"
+  },
+  "ram": {
+    "title": "Gestione processi",
+    "panel_title": "Gestione RAM",
+    "memory_monitor": "Monitor memoria",
+    "used": "Usato",
+    "free": "Libero",
+    "available": "Disponibile",
+    "no_swap": "Nessun SWAP",
+    "loading_memory": "Caricamento dati memoria...",
+    "loading": {
+      "title": "⏳",
+      "message": "Caricamento elenco processi..."
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "Nome processo",
+      "ram_percent": "RAM %",
+      "memory": "Memoria"
+    },
+    "footer": {
+      "process_count_label": "Numero di processi",
+      "total_ram_label": "Utilizzo RAM totale",
+      "memory_distribution_label": "Distribuzione memoria",
+      "process_count_unit": "",
+      "total_ram_unit": "MB"
+    },
+    "header_bar": {
+      "main_title": "Monitor processi",
+      "last_update": "Ultimo aggiornamento"
+    },
+    "status_colors": {
+      "critical": "Critico",
+      "warning": "Avviso",
+      "normal": "Normale",
+      "low": "Basso"
+    },
+    "distribution": {
+      "na": "Nessun dato disponibile",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "Lo script non ha restituito dati",
+      "parse_error": "Errore nell'analisi dei dati"
+    }
+  },
+  "volume": {
+    "title": "Volume",
+    "muted": "Disattivato"
+  },
+  "bluetooth": {
+    "title": "Bluetooth",
+    "enabled": "Bluetooth attivo",
+    "disabled": "Bluetooth disattivo",
+    "devices_connected": "dispositivi connessi",
+    "pairing": "Associazione in corso...",
+    "connecting": "Connessione in corso...",
+    "connected": "Connesso",
+    "paired": "Associato",
+    "not_connected": "Non connesso",
+    "searching": "Ricerca dispositivi...",
+    "no_devices": "Nessun dispositivo trovato",
+    "turn_on": "Attiva Bluetooth per connettere dispositivi",
+    "pair_error": "Impossibile associare il dispositivo"
+  },
+  "wifi": {
+    "title": "WiFi",
+    "enabled": "WiFi attivo",
+    "disabled": "WiFi disattivo",
+    "not_connected": "Non connesso",
+    "available_networks": "Reti disponibili",
+    "searching": "Ricerca reti...",
+    "no_networks": "Nessuna rete trovata",
+    "turn_on": "Attiva WiFi per vedere le reti disponibili",
+    "forget": "Dimentica",
+    "connect": "Connetti",
+    "no_password": "Nessuna password richiesta",
+    "enter_password": "Inserisci password",
+    "password_required": "Inserisci la password",
+    "wrong_password": "Password errata"
+  },
+  "infoSection": {
+    "name": "Nome CPU",
+    "vendor": "Produttore",
+    "architecture": "Architettura",
+    "socket": "Socket",
+    "loading": "Caricamento...",
+    "undefined": "Non definito"
+  },
+  "CpuPane": {
+    "title": "Informazioni CPU"
+  },
+  "cpuStats": {
+    "totalUsage": "Utilizzo Totale",
+    "maxCore": "Core Più Alto",
+    "timeLabel": "⏱️ Tempo",
+    "dataPoints": "punti"
+  },
+  "weather": {
+    "title": "Meteo",
+    "apiKeyLabel": "Chiave API (weatherapi.com)",
+    "apiKeyPlaceholder": "Inserisci la tua chiave API...",
+    "apiKeyHint": "Ottieni una chiave API gratuita su: weatherapi.com\nLa chiave API verrà automaticamente salvata e validata",
+    "locationLabel": "Posizione",
+    "locationPlaceholder": "Cerca città...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}

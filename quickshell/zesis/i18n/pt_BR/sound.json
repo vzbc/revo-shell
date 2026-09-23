@@ -1,0 +1,9 @@
+{
+  "breadcrumb": "CONFIGURAÇÕES / SOM",
+  "title": "Som",
+  "master": "Principal",
+  "muted": "mudo",
+  "volumeOsdLabel": "OSD de Volume",
+  "outputWithName": "Saída  ·  %1",
+  "noOutput": "Nenhuma saída"
+}

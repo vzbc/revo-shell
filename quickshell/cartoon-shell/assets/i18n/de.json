@@ -1,0 +1,237 @@
+{
+  "settings": {
+    "title": "Einstellungen",
+    "general": "Allgemein",
+    "appearance": "Erscheinungsbild",
+    "wallpapers": "Hintergrundbilder",
+    "network": "Netzwerk",
+    "audio": "Audio",
+    "performance": "Leistung",
+    "shortcuts": "Tastenkombinationen",
+    "system": "System",
+    "language": "Sprache"
+  },
+  "dateFormat": {
+    "today": "Heute",
+    "tomorrow": "Morgen",
+    "day": {
+      "monday": "Montag",
+      "tuesday": "Dienstag",
+      "wednesday": "Mittwoch",
+      "thursday": "Donnerstag",
+      "friday": "Freitag",
+      "saturday": "Samstag",
+      "sunday": "Sonntag"
+    },
+    "month": {
+      "january": "Januar",
+      "february": "Februar",
+      "march": "März",
+      "april": "April",
+      "may": "Mai",
+      "june": "Juni",
+      "july": "Juli",
+      "august": "August",
+      "september": "September",
+      "october": "Oktober",
+      "november": "November",
+      "december": "Dezember"
+    }
+  },
+  "general": {
+    "title": "Allgemeine Einstellungen",
+    "language_label": "Sprache:",
+    "autostart_label": "Autostart:",
+    "notification_label": "Benachrichtigungen:",
+    "notification_system": "Systembenachrichtigungen anzeigen",
+    "notification_sound": "Benachrichtigungstöne",
+    "notification_performance": "Leistungsbenachrichtigungen"
+  },
+  "appearance": {
+    "title": "Erscheinungsbild",
+    "theme_label": "Thema:",
+    "theme_light": "Hell",
+    "theme_dark": "Dunkel",
+    "clock_panel_label": "Uhr-Panel:",
+    "panel_position_label": "Panel-Position:",
+    "position_top": "Oben",
+    "position_bottom": "Unten",
+    "clock_position_label": "Uhr-Position:",
+    "panel_height_label": "Panel-Höhe:"
+  },
+  "system": {
+    "application": "Anwendung",
+    "sleep": "Ruhezustand",
+    "logout": "Abmelden",
+    "shutdown": "Herunterfahren",
+    "restart": "Neu starten",
+    "lock": "Bildschirm sperren"
+  },
+  "music": {
+    "nowPlaying": "Wird abgespielt",
+    "paused": "Pausiert"
+  },
+  "mixer": {
+    "title": "Audio-Mixer",
+    "subtitle": "Verwalten Sie Audio-Streams und Lautstärke",
+    "output_device": "Ausgabegerät",
+    "application_streams": "Anwendungs-Audio-Streams",
+    "no_streams": "Keine aktiven Audio-Streams",
+    "active_streams": "Aktive Streams: %{count}"
+  },
+  "entry": {
+    "unknown_app": "Unbekannte Anwendung",
+    "unmute": "Stummschaltung aufheben",
+    "mute": "Stummschalten",
+    "volume_percent": "%{volume}%",
+    "media_name": "Medienname",
+    "volume_slider_tooltip": "Lautstärke anpassen",
+    "muted": "Stummgeschaltet",
+    "overdrive": "Lautstärke überschritten"
+  },
+  "calendar": {
+    "title": "Kalender",
+    "weekdays": {
+      "sunday": "So",
+      "monday": "Mo",
+      "tuesday": "Di",
+      "wednesday": "Mi",
+      "thursday": "Do",
+      "friday": "Fr",
+      "saturday": "Sa"
+    }
+  },
+  "wallpapers": {
+    "title": "Bilderverwaltung",
+    "total_images": "Bilder insgesamt:",
+    "path": "Pfad:",
+    "loading": "Laden...",
+    "loading_info": "Informationen werden geladen...",
+    "no_images": "Keine Bilder im Ordner ~/Pictures/Wallpapers gefunden",
+    "set_wallpaper": "Festlegen",
+    "already_set": "Festgelegt",
+    "delete": "Löschen",
+    "delete_confirm": "Löschen bestätigen",
+    "cancel": "Abbrechen",
+    "success_set": "Hintergrundbild erfolgreich festgelegt!",
+    "success_delete": "Bild erfolgreich gelöscht!"
+  },
+  "confirm": {
+    "title": "Bestätigen",
+    "message": "Sind Sie sicher, dass Sie {action} möchten?",
+    "yes": "Ja",
+    "no": "Nein",
+    "sleep": "in den Ruhezustand wechseln",
+    "lock": "den Bildschirm sperren",
+    "logout": "sich abmelden",
+    "restart": "neu starten",
+    "shutdown": "herunterfahren"
+  },
+  "ram": {
+    "title": "Prozess-Manager",
+    "panel_title": "RAM-Verwaltung",
+    "memory_monitor": "Speicherüberwachung",
+    "used": "Belegt",
+    "free": "Frei",
+    "available": "Verfügbar",
+    "no_swap": "Kein SWAP",
+    "loading_memory": "Speicherdaten werden geladen...",
+    "loading": {
+      "title": "⏳",
+      "message": "Prozessliste wird geladen..."
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "Prozessname",
+      "ram_percent": "RAM %",
+      "memory": "Speicher"
+    },
+    "footer": {
+      "process_count_label": "Prozessanzahl",
+      "total_ram_label": "RAM-Gesamtnutzung",
+      "memory_distribution_label": "Speicherverteilung",
+      "process_count_unit": "",
+      "total_ram_unit": "MB"
+    },
+    "header_bar": {
+      "main_title": "Prozess-Monitor",
+      "last_update": "Letzte Aktualisierung"
+    },
+    "status_colors": {
+      "critical": "Kritisch",
+      "warning": "Warnung",
+      "normal": "Normal",
+      "low": "Niedrig"
+    },
+    "distribution": {
+      "na": "Keine Daten verfügbar",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "Skript hat keine Daten zurückgegeben",
+      "parse_error": "Fehler beim Parsen der Daten"
+    }
+  },
+  "volume": {
+    "title": "Lautstärke",
+    "muted": "Stummgeschaltet"
+  },
+  "bluetooth": {
+    "title": "Bluetooth",
+    "enabled": "Bluetooth ist eingeschaltet",
+    "disabled": "Bluetooth ist ausgeschaltet",
+    "devices_connected": "Geräte verbunden",
+    "pairing": "Kopplung läuft...",
+    "connecting": "Verbindung wird hergestellt...",
+    "connected": "Verbunden",
+    "paired": "Gekoppelt",
+    "not_connected": "Nicht verbunden",
+    "searching": "Suche nach Geräten...",
+    "no_devices": "Keine Geräte gefunden",
+    "turn_on": "Bluetooth einschalten, um Geräte zu verbinden",
+    "pair_error": "Kopplung mit Gerät nicht möglich"
+  },
+  "wifi": {
+    "title": "WLAN",
+    "enabled": "WLAN ist eingeschaltet",
+    "disabled": "WLAN ist ausgeschaltet",
+    "not_connected": "Nicht verbunden",
+    "available_networks": "Verfügbare Netzwerke",
+    "searching": "Suche nach Netzwerken...",
+    "no_networks": "Keine Netzwerke gefunden",
+    "turn_on": "WLAN einschalten, um verfügbare Netzwerke anzuzeigen",
+    "forget": "Vergessen",
+    "connect": "Verbinden",
+    "no_password": "Kein Passwort erforderlich",
+    "enter_password": "Passwort eingeben",
+    "password_required": "Bitte Passwort eingeben",
+    "wrong_password": "Falsches Passwort"
+  },
+  "infoSection": {
+    "name": "CPU-Name",
+    "vendor": "Hersteller",
+    "architecture": "Architektur",
+    "socket": "Sockel",
+    "loading": "Wird geladen...",
+    "undefined": "Undefiniert"
+  },
+  "CpuPane": {
+    "title": "CPU-Informationen"
+  },
+  "cpuStats": {
+    "totalUsage": "Gesamtauslastung",
+    "maxCore": "Höchster Kern",
+    "timeLabel": "⏱️ Zeit",
+    "dataPoints": "Punkte"
+  },
+  "weather": {
+    "title": "Wetter",
+    "apiKeyLabel": "API-Schlüssel (weatherapi.com)",
+    "apiKeyPlaceholder": "Geben Sie Ihren API-Schlüssel ein...",
+    "apiKeyHint": "Kostenlosen API-Schlüssel erhalten unter: weatherapi.com\nAPI-Schlüssel wird automatisch gespeichert und validiert",
+    "locationLabel": "Standort",
+    "locationPlaceholder": "Stadt suchen...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}

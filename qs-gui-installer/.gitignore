@@ -1,0 +1,7 @@
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.qmlc
+*.qmlc
+.DS_Store

@@ -1,0 +1,233 @@
+{
+  "settings": {
+    "title": "Settings",
+    "general": "General",
+    "appearance": "Appearance",
+    "wallpapers": "Wallpapers",
+    "network": "Network",
+    "audio": "Audio",
+    "performance": "Performance",
+    "shortcuts": "Shortcuts",
+    "system": "System",
+    "language": "Language"
+  },
+  "dateFormat": {
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "day": {
+      "monday": "Monday",
+      "tuesday": "Tuesday",
+      "wednesday": "Wednesday",
+      "thursday": "Thursday",
+      "friday": "Friday",
+      "saturday": "Saturday",
+      "sunday": "Sunday"
+    },
+    "month": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    }
+  },
+  "general": {
+    "title": "General Settings",
+    "language_label": "Language:",
+    "autostart_label": "Auto-start:",
+    "notification_label": "Notifications:",
+    "notification_system": "Show system notifications",
+    "notification_sound": "Notification sounds",
+    "notification_performance": "Performance notifications"
+  },
+  "appearance": {
+    "title": "Appearance",
+    "theme_label": "Theme:",
+    "theme_light": "Light",
+    "theme_dark": "Dark",
+    "clock_panel_label": "Clock Panel:",
+    "panel_position_label": "Panel Position:",
+    "position_top": "Top",
+    "position_bottom": "Bottom",
+    "clock_position_label": "Clock Position:",
+    "panel_height_label": "Panel Height:"
+  },
+  "system": {
+    "application": "Application",
+    "sleep": "Sleep Mode",
+    "logout": "Logout",
+    "shutdown": "Shutdown",
+    "restart": "Restart",
+    "lock": "Lock Screen"
+  },
+  "mixer": {
+    "title": "Audio Mixer",
+    "subtitle": "Manage audio streams and volume",
+    "output_device": "Output Device",
+    "application_streams": "Application Audio Streams",
+    "no_streams": "No active audio streams",
+    "active_streams": "Active Streams: %{count}"
+  },
+  "entry": {
+    "unknown_app": "Unknown Application",
+    "unmute": "Unmute",
+    "mute": "Mute",
+    "volume_percent": "%{volume}%",
+    "media_name": "Media Name",
+    "volume_slider_tooltip": "Adjust Volume",
+    "muted": "Muted",
+    "overdrive": "Volume Overdrive"
+  },
+  "calendar": {
+    "title": "Calendar",
+    "weekdays": {
+      "sunday": "Sun",
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat"
+    }
+  },
+  "wallpapers": {
+    "title": "Image Management",
+    "total_images": "Total images:",
+    "path": "Path:",
+    "loading": "Loading...",
+    "loading_info": "Loading information...",
+    "no_images": "No images found in ~/Pictures/Wallpapers folder",
+    "set_wallpaper": "Set",
+    "already_set": "Applied",
+    "delete": "Delete",
+    "delete_confirm": "Confirm delete",
+    "cancel": "Cancel",
+    "success_set": "Wallpaper set successfully!",
+    "success_delete": "Image deleted successfully!"
+  },
+  "confirm": {
+    "title": "Confirm",
+    "message": "Are you sure you want to {action}?",
+    "yes": "Yes",
+    "no": "No",
+    "sleep": "enter sleep mode",
+    "lock": "lock the screen",
+    "logout": "logout",
+    "restart": "restart",
+    "shutdown": "shutdown"
+  },
+  "ram": {
+    "title": "Process Manager",
+    "panel_title": "RAM Manager",
+    "memory_monitor": "Memory Monitor",
+    "used": "Used",
+    "free": "Free",
+    "available": "Available",
+    "no_swap": "No SWAP",
+    "loading_memory": "Loading memory data...",
+    "loading": {
+      "title": "⏳",
+      "message": "Loading process list..."
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "Process Name",
+      "ram_percent": "RAM %",
+      "memory": "Memory"
+    },
+    "footer": {
+      "process_count_label": "Process Count",
+      "total_ram_label": "Total RAM Used",
+      "memory_distribution_label": "Memory Distribution",
+      "process_count_unit": "",
+      "total_ram_unit": "MB"
+    },
+    "header_bar": {
+      "main_title": "Process Monitor",
+      "last_update": "Last Update"
+    },
+    "status_colors": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "normal": "Normal",
+      "low": "Low"
+    },
+    "distribution": {
+      "na": "No data available",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "Script returned no data",
+      "parse_error": "Error parsing output data"
+    }
+  },
+  "volume": {
+    "title": "Volume",
+    "muted": "Muted"
+  },
+  "bluetooth": {
+    "title": "Bluetooth",
+    "enabled": "Bluetooth is on",
+    "disabled": "Bluetooth is off",
+    "devices_connected": "devices connected",
+    "pairing": "Pairing...",
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "paired": "Paired",
+    "not_connected": "Not connected",
+    "searching": "Searching for devices...",
+    "no_devices": "No devices found",
+    "turn_on": "Turn on Bluetooth to connect to devices",
+    "pair_error": "Unable to pair with device"
+  },
+  "wifi": {
+    "title": "WiFi",
+    "enabled": "WiFi is on",
+    "disabled": "WiFi is off",
+    "not_connected": "Not connected",
+    "available_networks": "Available networks",
+    "searching": "Searching for networks...",
+    "no_networks": "No networks found",
+    "turn_on": "Turn on WiFi to see available networks",
+    "forget": "Forget",
+    "connect": "Connect",
+    "no_password": "No password required",
+    "enter_password": "Enter password",
+    "password_required": "Please enter password",
+    "wrong_password": "Wrong password"
+  },
+  "infoSection": {
+    "name": "CPU Name",
+    "vendor": "Vendor",
+    "architecture": "Architecture",
+    "socket": "Socket",
+    "loading": "Loading...",
+    "undefined": "Undefined"
+  },
+  "CpuPane": {
+    "title": "CPU Information"
+  },
+  "cpuStats": {
+    "totalUsage": "Total Usage",
+    "maxCore": "Highest Core",
+    "timeLabel": "⏱️ Time",
+    "dataPoints": "points"
+  },
+  "weather": {
+    "title": "Weather",
+    "apiKeyLabel": "API Key (weatherapi.com)",
+    "apiKeyPlaceholder": "Enter your API key...",
+    "apiKeyHint": "Get a free API key at: weatherapi.com\nAPI key will be automatically saved and validated when you enter it",
+    "locationLabel": "Location",
+    "locationPlaceholder": "Search for a city...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}

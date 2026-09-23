@@ -1,0 +1,1 @@
+/home/revo/.config/hypr/scripts/quickshell/guide/GuidePopup.qml

@@ -1,0 +1,237 @@
+{
+  "settings": {
+    "title": "सेटिंग्स",
+    "general": "सामान्य",
+    "appearance": "दिखावट",
+    "wallpapers": "वॉलपेपर",
+    "network": "नेटवर्क",
+    "audio": "ऑडियो",
+    "performance": "प्रदर्शन",
+    "shortcuts": "शॉर्टकट",
+    "system": "सिस्टम",
+    "language": "भाषा"
+  },
+  "dateFormat": {
+    "today": "आज",
+    "tomorrow": "कल",
+    "day": {
+      "monday": "सोमवार",
+      "tuesday": "मंगलवार",
+      "wednesday": "बुधवार",
+      "thursday": "गुरुवार",
+      "friday": "शुक्रवार",
+      "saturday": "शनिवार",
+      "sunday": "रविवार"
+    },
+    "month": {
+      "january": "जनवरी",
+      "february": "फरवरी",
+      "march": "मार्च",
+      "april": "अप्रैल",
+      "may": "मई",
+      "june": "जून",
+      "july": "जुलाई",
+      "august": "अगस्त",
+      "september": "सितंबर",
+      "october": "अक्टूबर",
+      "november": "नवंबर",
+      "december": "दिसंबर"
+    }
+  },
+  "general": {
+    "title": "सामान्य सेटिंग्स",
+    "language_label": "भाषा:",
+    "autostart_label": "ऑटो-स्टार्ट:",
+    "notification_label": "सूचनाएं:",
+    "notification_system": "सिस्टम सूचनाएं दिखाएं",
+    "notification_sound": "सूचना ध्वनि",
+    "notification_performance": "प्रदर्शन सूचनाएं"
+  },
+  "appearance": {
+    "title": "दिखावट",
+    "theme_label": "थीम:",
+    "theme_light": "हल्का",
+    "theme_dark": "गहरा",
+    "clock_panel_label": "घड़ी पैनल:",
+    "panel_position_label": "पैनल की स्थिति:",
+    "position_top": "ऊपर",
+    "position_bottom": "नीचे",
+    "clock_position_label": "घड़ी की स्थिति:",
+    "panel_height_label": "पैनल की ऊंचाई:"
+  },
+  "system": {
+    "application": "एप्लिकेशन",
+    "sleep": "स्लीप मोड",
+    "logout": "लॉगआउट",
+    "shutdown": "शटडाउन",
+    "restart": "पुनः आरंभ करें",
+    "lock": "स्क्रीन लॉक करें"
+  },
+  "mixer": {
+    "title": "ऑडियो मिक्सर",
+    "subtitle": "ऑडियो स्ट्रीम और वॉल्यूम प्रबंधित करें",
+    "output_device": "आउटपुट डिवाइस",
+    "application_streams": "एप्लिकेशन ऑडियो स्ट्रीम",
+    "no_streams": "कोई सक्रिय ऑडियो स्ट्रीम नहीं",
+    "active_streams": "सक्रिय स्ट्रीम: %{count}"
+  },
+  "entry": {
+    "unknown_app": "अज्ञात एप्लिकेशन",
+    "unmute": "अनम्यूट करें",
+    "mute": "म्यूट करें",
+    "volume_percent": "%{volume}%",
+    "media_name": "मीडिया नाम",
+    "volume_slider_tooltip": "वॉल्यूम समायोजित करें",
+    "muted": "म्यूट किया गया",
+    "overdrive": "वॉल्यूम ओवरड्राइव"
+  },
+  "music": {
+    "nowPlaying": "अब चल रहा है",
+    "paused": "रोका गया"
+  },
+  "calendar": {
+    "title": "कैलेंडर",
+    "weekdays": {
+      "sunday": "रवि",
+      "monday": "सोम",
+      "tuesday": "मंगल",
+      "wednesday": "बुध",
+      "thursday": "गुरु",
+      "friday": "शुक्र",
+      "saturday": "शनि"
+    }
+  },
+  "wallpapers": {
+    "title": "छवि प्रबंधन",
+    "total_images": "कुल छवियां:",
+    "path": "पथ:",
+    "loading": "लोड हो रहा है...",
+    "loading_info": "जानकारी लोड हो रही है...",
+    "no_images": "~/Pictures/Wallpapers फोल्डर में कोई छवि नहीं मिली",
+    "set_wallpaper": "सेट करें",
+    "already_set": "सेट किया गया",
+    "delete": "हटाएं",
+    "delete_confirm": "हटाने की पुष्टि करें",
+    "cancel": "रद्द करें",
+    "success_set": "वॉलपेपर सफलतापूर्वक सेट किया गया!",
+    "success_delete": "छवि सफलतापूर्वक हटा दी गई!"
+  },
+  "confirm": {
+    "title": "पुष्टि करें",
+    "message": "क्या आप वाकई {action} चाहते हैं?",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "sleep": "स्लीप मोड में जाना",
+    "lock": "स्क्रीन लॉक करना",
+    "logout": "लॉगआउट करना",
+    "restart": "पुनः आरंभ करना",
+    "shutdown": "शटडाउन करना"
+  },
+  "ram": {
+    "title": "प्रक्रिया प्रबंधक",
+    "panel_title": "RAM प्रबंधक",
+    "memory_monitor": "मेमोरी मॉनिटर",
+    "used": "उपयोग में",
+    "free": "खाली",
+    "available": "उपलब्ध",
+    "no_swap": "कोई SWAP नहीं",
+    "loading_memory": "मेमोरी डेटा लोड हो रहा है...",
+    "loading": {
+      "title": "⏳",
+      "message": "प्रक्रिया सूची लोड हो रही है..."
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "प्रक्रिया का नाम",
+      "ram_percent": "RAM %",
+      "memory": "मेमोरी"
+    },
+    "footer": {
+      "process_count_label": "प्रक्रिया संख्या",
+      "total_ram_label": "कुल RAM उपयोग",
+      "memory_distribution_label": "मेमोरी वितरण",
+      "process_count_unit": "",
+      "total_ram_unit": "MB"
+    },
+    "header_bar": {
+      "main_title": "प्रक्रिया मॉनिटर",
+      "last_update": "अंतिम अपडेट"
+    },
+    "status_colors": {
+      "critical": "गंभीर",
+      "warning": "चेतावनी",
+      "normal": "सामान्य",
+      "low": "कम"
+    },
+    "distribution": {
+      "na": "कोई डेटा उपलब्ध नहीं",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "स्क्रिप्ट ने कोई डेटा नहीं लौटाया",
+      "parse_error": "डेटा पार्स करने में त्रुटि"
+    }
+  },
+  "volume": {
+    "title": "वॉल्यूम",
+    "muted": "म्यूट"
+  },
+  "bluetooth": {
+    "title": "ब्लूटूथ",
+    "enabled": "ब्लूटूथ चालू है",
+    "disabled": "ब्लूटूथ बंद है",
+    "devices_connected": "डिवाइस कनेक्ट हैं",
+    "pairing": "पेयरिंग हो रही है...",
+    "connecting": "कनेक्ट हो रहा है...",
+    "connected": "कनेक्टेड",
+    "paired": "पेयर किया गया",
+    "not_connected": "कनेक्ट नहीं है",
+    "searching": "डिवाइस खोज रहे हैं...",
+    "no_devices": "कोई डिवाइस नहीं मिला",
+    "turn_on": "डिवाइस कनेक्ट करने के लिए ब्लूटूथ चालू करें",
+    "pair_error": "डिवाइस के साथ पेयर नहीं हो सका"
+  },
+  "wifi": {
+    "title": "वाई-फाई",
+    "enabled": "वाई-फाई चालू है",
+    "disabled": "वाई-फाई बंद है",
+    "not_connected": "कनेक्ट नहीं है",
+    "available_networks": "उपलब्ध नेटवर्क",
+    "searching": "नेटवर्क खोज रहे हैं...",
+    "no_networks": "कोई नेटवर्क नहीं मिला",
+    "turn_on": "उपलब्ध नेटवर्क देखने के लिए वाई-फाई चालू करें",
+    "forget": "भूल जाएं",
+    "connect": "कनेक्ट करें",
+    "no_password": "पासवर्ड की आवश्यकता नहीं",
+    "enter_password": "पासवर्ड दर्ज करें",
+    "password_required": "कृपया पासवर्ड दर्ज करें",
+    "wrong_password": "गलत पासवर्ड"
+  },
+  "infoSection": {
+    "name": "CPU का नाम",
+    "vendor": "निर्माता",
+    "architecture": "वास्तुकला",
+    "socket": "सॉकेट",
+    "loading": "लोड हो रहा है...",
+    "undefined": "अपरिभाषित"
+  },
+  "CpuPane": {
+    "title": "CPU जानकारी"
+  },
+  "cpuStats": {
+    "totalUsage": "कुल उपयोग",
+    "maxCore": "उच्चतम कोर",
+    "timeLabel": "⏱️ समय",
+    "dataPoints": "अंक"
+  },
+  "weather": {
+    "title": "मौसम",
+    "apiKeyLabel": "API कुंजी (weatherapi.com)",
+    "apiKeyPlaceholder": "अपनी API कुंजी दर्ज करें...",
+    "apiKeyHint": "मुफ्त API कुंजी प्राप्त करें: weatherapi.com\nAPI कुंजी स्वचालित रूप से सहेजी और सत्यापित की जाएगी",
+    "locationLabel": "स्थान",
+    "locationPlaceholder": "शहर खोजें...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}

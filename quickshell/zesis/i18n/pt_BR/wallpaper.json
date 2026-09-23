@@ -1,0 +1,22 @@
+{
+  "searchPlaceholder": "Buscar papéis de parede...",
+  "noneFoundIn": "Nenhum papel de parede encontrado em\n%1",
+  "noResults": "Nenhum resultado",
+  "breadcrumb": "CONFIGURAÇÕES / PAPEL DE PAREDE",
+  "title": "Papel de Parede & Tema",
+  "popupTitle": "Temas",
+  "dark": "Escuro",
+  "light": "Claro",
+  "wallpapersFolderLabel": "Pasta de papéis de parede",
+  "resetToDefault": "Restaurar padrão",
+  "backendLabel": "Backend do papel de parede",
+  "customCommandPlaceholder": "ex.: swww img \"$1\" --transition-type fade",
+  "autoStartDaemon": "Iniciar automaticamente o daemon de papel de parede",
+  "applying": "Aplicando...",
+  "colorPalette": "Paleta de Cores",
+  "applyTo": "Aplicar em",
+  "allMonitors": "Todos os monitores",
+  "resetToGlobal": "Restaurar para global",
+  "colorsFromLabel": "Cores de",
+  "templateWarning": "Seu próprio modelo do matugen falhou ao executar: %1"
+}

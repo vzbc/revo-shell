@@ -1,0 +1,68 @@
+#  La API de plugins de k4.
+#
+#  Un plugin importa QtQuick y K4. Nada más. Todo lo que aquí se ofrece está
+#  envuelto a propósito para que el día que exista un host de Windows o Mac se
+#  reimplemente esta carpeta y los plugins no se enteren.
+#
+#  Los servicios internos de services/ SÍ pueden usar Quickshell directamente:
+#  son implementación, no superficie pública. La regla es para plugins/.
+
+module K4
+
+Plugin 1.0 Plugin.qml
+singleton Puente 1.0 Puente.qml
+singleton Tema 1.0 Tema.qml
+Etiqueta 1.0 Etiqueta.qml
+
+#  Piezas visuales: para que un plugin de fuera pueda tener la misma cara que
+#  la barra sin dibujarla a mano. Ninguna importa core/ — están escritas contra
+#  K4.Tema, que es la regla que vigila tools/api.py.
+Glifo 1.0 Glifo.qml
+IconoPlugin 1.0 IconoPlugin.qml
+Interruptor 1.0 Interruptor.qml
+Deslizador 1.0 Deslizador.qml
+Medidor 1.0 Medidor.qml
+Baldosa 1.0 Baldosa.qml
+Boton 1.0 Boton.qml
+Aparicion 1.0 Aparicion.qml
+Rodillo 1.0 Rodillo.qml
+Desplazador 1.0 Desplazador.qml
+Estela 1.0 Estela.qml
+FocoInicial 1.0 FocoInicial.qml
+singleton Idioma 1.0 Idioma.qml
+Guardado 1.0 Guardado.qml
+
+singleton Paths 1.0 Paths.qml
+singleton Pildora 1.0 Pildora.qml
+
+#  Los datos vivos del sistema. Leer suele ser libre; lo que cambia algo pide
+#  su permiso declarado — y el portapapeles pide permiso hasta para leerlo.
+singleton Audio 1.0 Audio.qml
+singleton Medios 1.0 Medios.qml
+singleton Notificaciones 1.0 Notificaciones.qml
+singleton Red 1.0 Red.qml
+singleton Escritorios 1.0 Escritorios.qml
+singleton Portapapeles 1.0 Portapapeles.qml
+singleton Reloj 1.0 Reloj.qml
+
+#  Puntos de enganche: salir en sitios de la barra que no son tuyos.
+Ajustes 1.0 Ajustes.qml
+Lanzador 1.0 Lanzador.qml
+singleton Isla 1.0 Isla.qml
+Sonido 1.0 Sonido.qml
+Process 1.0 Process.qml
+Ipc 1.0 Ipc.qml
+singleton Sistema 1.0 Sistema.qml
+singleton Terminal 1.0 Terminal.qml
+singleton Apps 1.0 Apps.qml
+Fichero 1.0 Fichero.qml
+Icono 1.0 Icono.qml
+MenuBandeja 1.0 MenuBandeja.qml
+Ventana 1.0 Ventana.qml
+PorPantalla 1.0 PorPantalla.qml
+Atajo 1.0 Atajo.qml
+Cargador 1.0 Cargador.qml
+BloqueoSesion 1.0 BloqueoSesion.qml
+SuperficieBloqueo 1.0 SuperficieBloqueo.qml
+Autenticacion 1.0 Autenticacion.qml
+singleton Huella 1.0 Huella.qml

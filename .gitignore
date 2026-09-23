@@ -1,0 +1,48 @@
+# Secrets / local env
+.env
+**/.env
+*.pem
+*.key
+id_rsa*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+qs-gui-installer/venv/
+qs-gui-installer/__pycache__/
+
+# Build / caches
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+.cache/
+node_modules/
+.qmlcache/
+.qmlc
+*.qmlc
+
+# Nested VCS (should already be gone)
+.git/
+**/.git/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Backups (keep source only)
+*.backup.*
+*.bak
+!**/monitors.conf.bak
+
+# Installer temp
+dotfiles_repo/
+hyprland_configs_repo/
+quickshell_repo/

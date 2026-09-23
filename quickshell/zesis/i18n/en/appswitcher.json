@@ -1,0 +1,15 @@
+{
+  "breadcrumb": "SETTINGS / APP SWITCHER",
+  "title": "App Switcher",
+  "defaultView": "Default view",
+  "windowCards": "Window cards",
+  "workspaceGrid": "Workspace grid",
+  "confirmOnRelease": "Confirm on key release",
+  "rememberLastView": "Remember last view this session",
+  "followMovedWindow": "Follow moved window",
+  "newWorkspace": "New workspace",
+  "fillGaps": "Fill gaps",
+  "append": "Append",
+  "switchToWorkspaceView": "Switch to workspace view",
+  "switchToWindowView": "Switch to window view"
+}

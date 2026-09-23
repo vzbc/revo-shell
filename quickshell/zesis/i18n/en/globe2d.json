@@ -1,0 +1,4 @@
+{
+  "shaderFailedTitle": "Globe shader failed to load",
+  "shaderFailedDetail": "globeshader/globe.qsb is missing or invalid - run `nix run .#compile-shaders` if using Nix, otherwise see the README's shader-compiling section.%1"
+}

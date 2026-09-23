@@ -1,0 +1,58 @@
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls
+import Quickshell
+
+import "root:/themes"
+
+Rectangle {
+    id: root
+
+    // الخصائص التي سنمررها
+    required property string messageText
+    required property string role // "user" or "model"
+    property bool isUser: role === "user"
+    readonly property var theme: ThemeManager.selectedTheme
+
+    width: Math.min(parent.width * 0.85, messageLayout.implicitWidth + 30)
+    height: messageLayout.implicitHeight + 20
+
+    // المحاذاة: المستخدم يمين، المودل يسار
+    anchors.right: isUser ? parent.right : undefined
+    anchors.left: isUser ? undefined : parent.left
+
+    radius: root.theme.dimensions.shapeMedium
+
+    // الألوان حسب الثيم والمرسل
+    color: isUser ? root.theme.colors.primary : root.theme.colors.surfaceContainerHigh
+
+    opacity: 0.9
+
+    ColumnLayout {
+        id: messageLayout
+        anchors.centerIn: parent
+        width: parent.width - 24
+        spacing: 4
+
+        // اسم المرسل (اختياري)
+        Text {
+            text: root.isUser ? "You" : "Gemini"
+            font.pixelSize: 10
+            font.bold: true
+            color: root.isUser ? root.theme.colors.onPrimary : root.theme.colors.secondary
+            Layout.alignment: Qt.AlignLeft
+        }
+
+        // نص الرسالة
+        Text {
+            text: root.messageText
+            color: root.isUser ? root.theme.colors.onPrimary : root.theme.colors.onSurface
+
+            font.pixelSize: 13
+            wrapMode: Text.Wrap
+            textFormat: Text.MarkdownText // هام جداً لتنسيق الأكواد
+
+            Layout.fillWidth: true
+        }
+    }
+}

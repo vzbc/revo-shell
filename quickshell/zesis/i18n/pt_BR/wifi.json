@@ -1,0 +1,22 @@
+{
+  "breadcrumb": "CONFIGURAÇÕES / SISTEMA",
+  "title": "Wi-Fi",
+  "networkHeader": "Rede",
+  "ethernet": "Ethernet",
+  "connected": "Conectado",
+  "noAdapterFound": "Nenhum adaptador Wi-Fi encontrado",
+  "off": "Wi-Fi está desligado",
+  "availableNetworksSection": "REDES DISPONÍVEIS",
+  "savedBadge": "salva",
+  "savedStatus": "Salva",
+  "disconnect": "Desconectar",
+  "connect": "Conectar",
+  "connectedWithPercent": "Conectado  ·  %1%",
+  "secured": "protegida",
+  "open": "aberta",
+  "forget": "Esquecer",
+  "wrongPassword": "Senha incorreta",
+  "connectionFailed": "Falha na conexão",
+  "passwordForPlaceholder": "Senha para %1",
+  "join": "Entrar"
+}

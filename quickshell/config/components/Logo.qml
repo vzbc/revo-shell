@@ -1,0 +1,43 @@
+import QtQuick
+import QtQuick.Layouts
+import Quickshell
+import qs.popups.logo
+import ".."
+
+Item {
+    Variables { id: v }
+    id: root
+
+    Layout.leftMargin: 12
+    Layout.fillHeight: true
+    implicitWidth: logoLabel.implicitWidth + 26  // 12px left pad + 14px right pad
+
+    property bool hovered: false
+
+    Rectangle {
+        anchors.fill: parent
+        color: logoMenu.visible ? v.accentColor : "transparent"
+    }
+
+    Text {
+        id: logoLabel
+        anchors.centerIn: parent
+        text: ""
+        font.family: "FiraCode Nerd Font"
+        font.pixelSize: 30
+        color: logoMenu.visible ? v.accentForeground : v.textColor
+    }
+
+    MouseArea {
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onEntered: root.hovered = true
+        onExited: root.hovered = false
+        onClicked: logoMenu.visible = !logoMenu.visible
+    }
+    LogoMenu {
+        id: logoMenu
+        visible: false
+    }
+}

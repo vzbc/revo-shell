@@ -1,0 +1,13 @@
+{
+  "breadcrumb": "CONFIGURAÇÕES / SISTEMA",
+  "title": "Bateria",
+  "noBattery": "Sem bateria",
+  "notDetected": "Não detectada",
+  "fullyCharged": "Totalmente carregada",
+  "untilFull": "%1 até carga completa",
+  "charging": "Carregando",
+  "remaining": "%1 restante",
+  "statusLabel": "Status",
+  "chargingRate": "Taxa de carregamento",
+  "powerDraw": "Consumo de energia"
+}

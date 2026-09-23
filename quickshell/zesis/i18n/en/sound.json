@@ -1,0 +1,9 @@
+{
+  "breadcrumb": "SETTINGS / SOUND",
+  "title": "Sound",
+  "master": "Master",
+  "muted": "muted",
+  "volumeOsdLabel": "Volume OSD",
+  "outputWithName": "Output  ·  %1",
+  "noOutput": "No output"
+}

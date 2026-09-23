@@ -1,0 +1,22 @@
+{
+  "title": "Settings",
+  "searchPlaceholder": "Search settings",
+  "comingSoon": "Coming soon",
+  "groupAppearance": "APPEARANCE",
+  "groupBarWidgets": "BAR & WIDGETS",
+  "groupDevices": "DEVICES",
+  "groupAccount": "ACCOUNT",
+  "groupAbout": "ABOUT",
+  "navAppearance": "Appearance",
+  "navWallpaper": "Wallpaper",
+  "navBar": "Bar",
+  "navClock": "Clock",
+  "navAppSwitcher": "App Switcher",
+  "navWorkspace": "Workspace",
+  "navDisplay": "Display & Scale",
+  "navBluetooth": "Bluetooth",
+  "navWifi": "Wi-Fi",
+  "navSound": "Sound",
+  "navUser": "User",
+  "navAbout": "About"
+}

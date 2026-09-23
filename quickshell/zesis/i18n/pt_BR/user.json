@@ -1,0 +1,22 @@
+{
+  "breadcrumb": "CONFIGURAÇÕES / USUÁRIO",
+  "title": "Usuário",
+  "changeAvatar": "Alterar avatar",
+  "avatarLabel": "AVATAR",
+  "identitySection": "IDENTIDADE",
+  "nameLabel": "Nome",
+  "nameHint": "Como o shell te cumprimenta",
+  "namePlaceholder": "Seu nome",
+  "heroCardSection": "CARTÃO PRINCIPAL",
+  "followWallpaper": "Seguir papel de parede",
+  "followWallpaperHint": "Usar o papel de parede atual como fundo do cartão principal",
+  "customImage": "Imagem personalizada",
+  "noImageSelected": "Nenhuma imagem selecionada",
+  "chooseImage": "Escolher imagem",
+  "chooseHeroImageDialogTitle": "Escolher Imagem do Cartão Principal",
+  "chooseAvatarDialogTitle": "Escolher Imagem do Avatar",
+  "languageSection": "IDIOMA",
+  "languageLabel": "Idioma",
+  "languageHint": "Idioma da interface",
+  "languageAuto": "Automático"
+}

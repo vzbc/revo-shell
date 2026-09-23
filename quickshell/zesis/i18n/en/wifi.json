@@ -1,0 +1,22 @@
+{
+  "breadcrumb": "SETTINGS / SYSTEM",
+  "title": "Wi-Fi",
+  "networkHeader": "Network",
+  "ethernet": "Ethernet",
+  "connected": "Connected",
+  "noAdapterFound": "No Wi-Fi adapter found",
+  "off": "Wi-Fi is off",
+  "availableNetworksSection": "AVAILABLE NETWORKS",
+  "savedBadge": "saved",
+  "savedStatus": "Saved",
+  "disconnect": "Disconnect",
+  "connect": "Connect",
+  "connectedWithPercent": "Connected  ·  %1%",
+  "secured": "secured",
+  "open": "open",
+  "forget": "Forget",
+  "wrongPassword": "Wrong password",
+  "connectionFailed": "Connection failed",
+  "passwordForPlaceholder": "Password for %1",
+  "join": "Join"
+}

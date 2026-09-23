@@ -1,0 +1,22 @@
+{
+  "title": "Configurações",
+  "searchPlaceholder": "Buscar configurações",
+  "comingSoon": "Em breve",
+  "groupAppearance": "APARÊNCIA",
+  "groupBarWidgets": "BARRA E WIDGETS",
+  "groupDevices": "DISPOSITIVOS",
+  "groupAccount": "CONTA",
+  "groupAbout": "SOBRE",
+  "navAppearance": "Aparência",
+  "navWallpaper": "Papel de parede",
+  "navBar": "Barra",
+  "navClock": "Relógio",
+  "navAppSwitcher": "Alternador de apps",
+  "navWorkspace": "Área de trabalho",
+  "navDisplay": "Tela e escala",
+  "navBluetooth": "Bluetooth",
+  "navWifi": "Wi-Fi",
+  "navSound": "Som",
+  "navUser": "Usuário",
+  "navAbout": "Sobre"
+}

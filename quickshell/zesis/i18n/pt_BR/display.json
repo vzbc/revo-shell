@@ -1,0 +1,11 @@
+{
+  "breadcrumb": "CONFIGURAÇÕES / TELA E ESCALA",
+  "title": "Tela e Escala",
+  "monitorFallback": "Monitor",
+  "resolutionSummary": "%1 × %2 @ %3 Hz",
+  "resolutionLabel": "Resolução",
+  "refreshRateLabel": "Taxa de Atualização",
+  "hzValue": "%1 Hz",
+  "apply": "Aplicar",
+  "active": "Ativo"
+}

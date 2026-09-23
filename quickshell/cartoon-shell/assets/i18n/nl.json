@@ -1,0 +1,237 @@
+{
+  "settings": {
+    "title": "Instellingen",
+    "general": "Algemeen",
+    "appearance": "Uiterlijk",
+    "wallpapers": "Achtergronden",
+    "network": "Netwerk",
+    "audio": "Audio",
+    "performance": "Prestaties",
+    "shortcuts": "Sneltoetsen",
+    "system": "Systeem",
+    "language": "Taal"
+  },
+  "dateFormat": {
+    "today": "Vandaag",
+    "tomorrow": "Morgen",
+    "day": {
+      "monday": "Maandag",
+      "tuesday": "Dinsdag",
+      "wednesday": "Woensdag",
+      "thursday": "Donderdag",
+      "friday": "Vrijdag",
+      "saturday": "Zaterdag",
+      "sunday": "Zondag"
+    },
+    "month": {
+      "january": "Januari",
+      "february": "Februari",
+      "march": "Maart",
+      "april": "April",
+      "may": "Mei",
+      "june": "Juni",
+      "july": "Juli",
+      "august": "Augustus",
+      "september": "September",
+      "october": "Oktober",
+      "november": "November",
+      "december": "December"
+    }
+  },
+  "general": {
+    "title": "Algemene instellingen",
+    "language_label": "Taal:",
+    "autostart_label": "Automatisch starten:",
+    "notification_label": "Meldingen:",
+    "notification_system": "Systeemmeldingen tonen",
+    "notification_sound": "Meldingsgeluiden",
+    "notification_performance": "Prestatiemeldingen"
+  },
+  "appearance": {
+    "title": "Uiterlijk",
+    "theme_label": "Thema:",
+    "theme_light": "Licht",
+    "theme_dark": "Donker",
+    "clock_panel_label": "Klokpaneel:",
+    "panel_position_label": "Paneelpositie:",
+    "position_top": "Boven",
+    "position_bottom": "Onder",
+    "clock_position_label": "Klokpositie:",
+    "panel_height_label": "Paneelhoogte:"
+  },
+  "system": {
+    "application": "Applicatie",
+    "sleep": "Slaapmodus",
+    "logout": "Uitloggen",
+    "shutdown": "Afsluiten",
+    "restart": "Herstarten",
+    "lock": "Scherm vergrendelen"
+  },
+  "mixer": {
+    "title": "Geluidsmixer",
+    "subtitle": "Beheer audiostreams en volume",
+    "output_device": "Uitvoerapparaat",
+    "application_streams": "Toepassingsaudiostreams",
+    "no_streams": "Geen actieve audiostreams",
+    "active_streams": "Actieve streams: %{count}"
+  },
+  "entry": {
+    "unknown_app": "Onbekende toepassing",
+    "unmute": "Geluid inschakelen",
+    "mute": "Geluid uitschakelen",
+    "volume_percent": "%{volume}%",
+    "media_name": "Medianaam",
+    "volume_slider_tooltip": "Pas volume aan",
+    "muted": "Geluid uitgeschakeld",
+    "overdrive": "Geluid overdreven"
+  },
+  "music": {
+    "nowPlaying": "Nu aan het afspelen",
+    "paused": "Gepauzeerd"
+  },
+  "calendar": {
+    "title": "Kalender",
+    "weekdays": {
+      "sunday": "Zo",
+      "monday": "Ma",
+      "tuesday": "Di",
+      "wednesday": "Wo",
+      "thursday": "Do",
+      "friday": "Vr",
+      "saturday": "Za"
+    }
+  },
+  "wallpapers": {
+    "title": "Afbeeldingenbeheer",
+    "total_images": "Totaal afbeeldingen:",
+    "path": "Pad:",
+    "loading": "Laden...",
+    "loading_info": "Informatie laden...",
+    "no_images": "Geen afbeeldingen gevonden in de map ~/Pictures/Wallpapers",
+    "set_wallpaper": "Instellen",
+    "already_set": "Ingesteld",
+    "delete": "Verwijderen",
+    "delete_confirm": "Verwijderen bevestigen",
+    "cancel": "Annuleren",
+    "success_set": "Achtergrond succesvol ingesteld!",
+    "success_delete": "Afbeelding succesvol verwijderd!"
+  },
+  "confirm": {
+    "title": "Bevestigen",
+    "message": "Weet u zeker dat u {action} wilt?",
+    "yes": "Ja",
+    "no": "Nee",
+    "sleep": "naar slaapstand gaan",
+    "lock": "het scherm vergrendelen",
+    "logout": "uitloggen",
+    "restart": "herstarten",
+    "shutdown": "afsluiten"
+  },
+  "ram": {
+    "title": "Procesbeheer",
+    "panel_title": "RAM-beheer",
+    "memory_monitor": "Geheugenmonitor",
+    "used": "Gebruikt",
+    "free": "Vrij",
+    "available": "Beschikbaar",
+    "no_swap": "Geen SWAP",
+    "loading_memory": "Geheugengegevens laden...",
+    "loading": {
+      "title": "⏳",
+      "message": "Proceslijst laden..."
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "Procesnaam",
+      "ram_percent": "RAM %",
+      "memory": "Geheugen"
+    },
+    "footer": {
+      "process_count_label": "Aantal processen",
+      "total_ram_label": "Totaal RAM-gebruik",
+      "memory_distribution_label": "Geheugenverdeling",
+      "process_count_unit": "",
+      "total_ram_unit": "MB"
+    },
+    "header_bar": {
+      "main_title": "Procesmonitor",
+      "last_update": "Laatste update"
+    },
+    "status_colors": {
+      "critical": "Kritiek",
+      "warning": "Waarschuwing",
+      "normal": "Normaal",
+      "low": "Laag"
+    },
+    "distribution": {
+      "na": "Geen gegevens beschikbaar",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "Script heeft geen gegevens geretourneerd",
+      "parse_error": "Fout bij het parsen van gegevens"
+    }
+  },
+  "volume": {
+    "title": "Volume",
+    "muted": "Gedempt"
+  },
+  "bluetooth": {
+    "title": "Bluetooth",
+    "enabled": "Bluetooth is aan",
+    "disabled": "Bluetooth is uit",
+    "devices_connected": "apparaten verbonden",
+    "pairing": "Koppelen...",
+    "connecting": "Verbinden...",
+    "connected": "Verbonden",
+    "paired": "Gekoppeld",
+    "not_connected": "Niet verbonden",
+    "searching": "Apparaten zoeken...",
+    "no_devices": "Geen apparaten gevonden",
+    "turn_on": "Zet Bluetooth aan om apparaten te verbinden",
+    "pair_error": "Kan niet koppelen met apparaat"
+  },
+  "wifi": {
+    "title": "WiFi",
+    "enabled": "WiFi is aan",
+    "disabled": "WiFi is uit",
+    "not_connected": "Niet verbonden",
+    "available_networks": "Beschikbare netwerken",
+    "searching": "Netwerken zoeken...",
+    "no_networks": "Geen netwerken gevonden",
+    "turn_on": "Zet WiFi aan om beschikbare netwerken te zien",
+    "forget": "Vergeten",
+    "connect": "Verbinden",
+    "no_password": "Geen wachtwoord nodig",
+    "enter_password": "Wachtwoord invoeren",
+    "password_required": "Voer een wachtwoord in",
+    "wrong_password": "Onjuist wachtwoord"
+  },
+  "infoSection": {
+    "name": "CPU-naam",
+    "vendor": "Fabrikant",
+    "architecture": "Architectuur",
+    "socket": "Socket",
+    "loading": "Laden...",
+    "undefined": "Ongedefinieerd"
+  },
+  "CpuPane": {
+    "title": "CPU-informatie"
+  },
+  "cpuStats": {
+    "totalUsage": "Totaal Gebruik",
+    "maxCore": "Hoogste Core",
+    "timeLabel": "⏱️ Tijd",
+    "dataPoints": "punten"
+  },
+  "weather": {
+    "title": "Weer",
+    "apiKeyLabel": "API-sleutel (weatherapi.com)",
+    "apiKeyPlaceholder": "Voer uw API-sleutel in...",
+    "apiKeyHint": "Verkrijg een gratis API-sleutel op: weatherapi.com\nAPI-sleutel wordt automatisch opgeslagen en gevalideerd",
+    "locationLabel": "Locatie",
+    "locationPlaceholder": "Zoek stad...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}

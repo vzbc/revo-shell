@@ -1,0 +1,4 @@
+{
+  "shaderFailedTitle": "Falha ao carregar o shader do globo",
+  "shaderFailedDetail": "globeshader/globe.qsb está ausente ou inválido - rode `nix run .#compile-shaders` se estiver usando Nix, ou veja a seção de compilação de shaders no README.%1"
+}

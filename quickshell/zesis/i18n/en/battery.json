@@ -1,0 +1,13 @@
+{
+  "breadcrumb": "SETTINGS / SYSTEM",
+  "title": "Battery",
+  "noBattery": "No battery",
+  "notDetected": "Not detected",
+  "fullyCharged": "Fully charged",
+  "untilFull": "%1 until full",
+  "charging": "Charging",
+  "remaining": "%1 remaining",
+  "statusLabel": "Status",
+  "chargingRate": "Charging rate",
+  "powerDraw": "Power draw"
+}

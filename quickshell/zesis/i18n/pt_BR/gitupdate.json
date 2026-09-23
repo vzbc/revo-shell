@@ -1,0 +1,13 @@
+{
+  "updated": "Atualizado",
+  "updateNeedsHelp": "Atualização precisa de ajuda",
+  "updateAvailable": "Atualização disponível",
+  "updatedMessage": "O Zesis foi atualizado para a versão mais recente.",
+  "blockedMessage": "Há uma versão mais nova do seu desktop pronta, mas alguns arquivos aqui foram alterados manualmente. Não é possível atualizar com segurança automaticamente, peça para quem configurou isso dar uma olhada.",
+  "failedMessage": "A atualização não foi concluída. Peça para quem configurou isso dar uma olhada.",
+  "availableMessage": "Há uma versão mais nova do seu desktop pronta para instalar.",
+  "updating": "Atualizando...",
+  "tryAgain": "Tentar novamente",
+  "updateNow": "Atualizar agora",
+  "hide": "Ocultar"
+}

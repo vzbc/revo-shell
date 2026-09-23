@@ -1,0 +1,65 @@
+name: Bug Report
+description: Create a report to help fix a bug in Brain Shell
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a bug! Please fill out the details below.
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS / Distro
+      placeholder: e.g., Arch Linux, NixOS
+    validations:
+      required: true
+  - type: input
+    id: resolution
+    attributes:
+      label: Hardware & Resolution
+      placeholder: e.g., 1920x1080 primary, 4K secondary
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Please paste any relevant Quickshell logs or drag-and-drop screenshots here.name: Bug Report
+description: Create a report to help fix a bug in Brain Shell
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a bug! Please fill out the details below.
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: OS / Distro
+      placeholder: e.g., Arch Linux, NixOS
+    validations:
+      required: true
+  - type: input
+    id: resolution
+    attributes:
+      label: Hardware & Resolution
+      placeholder: e.g., 1920x1080 primary, 4K secondary
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Screenshots
+      description: Please paste any relevant Quickshell logs or drag-and-drop screenshots here.

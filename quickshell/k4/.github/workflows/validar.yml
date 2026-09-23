@@ -1,0 +1,64 @@
+#  Los validadores de la casa, en cada push y cada PR.
+#
+#  Son los mismos que pide el README antes de abrir un PR — aquí dejan de
+#  depender de que alguien se acuerde. Python de la biblioteca estándar, salvo
+#  las pruebas del editor, que necesitan ffmpeg de verdad; qmllint no está en
+#  el runner y guia.py salta esa comprobación (la compilación de ejemplos se
+#  cubre en local, donde vive Quickshell).
+
+name: validar
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validadores:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: El catálogo de plugins dice la verdad
+        run: python3 tools/plugins.py
+
+      - name: Ningún plugin se salta la API
+        run: python3 tools/api.py
+
+      - name: La documentación no le miente al código
+        run: python3 tools/guia.py
+
+      #  Este no compara con nada externo: busca un patrón que ya se coló tres
+      #  veces —un hijo directo de un layout colocándose a mano, que se queda
+      #  en 0×0 y deja de responder sin dar un error—. Se comprueba a sí mismo
+      #  antes de decir que no hay nada.
+      - name: Nadie se coloca a mano dentro de un layout
+        run: python3 tools/layouts.py
+
+      #  Las del editor no son de mentira: sintetizan un vídeo con ffmpeg y le
+      #  preguntan por él a ffprobe. El runner de Ubuntu no los trae, y sin
+      #  ellos la prueba no fallaba —reventaba—, que no es lo mismo: se llevaba
+      #  por delante los dos pasos de después, que no llegaban a correr.
+      - name: ffmpeg, que las pruebas del editor lo usan de verdad
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      - name: Las pruebas del editor
+        run: python3 tools/prueba_editar.py
+
+      - name: Las pruebas del instalador de plugins
+        run: python3 tools/prueba_plugins.py
+
+      #  Estas dos guardan agujeros que ya existieron, y por eso están aquí:
+      #  una prueba de regresión que no corre sola es una nota, no una prueba.
+      - name: Ninguna ruta ajena sale a la red ni escribe fuera de su carpeta
+        run: python3 tools/prueba_rutas.py
+
+      - name: Ningún texto de usuario se interpreta como marcado
+        run: python3 tools/prueba_texto.py
+
+      - name: Sin restos de conflictos ni espacios colgando
+        run: git diff --check

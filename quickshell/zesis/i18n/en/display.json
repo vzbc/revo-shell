@@ -1,0 +1,11 @@
+{
+  "breadcrumb": "SETTINGS / DISPLAY & SCALE",
+  "title": "Display & Scale",
+  "monitorFallback": "Monitor",
+  "resolutionSummary": "%1 × %2 @ %3 Hz",
+  "resolutionLabel": "Resolution",
+  "refreshRateLabel": "Refresh Rate",
+  "hzValue": "%1 Hz",
+  "apply": "Apply",
+  "active": "Active"
+}

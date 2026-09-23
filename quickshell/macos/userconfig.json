@@ -1,0 +1,21 @@
+{
+  "dockIconSize": 62,
+  "dockMagnification": true,
+  "dockAutohide": false,
+  "menubar": {
+    "wifi": true,
+    "bluetooth": true,
+    "battery": true,
+    "sound": true,
+    "controlcenter": true,
+    "spotlight": true,
+    "clock": true,
+    "tray": true
+  },
+  "accentColor": "#315bdc",
+  "darkMode": false,
+  "menubarWifi": true,
+  "menubarBluetooth": true,
+  "menubarSpotlight": true,
+  "menubarTray": true
+}

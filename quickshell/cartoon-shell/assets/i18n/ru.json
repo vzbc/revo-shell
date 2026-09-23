@@ -1,0 +1,237 @@
+{
+  "settings": {
+    "title": "Настройки",
+    "general": "Общие",
+    "appearance": "Внешний вид",
+    "wallpapers": "Обои",
+    "network": "Сеть",
+    "audio": "Аудио",
+    "performance": "Производительность",
+    "shortcuts": "Горячие клавиши",
+    "system": "Система",
+    "language": "Язык"
+  },
+  "dateFormat": {
+    "today": "Сегодня",
+    "tomorrow": "Завтра",
+    "day": {
+      "monday": "Понедельник",
+      "tuesday": "Вторник",
+      "wednesday": "Среда",
+      "thursday": "Четверг",
+      "friday": "Пятница",
+      "saturday": "Суббота",
+      "sunday": "Воскресенье"
+    },
+    "month": {
+      "january": "Январь",
+      "february": "Февраль",
+      "march": "Март",
+      "april": "Апрель",
+      "may": "Май",
+      "june": "Июнь",
+      "july": "Июль",
+      "august": "Август",
+      "september": "Сентябрь",
+      "october": "Октябрь",
+      "november": "Ноябрь",
+      "december": "Декабрь"
+    }
+  },
+  "general": {
+    "title": "Общие настройки",
+    "language_label": "Язык:",
+    "autostart_label": "Автозапуск:",
+    "notification_label": "Уведомления:",
+    "notification_system": "Показывать системные уведомления",
+    "notification_sound": "Звук уведомлений",
+    "notification_performance": "Уведомления о производительности"
+  },
+  "appearance": {
+    "title": "Внешний вид",
+    "theme_label": "Тема:",
+    "theme_light": "Светлая",
+    "theme_dark": "Темная",
+    "clock_panel_label": "Панель часов:",
+    "panel_position_label": "Положение панели:",
+    "position_top": "Сверху",
+    "position_bottom": "Снизу",
+    "clock_position_label": "Положение часов:",
+    "panel_height_label": "Высота панели:"
+  },
+  "system": {
+    "application": "Приложение",
+    "sleep": "Режим сна",
+    "logout": "Выйти",
+    "shutdown": "Выключить",
+    "restart": "Перезагрузить",
+    "lock": "Заблокировать экран"
+  },
+  "mixer": {
+    "title": "Микшер звука",
+    "subtitle": "Управление потоками звука и громкостью",
+    "output_device": "Устройство вывода",
+    "application_streams": "Звуковые потоки приложений",
+    "no_streams": "Нет активных звуковых потоков",
+    "active_streams": "Активные потоки: %{count}"
+  },
+  "entry": {
+    "unknown_app": "Неизвестное приложение",
+    "unmute": "Включить звук",
+    "mute": "Отключить звук",
+    "volume_percent": "%{volume}%",
+    "media_name": "Название медиа",
+    "volume_slider_tooltip": "Отрегулировать громкость",
+    "muted": "Звук отключен",
+    "overdrive": "Громкость превышена"
+  },
+  "music": {
+    "nowPlaying": "Сейчас играет",
+    "paused": "Приостановлено"
+  },
+  "calendar": {
+    "title": "Календарь",
+    "weekdays": {
+      "sunday": "Вс",
+      "monday": "Пн",
+      "tuesday": "Вт",
+      "wednesday": "Ср",
+      "thursday": "Чт",
+      "friday": "Пт",
+      "saturday": "Сб"
+    }
+  },
+  "wallpapers": {
+    "title": "Управление изображениями",
+    "total_images": "Всего изображений:",
+    "path": "Путь:",
+    "loading": "Загрузка...",
+    "loading_info": "Загрузка информации...",
+    "no_images": "Изображения не найдены в папке ~/Pictures/Wallpapers",
+    "set_wallpaper": "Установить",
+    "already_set": "Установлено",
+    "delete": "Удалить",
+    "delete_confirm": "Подтвердить удаление",
+    "cancel": "Отмена",
+    "success_set": "Обои успешно установлены!",
+    "success_delete": "Изображение успешно удалено!"
+  },
+  "confirm": {
+    "title": "Подтверждение",
+    "message": "Вы уверены, что хотите {action}?",
+    "yes": "Да",
+    "no": "Нет",
+    "sleep": "перейти в режим сна",
+    "lock": "заблокировать экран",
+    "logout": "выйти",
+    "restart": "перезагрузить",
+    "shutdown": "выключить"
+  },
+  "ram": {
+    "title": "Диспетчер процессов",
+    "panel_title": "Управление RAM",
+    "memory_monitor": "Монитор памяти",
+    "used": "Использовано",
+    "free": "Свободно",
+    "available": "Доступно",
+    "no_swap": "Нет SWAP",
+    "loading_memory": "Загрузка данных памяти...",
+    "loading": {
+      "title": "⏳",
+      "message": "Загрузка списка процессов..."
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "Имя процесса",
+      "ram_percent": "RAM %",
+      "memory": "Память"
+    },
+    "footer": {
+      "process_count_label": "Количество процессов",
+      "total_ram_label": "Использование RAM",
+      "memory_distribution_label": "Распределение памяти",
+      "process_count_unit": "",
+      "total_ram_unit": "МБ"
+    },
+    "header_bar": {
+      "main_title": "Монитор процессов",
+      "last_update": "Последнее обновление"
+    },
+    "status_colors": {
+      "critical": "Критично",
+      "warning": "Предупреждение",
+      "normal": "Нормально",
+      "low": "Низко"
+    },
+    "distribution": {
+      "na": "Нет данных",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "Скрипт не вернул данные",
+      "parse_error": "Ошибка парсинга данных"
+    }
+  },
+  "volume": {
+    "title": "Громкость",
+    "muted": "Без звука"
+  },
+  "bluetooth": {
+    "title": "Bluetooth",
+    "enabled": "Bluetooth включен",
+    "disabled": "Bluetooth выключен",
+    "devices_connected": "устройств подключено",
+    "pairing": "Сопряжение...",
+    "connecting": "Подключение...",
+    "connected": "Подключено",
+    "paired": "Сопряжено",
+    "not_connected": "Не подключено",
+    "searching": "Поиск устройств...",
+    "no_devices": "Устройства не найдены",
+    "turn_on": "Включите Bluetooth для подключения устройств",
+    "pair_error": "Не удалось выполнить сопряжение"
+  },
+  "wifi": {
+    "title": "WiFi",
+    "enabled": "WiFi включен",
+    "disabled": "WiFi выключен",
+    "not_connected": "Не подключено",
+    "available_networks": "Доступные сети",
+    "searching": "Поиск сетей...",
+    "no_networks": "Сети не найдены",
+    "turn_on": "Включите WiFi для просмотра доступных сетей",
+    "forget": "Забыть",
+    "connect": "Подключить",
+    "no_password": "Пароль не требуется",
+    "enter_password": "Введите пароль",
+    "password_required": "Пожалуйста, введите пароль",
+    "wrong_password": "Неверный пароль"
+  },
+  "infoSection": {
+    "name": "Название процессора",
+    "vendor": "Производитель",
+    "architecture": "Архитектура",
+    "socket": "Сокет",
+    "loading": "Загрузка...",
+    "undefined": "Не определено"
+  },
+  "CpuPane": {
+    "title": "Информация о процессоре"
+  },
+  "cpuStats": {
+    "totalUsage": "Общее использование",
+    "maxCore": "Наибольшее ядро",
+    "timeLabel": "⏱️ Время",
+    "dataPoints": "точек"
+  },
+  "weather": {
+    "title": "Погода",
+    "apiKeyLabel": "API ключ (weatherapi.com)",
+    "apiKeyPlaceholder": "Введите ваш API ключ...",
+    "apiKeyHint": "Получите бесплатный API ключ на: weatherapi.com\nAPI ключ будет автоматически сохранен и проверен",
+    "locationLabel": "Местоположение",
+    "locationPlaceholder": "Поиск города...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}

@@ -1,0 +1,96 @@
+import QtQuick
+import Quickshell.Io
+
+JsonObject {
+    id: root
+
+    property AnimationsComponent animations: AnimationsComponent {}
+    property FontsComponent fonts: FontsComponent {}
+    property MarginComponent margin: MarginComponent {}
+    property PaddingComponent padding: PaddingComponent {}
+    property RoundingComponent rounding: RoundingComponent {}
+    property SpacingComponent spacing: SpacingComponent {}
+
+    component FontFamily: JsonObject {
+        property string material: "Material Symbols Rounded"
+        property string mono: "Hack"
+        property string sans: "Google Sans Flex"
+    }
+
+    component FontSize: JsonObject {
+        property real scale: 1.0
+        readonly property real small: 12 * scale
+        readonly property real medium: 13 * scale
+        readonly property real normal: 14 * scale
+        readonly property real large: 16 * scale
+        readonly property real larger: 18 * scale
+        readonly property real extraLarge: 30 * scale
+    }
+
+    component FontsComponent: JsonObject {
+        property FontFamily family: FontFamily {}
+        property FontSize size: FontSize {}
+    }
+
+    component AnimationCurvesComponent: JsonObject {
+        readonly property list<real> emphasized: [0.05, 0, 0.13, 0.06, 0.16, 0.4, 0.20833, 0.82, 0.25, 1, 1, 1]
+        readonly property list<real> emphasizedAccel: [0.3, 0, 0.8, 0.15, 1, 1]
+        readonly property list<real> emphasizedDecel: [0.05, 0.7, 0.1, 1, 1, 1]
+        readonly property list<real> expressiveDefaultSpatial: [0.38, 1.21, 0.22, 1, 1, 1]
+        readonly property list<real> expressiveEffects: [0.34, 0.8, 0.34, 1, 1, 1]
+        readonly property list<real> expressiveFastSpatial: [0.42, 1.67, 0.21, 0.9, 1, 1]
+        readonly property list<real> standard: [0.2, 0, 0, 1, 1, 1]
+        readonly property list<real> standardAccel: [0.3, 0, 1, 1, 1, 1]
+        readonly property list<real> standardDecel: [0, 0, 0, 1, 1, 1]
+    }
+
+    component AnimationDurationsComponent: JsonObject {
+        property int scale: 1
+        readonly property int emphasized: 500 * scale
+        readonly property int emphasizedAccel: 200 * scale
+        readonly property int emphasizedDecel: 400 * scale
+        readonly property int expressiveDefaultSpatial: 500 * scale
+        readonly property int expressiveEffects: 200 * scale
+        readonly property int expressiveFastSpatial: 350 * scale
+        readonly property int extraLarge: 1000 * scale
+        readonly property int large: 600 * scale
+        readonly property int normal: 300 * scale
+        readonly property int small: 200 * scale
+    }
+
+    component AnimationsComponent: JsonObject {
+        property AnimationCurvesComponent curves: AnimationCurvesComponent {}
+        property AnimationDurationsComponent durations: AnimationDurationsComponent {}
+    }
+
+    component RoundingComponent: JsonObject {
+        property int small: 12
+        property int normal: 17
+        property int large: 25
+        property int full: 1000
+    }
+
+    component SpacingComponent: JsonObject {
+        property int small: 7
+        property int smaller: 10
+        property int normal: 12
+        property int larger: 15
+        property int large: 20
+    }
+
+    component PaddingComponent: JsonObject {
+        property int small: 5
+        property int smaller: 7
+        property int normal: 10
+        property int larger: 12
+        property int large: 15
+    }
+
+    component MarginComponent: JsonObject {
+        property int small: 5
+        property int smaller: 7
+        property int normal: 10
+        property int larger: 12
+        property int large: 15
+    }
+}

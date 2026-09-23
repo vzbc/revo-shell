@@ -1,0 +1,19 @@
+name: Feature Request
+description: Suggest an idea for Brain Shell
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Have an idea to make Brain Shell better? Let us know! (Note to save time, please check Discord to see if this has been suggested already).
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Are there any workarounds you are currently using?

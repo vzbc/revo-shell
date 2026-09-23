@@ -1,0 +1,114 @@
+[
+  {
+    "name": "Finder",
+    "icon": "Finder.png",
+    "desktop": "org.gnome.Nautilus",
+    "exec": "nautilus",
+    "appIds": [
+      "org.gnome.Nautilus",
+      "nautilus"
+    ]
+  },
+  {
+    "name": "Launchpad",
+    "icon": "Launchpad.png",
+    "desktop": "macos-launcher",
+    "exec": "macos-launcher",
+    "appIds": [
+      "macos-launcher",
+      "Launcher"
+    ]
+  },
+  {
+    "name": "Safari",
+    "icon": "Safari.png",
+    "desktop": "",
+    "exec": "pafari",
+    "appIds": [
+      "pafari"
+    ]
+  },
+  {
+    "name": "Mail",
+    "icon": "Mail.png",
+    "desktop": "org.gnome.Geary",
+    "exec": "geary",
+    "appIds": [
+      "org.gnome.Geary",
+      "geary"
+    ]
+  },
+  {
+    "name": "Photos",
+    "icon": "Photos.png",
+    "desktop": "org.kde.gwenview",
+    "exec": "gwenview",
+    "appIds": [
+      "org.kde.gwenview",
+      "gwenview"
+    ]
+  },
+  {
+    "name": "Calendar",
+    "icon": "Calendar.png",
+    "desktop": "org.gnome.Calendar",
+    "exec": "gnome-calendar",
+    "appIds": [
+      "org.gnome.Calendar"
+    ]
+  },
+  {
+    "name": "Contacts",
+    "icon": "Contacts.png",
+    "desktop": "org.gnome.Contacts",
+    "exec": "gnome-contacts",
+    "appIds": [
+      "org.gnome.Contacts"
+    ]
+  },
+  {
+    "name": "Vesktop",
+    "icon": "file:///home/revo/.config/quickshell/macos/assets/icons/vesktop.png",
+    "desktop": "",
+    "exec": "vesktop",
+    "appIds": [
+      "vesktop"
+    ]
+  },
+  {
+    "name": "Calculator",
+    "icon": "Calculator.png",
+    "desktop": "org.gnome.Calculator",
+    "exec": "gnome-calculator",
+    "appIds": [
+      "org.gnome.Calculator"
+    ]
+  },
+  {
+    "name": "Terminal",
+    "icon": "Terminal.png",
+    "desktop": "kitty",
+    "exec": "kitty",
+    "appIds": [
+      "kitty"
+    ]
+  },
+  {
+    "name": "App Store",
+    "icon": "App Store.png",
+    "desktop": "pearos-appstore",
+    "exec": "pearos-appstore",
+    "appIds": [
+      "pearos-appstore"
+    ]
+  },
+  {
+    "name": "System Settings",
+    "icon": "System Settings.png",
+    "desktop": "pearos-settings",
+    "exec": "pearos-settings",
+    "appIds": [
+      "pearos-settings"
+    ]
+  }
+]

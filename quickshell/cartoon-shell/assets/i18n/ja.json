@@ -1,0 +1,237 @@
+{
+  "settings": {
+    "title": "設定",
+    "general": "一般",
+    "appearance": "外観",
+    "wallpapers": "壁紙",
+    "network": "ネットワーク",
+    "audio": "オーディオ",
+    "performance": "パフォーマンス",
+    "shortcuts": "ショートカット",
+    "system": "システム",
+    "language": "言語"
+  },
+  "dateFormat": {
+    "today": "今日",
+    "tomorrow": "明日",
+    "day": {
+      "monday": "月曜日",
+      "tuesday": "火曜日",
+      "wednesday": "水曜日",
+      "thursday": "木曜日",
+      "friday": "金曜日",
+      "saturday": "土曜日",
+      "sunday": "日曜日"
+    },
+    "month": {
+      "january": "1月",
+      "february": "2月",
+      "march": "3月",
+      "april": "4月",
+      "may": "5月",
+      "june": "6月",
+      "july": "7月",
+      "august": "8月",
+      "september": "9月",
+      "october": "10月",
+      "november": "11月",
+      "december": "12月"
+    }
+  },
+  "general": {
+    "title": "一般設定",
+    "language_label": "言語：",
+    "autostart_label": "自動起動：",
+    "notification_label": "通知：",
+    "notification_system": "システム通知を表示",
+    "notification_sound": "通知音",
+    "notification_performance": "パフォーマンス通知"
+  },
+  "appearance": {
+    "title": "外観",
+    "theme_label": "テーマ：",
+    "theme_light": "ライト",
+    "theme_dark": "ダーク",
+    "clock_panel_label": "時計パネル：",
+    "panel_position_label": "パネル位置：",
+    "position_top": "上",
+    "position_bottom": "下",
+    "clock_position_label": "時計の位置：",
+    "panel_height_label": "パネルの高さ："
+  },
+  "system": {
+    "application": "アプリケーション",
+    "sleep": "スリープモード",
+    "logout": "ログアウト",
+    "shutdown": "シャットダウン",
+    "restart": "再起動",
+    "lock": "画面ロック"
+  },
+  "mixer": {
+    "title": "オーディオミキサー",
+    "subtitle": "オーディオストリームと音量を管理",
+    "output_device": "出力デバイス",
+    "application_streams": "アプリケーションオーディオストリーム",
+    "no_streams": "アクティブなオーディオストリームがありません",
+    "active_streams": "アクティブなストリーム: %{count}"
+  },
+  "entry": {
+    "unknown_app": "不明なアプリケーション",
+    "unmute": "ミュート解除",
+    "mute": "ミュート",
+    "volume_percent": "%{volume}%",
+    "media_name": "メディア名",
+    "volume_slider_tooltip": "音量を調整",
+    "muted": "ミュート中",
+    "overdrive": "音量オーバードライブ"
+  },
+  "music": {
+    "nowPlaying": "再生中",
+    "paused": "一時停止中"
+  },
+  "calendar": {
+    "title": "カレンダー",
+    "weekdays": {
+      "sunday": "日",
+      "monday": "月",
+      "tuesday": "火",
+      "wednesday": "水",
+      "thursday": "木",
+      "friday": "金",
+      "saturday": "土"
+    }
+  },
+  "wallpapers": {
+    "title": "画像管理",
+    "total_images": "画像数:",
+    "path": "パス:",
+    "loading": "読み込み中...",
+    "loading_info": "情報を読み込み中...",
+    "no_images": "~/Pictures/Wallpapersフォルダに画像が見つかりません",
+    "set_wallpaper": "設定",
+    "already_set": "設定済み",
+    "delete": "削除",
+    "delete_confirm": "削除確認",
+    "cancel": "キャンセル",
+    "success_set": "壁紙を設定しました！",
+    "success_delete": "画像を削除しました！"
+  },
+  "confirm": {
+    "title": "確認",
+    "message": "{action}してもよろしいですか？",
+    "yes": "はい",
+    "no": "いいえ",
+    "sleep": "スリープモードに入る",
+    "lock": "画面をロックする",
+    "logout": "ログアウトする",
+    "restart": "再起動する",
+    "shutdown": "シャットダウンする"
+  },
+  "ram": {
+    "title": "プロセスマネージャー",
+    "panel_title": "RAMマネージャー",
+    "memory_monitor": "メモリモニター",
+    "used": "使用中",
+    "free": "空き",
+    "available": "利用可能",
+    "no_swap": "SWAPなし",
+    "loading_memory": "メモリデータを読み込み中...",
+    "loading": {
+      "title": "⏳",
+      "message": "プロセスリストを読み込み中..."
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "プロセス名",
+      "ram_percent": "RAM %",
+      "memory": "メモリ"
+    },
+    "footer": {
+      "process_count_label": "プロセス数",
+      "total_ram_label": "合計RAM使用量",
+      "memory_distribution_label": "メモリ分布",
+      "process_count_unit": "",
+      "total_ram_unit": "MB"
+    },
+    "header_bar": {
+      "main_title": "プロセスモニター",
+      "last_update": "最終更新"
+    },
+    "status_colors": {
+      "critical": "危険",
+      "warning": "警告",
+      "normal": "正常",
+      "low": "低"
+    },
+    "distribution": {
+      "na": "データなし",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "スクリプトがデータを返しませんでした",
+      "parse_error": "出力データの解析エラー"
+    }
+  },
+  "volume": {
+    "title": "音量",
+    "muted": "ミュート"
+  },
+  "bluetooth": {
+    "title": "Bluetooth",
+    "enabled": "Bluetoothがオン",
+    "disabled": "Bluetoothがオフ",
+    "devices_connected": "台接続中",
+    "pairing": "ペアリング中...",
+    "connecting": "接続中...",
+    "connected": "接続済み",
+    "paired": "ペアリング済み",
+    "not_connected": "未接続",
+    "searching": "デバイスを検索中...",
+    "no_devices": "デバイスが見つかりません",
+    "turn_on": "Bluetoothをオンにしてデバイスを接続",
+    "pair_error": "デバイスとペアリングできません"
+  },
+  "wifi": {
+    "title": "WiFi",
+    "enabled": "WiFiがオン",
+    "disabled": "WiFiがオフ",
+    "not_connected": "未接続",
+    "available_networks": "利用可能なネットワーク",
+    "searching": "ネットワークを検索中...",
+    "no_networks": "ネットワークが見つかりません",
+    "turn_on": "WiFiをオンにして利用可能なネットワークを表示",
+    "forget": "削除",
+    "connect": "接続",
+    "no_password": "パスワード不要",
+    "enter_password": "パスワードを入力",
+    "password_required": "パスワードを入力してください",
+    "wrong_password": "パスワードが間違っています"
+  },
+  "infoSection": {
+    "name": "CPU名",
+    "vendor": "ベンダー",
+    "architecture": "アーキテクチャ",
+    "socket": "ソケット",
+    "loading": "読み込み中...",
+    "undefined": "未定義"
+  },
+  "CpuPane": {
+    "title": "CPU情報"
+  },
+  "cpuStats": {
+    "totalUsage": "合計使用率",
+    "maxCore": "最高コア",
+    "timeLabel": "⏱️ 時間",
+    "dataPoints": "ポイント"
+  },
+  "weather": {
+    "title": "天気",
+    "apiKeyLabel": "APIキー (weatherapi.com)",
+    "apiKeyPlaceholder": "APIキーを入力...",
+    "apiKeyHint": "無料APIキーを取得：weatherapi.com\nAPIキーは自動的に保存され検証されます",
+    "locationLabel": "場所",
+    "locationPlaceholder": "都市を検索...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}

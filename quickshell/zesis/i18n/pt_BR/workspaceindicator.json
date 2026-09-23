@@ -1,0 +1,19 @@
+{
+  "breadcrumb": "CONFIGURAÇÕES / INDICADOR DE ÁREA DE TRABALHO",
+  "title": "Indicador de Área de Trabalho",
+  "workspaces": "Áreas de trabalho",
+  "expressive": "Expressivo",
+  "expressiveHint": "Os dentes seguem a quantidade de áreas de trabalho ativas",
+  "minimum": "Mínimo",
+  "discRadius": "Raio do disco",
+  "toothWidth": "Largura do dente",
+  "valleyDepth": "Profundidade do vale",
+  "dotSize": "Tamanho do ponto",
+  "dotOrbit": "Órbita do ponto",
+  "cornerPeek": "Espiada no canto",
+  "skin": "Skin",
+  "skinHint": "Estilo visual do indicador",
+  "monitors": "Monitores",
+  "monitorsDescription": "Escolha quais telas conectadas mostram o indicador. Deixe todos os monitores ativos para mostrá-lo em todo lugar.",
+  "preview": "PRÉ-VISUALIZAÇÃO"
+}

@@ -1,0 +1,22 @@
+{
+  "breadcrumb": "SETTINGS / USER",
+  "title": "User",
+  "changeAvatar": "Change avatar",
+  "avatarLabel": "AVATAR",
+  "identitySection": "IDENTITY",
+  "nameLabel": "Name",
+  "nameHint": "How the shell greets you",
+  "namePlaceholder": "Your name",
+  "heroCardSection": "HERO CARD",
+  "followWallpaper": "Follow wallpaper",
+  "followWallpaperHint": "Use the current wallpaper as the hero background",
+  "customImage": "Custom image",
+  "noImageSelected": "No image selected",
+  "chooseImage": "Choose image",
+  "chooseHeroImageDialogTitle": "Choose Hero Image",
+  "chooseAvatarDialogTitle": "Choose Avatar Image",
+  "languageSection": "LANGUAGE",
+  "languageLabel": "Language",
+  "languageHint": "Interface language",
+  "languageAuto": "Automatic"
+}

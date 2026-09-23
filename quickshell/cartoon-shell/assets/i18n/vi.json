@@ -1,0 +1,234 @@
+{
+  "settings": {
+    "title": "Cài đặt",
+    "general": "Chung",
+    "appearance": "Giao diện",
+    "wallpapers": "Hình nền",
+    "network": "Mạng",
+    "audio": "Âm thanh",
+    "performance": "Hiệu suất",
+    "shortcuts": "Phím tắt",
+    "system": "Hệ thống",
+    "language": "Ngôn ngữ"
+  },
+  "dateFormat" : {
+    "today": "Hôm nay",
+    "tomorrow": "Ngày mai",
+    "day" : {
+      "monday" : "Thứ 2",
+      "tuesday" : "Thứ 3",
+      "wednesday" : "Thứ 4",
+      "thursday" : "Thứ 5",
+      "friday" : "Thứ 6",
+      "saturday" : "Thứ 7",
+      "sunday" : "Chủ nhật"
+    },
+    "month" : {
+      "january" : "Tháng 1",
+      "february" : "Tháng 2",
+      "march" : "Tháng 3",
+      "april" : "Tháng 4",
+      "may" : "Tháng 5",
+      "june" : "Tháng 6",
+      "july" : "Tháng 7",
+      "august" : "Tháng 8",
+      "september" : "Tháng 9",
+      "october" : "Tháng 10",
+      "november" : "Tháng 11",
+      "december" : "Tháng 12"
+    }
+  },
+  "general": {
+    "title": "Cài đặt chung",
+    "language_label": "Ngôn ngữ:",
+    "autostart_label": "Tự động khởi chạy:",
+    "notification_label": "Thông báo:",
+    "notification_system": "Hiển thị thông báo hệ thống",
+    "notification_sound": "Âm thanh thông báo",
+    "notification_performance": "Thông báo hiệu suất"
+  },
+  "appearance": {
+    "title": "Giao diện",
+    "theme_label": "Chủ đề:",
+    "theme_light": "Sáng",
+    "theme_dark": "Tối",
+    "clock_panel_label": "Bảng đồng hồ:",
+    "panel_position_label": "Vị trí panel:",
+    "position_top": "Trên",
+    "position_bottom": "Dưới",
+    "clock_position_label": "Vị trí đồng hồ:",
+    "panel_height_label": "Chiều cao panel:"
+  },
+  "system": {
+    "application": "Ứng dụng",
+    "sleep": "Chế độ ngủ",
+    "logout": "Đăng xuất",
+    "shutdown": "Tắt máy",
+    "restart": "Khởi động lại",
+    "lock": "Khóa màn hình"
+  },
+  "mixer": {
+    "title": "Trình trộn âm thanh",
+    "subtitle": "Quản lý luồng âm thanh và âm lượng",
+    "output_device": "Thiết bị đầu ra",
+    "application_streams": "Luồng âm thanh ứng dụng",
+    "no_streams": "Không có luồng âm thanh đang hoạt động",
+    "active_streams": "Luồng đang hoạt động: %{count}"
+  },
+  "entry": {
+    "unknown_app": "Ứng dụng không xác định",
+    "unmute": "Bật tiếng",
+    "mute": "Tắt tiếng",
+    "volume_percent": "%{volume}%",
+    "media_name": "Tên phương tiện",
+    "volume_slider_tooltip": "Điều chỉnh âm lượng",
+    "muted": "Đang tắt tiếng",
+    "overdrive": "Âm lượng vượt mức"
+  },
+  "calendar": {
+    "title": "Lịch",
+    "weekdays": {
+      "sunday": "CN",
+      "monday": "T2",
+      "tuesday": "T3",
+      "wednesday": "T4",
+      "thursday": "T5",
+      "friday": "T6",
+      "saturday": "T7"
+    }
+  },
+  "wallpapers": {
+    "title": "Quản lý hình ảnh",
+    "total_images": "Tổng số ảnh:",
+    "path": "Đường dẫn:",
+    "loading": "Đang tải...",
+    "loading_info": "Đang tải thông tin...",
+    "no_images": "Không tìm thấy ảnh nào trong thư mục ~/Pictures/Wallpapers",
+    "set_wallpaper": "Đặt nền",
+    "already_set": "Đã đặt",
+    "delete": "Xóa",
+    "delete_confirm": "Xác nhận xóa",
+    "cancel": "Hủy",
+    "success_set": "Đã đặt hình nền thành công!",
+    "success_delete": "Đã xóa ảnh thành công!"
+  },
+  "confirm": {
+    "title": "Xác nhận",
+    "message": "Bạn có chắc chắn muốn {action}?",
+    "yes": "Có",
+    "no": "Không",
+    "sleep": "chuyển sang chế độ ngủ",
+    "lock": "khóa màn hình",
+    "logout": "đăng xuất",
+    "restart": "khởi động lại",
+    "shutdown": "tắt máy"
+  },
+  "ram": {
+    "title": "Trình quản lý tiến trình",
+    "panel_title": "Quản lí Ram",
+    "memory_monitor": "Giám sát bộ nhớ",
+    "used": "Đã dùng",
+    "free": "Còn trống",
+    "available": "Khả dụng",
+    "no_swap": "Không có SWAP",
+    "loading_memory": "Đang tải dữ liệu bộ nhớ...",
+    "loading": {
+      "title": "⏳",
+      "message": "Đang tải danh sách tiến trình..."
+    },
+    "headers": {
+      "pid": "PID",
+      "name": "Tên tiến trình",
+      "ram_percent": "RAM %",
+      "memory": "Bộ nhớ"
+    },
+    "footer": {
+      "process_count_label": "Số tiến trình",
+      "total_ram_label": "Tổng RAM sử dụng",
+      "memory_distribution_label": "Phân bố bộ nhớ",
+      "process_count_unit": "",
+      "total_ram_unit": "MB"
+    },
+    "header_bar": {
+      "main_title": "Giám sát tiến trình",
+      "last_update": "Lần cập nhật"
+    },
+    "status_colors": {
+      "critical": "Nguy cấp",
+      "warning": "Cảnh báo",
+      "normal": "Bình thường",
+      "low": "Thấp"
+    },
+    "distribution": {
+      "na": "Không có dữ liệu",
+      "format": "{process} ({percent}%)"
+    },
+    "debug": {
+      "empty_output": "Tập lệnh không trả về dữ liệu",
+      "parse_error": "Lỗi phân tích dữ liệu đầu ra"
+    }
+  },
+  "volume": {
+    "title": "Âm thanh",
+    "muted": "Đã tắt tiếng"
+  },
+  "bluetooth": {
+    "title": "Bluetooth",
+    "enabled": "Bluetooth đang bật",
+    "disabled": "Bluetooth đang tắt",
+    "devices_connected": "thiết bị đã kết nối",
+    "pairing": "Đang ghép nối...",
+    "connecting": "Đang kết nối...",
+    "connected": "Đã kết nối",
+    "paired": "Đã ghép nối",
+    "not_connected": "Không kết nối",
+    "searching": "Đang tìm kiếm thiết bị...",
+    "no_devices": "Không có thiết bị nào",
+    "turn_on": "Bật Bluetooth để kết nối với thiết bị",
+    "pair_error": "Không thể ghép nối với thiết bị"
+  },
+  "wifi": {
+    "title": "WiFi",
+    "enabled": "WiFi đang bật",
+    "disabled": "WiFi đang tắt",
+    "not_connected": "Chưa kết nối",
+    "available_networks": "Mạng có sẵn",
+    "searching": "Đang tìm kiếm thiết bị...",
+    "no_networks": "Không có mạng nào",
+    "turn_on": "Bật WiFi để xem mạng khả dụng",
+    "forget": "Quên",
+    "connect": "Kết nối",
+    "no_password": "Không cần mật khẩu",
+    "enter_password": "Nhập mật khẩu",
+    "password_required": "Vui lòng nhập mật khẩu",
+    "wrong_password": "Mật khẩu không đúng"
+  },
+  "infoSection": {
+    "name": "Tên CPU",
+    "vendor": "Nhà sản xuất",
+    "architecture": "Kiến trúc",
+    "socket": "Socket",
+    "loading": "Đang tải...",
+    "undefined": "Không xác định"
+  },
+  "CpuPane": {
+    "title": "Thông tin CPU"
+  },
+  "cpuStats": {
+    "totalUsage": "Tổng Usage",
+    "maxCore": "Core Cao Nhất",
+    "timeLabel": "⏱️ Thời Gian",
+    "dataPoints": "điểm"
+  },
+  "weather": {
+    "title": "Thời Tiết",
+    "apiKeyLabel": "API Key (weatherapi.com)",
+    "apiKeyPlaceholder": "Nhập API key của bạn...",
+    "apiKeyHint": "Nhận API key miễn phí tại: weatherapi.com\nAPI key sẽ tự động lưu và kiểm tra khi bạn nhập",
+    "locationLabel": "Địa điểm",
+    "locationPlaceholder": "Tìm kiếm thành phố...",
+    "searchButton": "🔍",
+    "searchingButton": "⏳"
+  }
+}
+

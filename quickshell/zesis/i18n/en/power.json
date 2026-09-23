@@ -1,0 +1,17 @@
+{
+  "lock": "Lock",
+  "logOut": "Log Out",
+  "reboot": "Reboot",
+  "shutDown": "Shut Down",
+  "vendingCorner": "VENDING CORNER",
+  "fillerItems": "CHIPS|SODA|GUM|MINTS|COCOA|WATER|TEA|COOKIE|JERKY|PRETZEL|PEANUTS|CANDY|JUICE|COFFEE|CRACKER|TRAIL MIX",
+  "enterCode": "ENTER CODE",
+  "codePrefix": "CODE: ",
+  "dispensing": "DISPENSING",
+  "dropping": "DROPPING...",
+  "stuckTapGlass": "STUCK - TAP GLASS",
+  "liftTheFlap": "LIFT THE FLAP",
+  "pressItemToConfirm": "PRESS ITEM TO CONFIRM",
+  "invalidCode": "INVALID CODE",
+  "soldOut": "SOLD OUT"
+}

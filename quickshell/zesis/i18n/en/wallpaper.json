@@ -1,0 +1,22 @@
+{
+  "searchPlaceholder": "Search wallpapers...",
+  "noneFoundIn": "No wallpapers found in\n%1",
+  "noResults": "No results",
+  "breadcrumb": "SETTINGS / WALLPAPER",
+  "title": "Wallpaper & Theme",
+  "popupTitle": "Themes",
+  "dark": "Dark",
+  "light": "Light",
+  "wallpapersFolderLabel": "Wallpapers folder",
+  "resetToDefault": "Reset to default",
+  "backendLabel": "Wallpaper backend",
+  "customCommandPlaceholder": "e.g. swww img \"$1\" --transition-type fade",
+  "autoStartDaemon": "Auto-start wallpaper daemon",
+  "applying": "Applying...",
+  "colorPalette": "Color Palette",
+  "applyTo": "Apply to",
+  "allMonitors": "All monitors",
+  "resetToGlobal": "Reset to global",
+  "colorsFromLabel": "Colors from",
+  "templateWarning": "Your own matugen template failed to run: %1"
+}

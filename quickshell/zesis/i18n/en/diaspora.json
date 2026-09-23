@@ -1,0 +1,15 @@
+{
+  "network": "Network",
+  "offline": "Offline",
+  "loadingNetworkStats": "Loading network stats...",
+  "dotsOnTheMap": "dots on the map",
+  "verified": "verified",
+  "active": "active",
+  "shells": "Shells",
+  "trend": "Trend",
+  "cadence5Min": "Every 5 minutes",
+  "cadence15Min": "Every 15 minutes",
+  "cadence30Min": "Every 30 minutes",
+  "cadence1Hour": "Every hour",
+  "cadence2Hours": "Every 2 hours"
+}

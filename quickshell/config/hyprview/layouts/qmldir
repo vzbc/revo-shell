@@ -1,0 +1,2 @@
+singleton SmartGridLayout 1.0 SmartGridLayout.qml
+singleton LayoutsManager 1.0 LayoutsManager.qml

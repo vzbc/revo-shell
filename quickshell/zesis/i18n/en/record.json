@@ -1,0 +1,12 @@
+{
+  "breadcrumb": "WIDGETS / RECORDING",
+  "title": "Recording",
+  "encodeDevice": "ENCODE DEVICE",
+  "autoRecommended": "Auto (recommended)",
+  "softwareCpu": "Software (CPU)",
+  "quality": "QUALITY (QP)",
+  "qualityHint": "Lower is higher quality / larger files. Ignored when using software encode.",
+  "framerateCap": "FRAMERATE CAP",
+  "uncapped": "Uncapped",
+  "recordRegion": "Record Region..."
+}

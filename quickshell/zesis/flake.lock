@@ -1,0 +1,69 @@
+{
+  "nodes": {
+    "athroisma": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785369829,
+        "narHash": "sha256-foW1lI8pV153RJdbAAZyPrvjWesBdSYPN4ZS04/Recg=",
+        "owner": "zesis-shell",
+        "repo": "athroisma",
+        "rev": "64cf8c84ea922afd605efdc9b83d40fd3afb8dd2",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zesis-shell",
+        "repo": "athroisma",
+        "type": "github"
+      }
+    },
+    "congeries": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785866117,
+        "narHash": "sha256-TX6zHZm40GMiMYqExjPWL1vGVB75++YBkwBeqQuIEUM=",
+        "owner": "zesis-shell",
+        "repo": "congeries",
+        "rev": "f49e56b5ac632f1af7cf6134596eae7c981b1d46",
+        "type": "github"
+      },
+      "original": {
+        "owner": "zesis-shell",
+        "repo": "congeries",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1785318670,
+        "narHash": "sha256-dN6Ou5x/+23FZLEpYP3IffO+NyJFzUlGumt1uu3MMaY=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "0954f7ee2f6bb3dc7d4e3d0d8bcb8fd4bde4cfc5",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "athroisma": "athroisma",
+        "congeries": "congeries",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
