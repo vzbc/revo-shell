@@ -10,6 +10,8 @@ type Props = {
   as?: "button" | "a";
   href?: string;
   download?: string;
+  target?: string;
+  rel?: string;
   onClick?: () => void;
 };
 
@@ -20,6 +22,8 @@ export function HoverBorderGradient({
   as = "button",
   href,
   download,
+  target,
+  rel,
   onClick,
 }: Props) {
   const Tag = as === "a" ? motion.a : motion.button;
@@ -46,7 +50,7 @@ export function HoverBorderGradient({
       <div className="absolute inset-0 rounded-full bg-black" />
       <Tag
         {...(as === "a"
-          ? { href, download }
+          ? { href, download, target, rel }
           : { onClick, type: "button" as const })}
         className={cn(base, className, "bg-black text-white hover:bg-zinc-950")}
       >
