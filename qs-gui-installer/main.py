@@ -169,6 +169,15 @@ class InstallerConfig:
         "requests", "distro", "psutil", "PySide6",
     ]
 
+    # Catalog of shells shipped in the monorepo — used when the filesystem
+    # scan finds nothing (fresh machine, before install / without local clone).
+    KNOWN_SHELLS = [
+        "11", "brain_shell", "cartoon-shell", "end4-pc", "ii",
+        "imported-1789667132", "k4", "lotus-dotfiles", "lucid", "macos",
+        "nibrasshell", "persona-quickshell", "Q1", "revo-editorial",
+        "ryoku", "shell", "synoptik", "vast-shell", "zesis",
+    ]
+
 # Data Models
 @dataclass
 class SystemInfo:
@@ -919,14 +928,16 @@ class InstallationWorker(QObject):
                 return {'success': False, 'files_installed': 0}
 
             quickshell_dest = Path.home() / ".config" / "quickshell"
+            # GUI is FORCE_FULL_INSTALL: deploy every shell in the monorepo.
+            # shell_id is the user's Stage3 pick (stored as current_shell_id)
+            # and must not restrict the tree copy.
+            files_installed = self._copy_tree(qs_src_root, quickshell_dest)
             if shell_id:
                 one = qs_src_root / shell_id
-                if one.is_dir():
-                    files_installed = self._copy_tree(one, quickshell_dest / shell_id)
-                else:
-                    files_installed = self._copy_tree(qs_src_root, quickshell_dest)
-            else:
-                files_installed = self._copy_tree(qs_src_root, quickshell_dest)
+                if one.is_dir() and not (quickshell_dest / shell_id).is_dir():
+                    files_installed += self._copy_tree(
+                        one, quickshell_dest / shell_id
+                    )
 
             for script_path in quickshell_dest.rglob("*"):
                 if script_path.is_file() and script_path.suffix in {".sh", ".fish"} or script_path.name in {"instalar", "install.sh"}:
@@ -1248,24 +1259,98 @@ if TRY_QT:
             self.installation_worker.system_info_ready.connect(self._on_system_info_ready)
 
         def _scan_local_shells(self) -> List[Dict]:
-            """Scan ~/.config/quickshell for ready shell folders"""
-            qs_path = Path.home() / ".config" / "quickshell"
-            shells: List[Dict] = []
-            if not qs_path.is_dir():
-                return shells
-            for entry in sorted(qs_path.iterdir(), key=lambda p: p.name.lower()):
-                if not entry.is_dir() or entry.name.startswith("."):
+            """Scan monorepo + installed paths for shell folders.
+
+            Sources (merged, de-duplicated by id):
+              1. monorepo next to this installer (offline / packaged)
+              2. common local checkouts (e.g. Downloads/lolol)
+              3. staged clone (if any)
+              4. ~/.config/quickshell (already installed)
+              5. InstallerConfig.KNOWN_SHELLS fallback (fresh machine)
+            """
+            skip_names = {
+                "previews", "guide", "modules", "config", "settings",
+                "build", "dist", "node_modules",
+            }
+            roots: List[Path] = []
+            # 1) monorepo sibling of qs-gui-installer/
+            local_root = Path(__file__).resolve().parent.parent
+            for cand in (
+                local_root / "quickshell",
+                local_root.parent / "quickshell",
+                # 2) common local checkouts used during development
+                Path.home() / "Downloads" / "lolol" / "quickshell",
+                Path.home() / "revo_shell_repo" / "quickshell",
+            ):
+                if cand.is_dir() and cand not in roots:
+                    roots.append(cand)
+            # 3) staged clone
+            staged = getattr(self.installation_worker, "_staged_repo", None)
+            if staged and Path(staged).is_dir():
+                staged_qs = Path(staged) / "quickshell"
+                if staged_qs.is_dir() and staged_qs not in roots:
+                    roots.append(staged_qs)
+            # 4) installed
+            installed = Path.home() / ".config" / "quickshell"
+            if installed.is_dir():
+                roots.append(installed)
+
+            found: Dict[str, Dict] = {}
+            for root in roots:
+                if not root.is_dir():
                     continue
-                if entry.name in ("previews", "guide", "modules"):
+                try:
+                    entries = sorted(root.iterdir(), key=lambda p: p.name.lower())
+                except OSError:
                     continue
-                display = entry.name.replace("-", " ").replace("_", " ").title()
-                shells.append({
-                    "id": entry.name,
+                for entry in entries:
+                    if not entry.is_dir() or entry.name.startswith("."):
+                        continue
+                    if entry.name.lower() in skip_names:
+                        continue
+                    # A shell needs an entry QML (shell.qml or any root *.qml)
+                    has_qml = (entry / "shell.qml").is_file() or any(
+                        entry.glob("*.qml")
+                    )
+                    if not has_qml:
+                        continue
+                    sid = entry.name
+                    if sid in found:
+                        # Prefer installed path when both exist
+                        try:
+                            if entry.is_relative_to(installed):
+                                found[sid]["path"] = str(entry)
+                                found[sid]["available"] = True
+                        except OSError:
+                            pass
+                        continue
+                    display = sid.replace("-", " ").replace("_", " ").title()
+                    found[sid] = {
+                        "id": sid,
+                        "name": display,
+                        "path": str(entry),
+                        "icon": sid[:2].upper(),
+                        "available": True,
+                    }
+
+            # 5) Merge known catalog so fresh machines still see every shell
+            for sid in self.config.KNOWN_SHELLS:
+                if sid in found:
+                    continue
+                display = sid.replace("-", " ").replace("_", " ").title()
+                found[sid] = {
+                    "id": sid,
                     "name": display,
-                    "path": str(entry),
-                    "icon": entry.name[:2].upper(),
+                    "path": "",
+                    "icon": sid[:2].upper(),
                     "available": True,
-                })
+                }
+
+            shells = [found[k] for k in sorted(found, key=str.lower)]
+            logger.info(
+                f"shell scan: {len(shells)} from roots="
+                f"{[str(r) for r in roots]} (catalog={len(self.config.KNOWN_SHELLS)})"
+            )
             return shells
 
         def _wire_qml_hooks(self):
@@ -1286,6 +1371,7 @@ if TRY_QT:
                 root.setProperty("installBackend", self._on_qml_install_requested)
                 root.setProperty("rebootHost", self._on_qml_reboot_requested)
                 root.setProperty("shellScanner", self._on_qml_rescan_shells)
+                root.setProperty("shellIdHook", self._on_qml_shell_selected)
                 root.setProperty("filesChecker", self._check_local_files)
                 root.setProperty("installProgress", 0)
                 root.setProperty("installStatus", "")
@@ -1344,6 +1430,12 @@ if TRY_QT:
                     root.setShells(self._scan_local_shells())
             except Exception as e:
                 logger.warning(f"Rescan shells failed: {e}")
+
+        def _on_qml_shell_selected(self, shell_id: str):
+            """Stage3 confirm → remember which shell the user picked."""
+            sid = (shell_id or "").strip()
+            self.current_shell_id = sid or None
+            logger.info(f"Shell selected: {self.current_shell_id!r}")
 
         def _push_install_progress(self, value: int, message: str):
             """Push real backend progress into Stage4 via MainView properties."""

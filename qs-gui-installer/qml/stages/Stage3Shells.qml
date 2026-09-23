@@ -8,10 +8,11 @@ Item {
 
     signal confirmed(string shellId, string shellPath)
 
-    // Populated from Python / filesystem scan of ~/.config/quickshell
+    // Populated from Python / filesystem scan (monorepo + installed + catalog)
     property var shells: []
     property string selectedId: ""
     property string selectedPath: ""
+    property bool loading: false
 
     readonly property var selectedShell: {
         for (var i = 0; i < shells.length; i++) {
@@ -50,70 +51,103 @@ Item {
 
             Label {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: shells.length > 0
-                      ? "Ready builds from ~/.config/quickshell — tap a circle to select."
-                      : "Scanning ~/.config/quickshell for available shells…"
+                text: loading
+                      ? "Scanning monorepo and ~/.config/quickshell…"
+                      : shells.length > 0
+                        ? shells.length + " shells ready — tap a circle to select."
+                        : "No shells found yet."
                 size: 15
                 tone: "#6E6E73"
             }
         }
 
-        // Circle grid
-        Flow {
-            id: grid
+        // Circle grid (scroll when there are many shells)
+        Flickable {
+            id: flick
             width: parent.width
-            spacing: 36
-            anchors.horizontalCenter: parent.horizontalCenter
+            height: Math.min(root.height * 0.52, 420)
+            contentWidth: width
+            contentHeight: grid.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            flickableDirection: Flickable.VerticalFlick
 
-            Repeater {
-                model: root.shells.length
+            Flow {
+                id: grid
+                width: flick.width
+                spacing: 36
 
-                delegate: Item {
-                    id: cell
-                    required property int index
-                    readonly property var shell: root.shells[index]
+                Repeater {
+                    model: root.shells
 
-                    width: 140
-                    height: 150
+                    delegate: Item {
+                        id: cell
+                        required property var modelData
+                        readonly property var shell: modelData
 
-                    ShellCircle {
-                        id: circle
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.top: parent.top
-                        anchors.topMargin: 8
-                        label: ""
-                        iconText: shell.icon || (shell.name ? shell.name.substring(0, 2).toUpperCase() : "QS")
-                        selected: root.selectedId === shell.id
-                        opacity: shell.available !== false ? 1 : 0.4
-                        onClicked: root.selectShell(shell.id, shell.path)
-                    }
+                        width: 140
+                        height: 150
 
-                    Label {
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.top: circle.bottom
-                        anchors.topMargin: 12
-                        width: parent.width
-                        text: shell.name || shell.id
-                        size: 13
-                        weight: circle.selected ? Font.DemiBold : Font.Normal
-                        tone: circle.selected ? "#FFFFFF" : "#A1A1A1"
-                        horizontalAlignment: Text.AlignHCenter
-                        elide: Text.ElideRight
+                        ShellCircle {
+                            id: circle
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: parent.top
+                            anchors.topMargin: 8
+                            label: ""
+                            iconText: shell.icon || (shell.name ? shell.name.substring(0, 2).toUpperCase() : "QS")
+                            selected: root.selectedId === shell.id
+                            opacity: shell.available !== false ? 1 : 0.4
+                            onClicked: root.selectShell(shell.id, shell.path)
+                        }
+
+                        Label {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            anchors.top: circle.bottom
+                            anchors.topMargin: 12
+                            width: parent.width
+                            text: shell.name || shell.id
+                            size: 13
+                            weight: circle.selected ? Font.DemiBold : Font.Normal
+                            tone: circle.selected ? "#FFFFFF" : "#A1A1A1"
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                        }
                     }
                 }
+            }
+
+            // Scroll hint when content overflows
+            Label {
+                visible: flick.contentHeight > flick.height
+                anchors.bottom: parent.bottom
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: "Scroll for more ↓"
+                size: 11
+                tone: "#6E6E73"
             }
         }
 
         // Empty state
         Label {
-            visible: root.shells.length === 0
+            visible: root.shells.length === 0 && !root.loading
             anchors.horizontalCenter: parent.horizontalCenter
-            text: "No shells found yet. Add folders under ~/.config/quickshell and re-open the installer."
+            text: "No shells found. Run the installer from the revo-shell monorepo, or install first, then come back."
             size: 14
             tone: "#6E6E73"
             wrapMode: Text.WordWrap
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
+        }
+
+        // Auto-select first shell so users are never stuck on an empty choice
+        Component.onCompleted: Qt.callLater(function() {
+            if (root.selectedId.length < 1 && root.shells.length > 0)
+                root.selectShell(root.shells[0].id, root.shells[0].path)
+        })
+
+        onShellsChanged: {
+            if (root.selectedId.length < 1 && root.shells.length > 0)
+                root.selectShell(root.shells[0].id, root.shells[0].path)
         }
 
         // Confirm bar

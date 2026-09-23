@@ -238,7 +238,14 @@ Rectangle {
         Stage3Shells {
             onConfirmed: function(id, path) {
                 root.shellId = id
-                root.shellPath = path
+                root.shellPath = path || ""
+                var h = root.shellIdHook
+                if (h) {
+                    if (typeof h === "function")
+                        h(id)
+                    else if (h.select)
+                        h.select(id)
+                }
                 root.next()
             }
         }
@@ -295,9 +302,10 @@ Rectangle {
     }
 
     property var pendingShells: []
+    property var shellIdHook: null
 
     function _applyShells(item) {
-        if (item && item.shells !== undefined && pendingShells && pendingShells.length > 0)
+        if (item && item.shells !== undefined && pendingShells)
             item.shells = pendingShells
     }
 
@@ -307,7 +315,19 @@ Rectangle {
         var comp = map[Math.max(0, Math.min(map.length - 1, stage))]
         stack.clear()
         stack.push(comp, StackView.Immediate)
-        Qt.callLater(function() { _applyShells(stack.currentItem) })
+        Qt.callLater(function() {
+            _applyShells(stack.currentItem)
+            // Re-scan shells every time the Shells step opens (stage index 2)
+            if (stage === 2) {
+                var s = shellScanner
+                if (s) {
+                    if (typeof s === "function")
+                        s()
+                    else if (s.scan)
+                        s.scan()
+                }
+            }
+        })
     }
 
     // Exposed hooks for Python
