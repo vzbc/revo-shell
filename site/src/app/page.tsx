@@ -229,15 +229,15 @@ export default function Home() {
       >
         <div className="mx-auto flex max-w-2xl flex-col items-center text-center">
           <h2 className="text-3xl font-semibold tracking-tight text-white md:text-5xl">
-            Ready to revo your desktop?
+            Ready to rebuild your desktop?
           </h2>
           <p className="mt-4 text-zinc-400">
-            One free AppImage walks you through repo → shell → password. Full
-            install with backups — your dots land in minutes.
+            One free AppImage. Full install with backups. Pick a shell, keep
+            your configs — rice in minutes.
           </p>
           <div className="mt-8 flex flex-col items-center gap-4">
             <GatedDownload variant="cta">
-              Download AppImage — Free
+              Download AppImage
             </GatedDownload>
             <GoogleSignInButton />
             <a

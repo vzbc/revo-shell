@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "Revo Shell is the place to add all your QuickShells in one place. Install beautiful Hyprland + Quickshell desktops with one GUI installer.",
   other: {
     "google-signin-client_id":
-      "404802591966-vpr44o2nlmhdco99tqmmano6o2rdlgoa.apps.googleusercontent.com",
+      "404802591966-9idov983hkv7g8lm0avmc6qo699fi7o2.apps.googleusercontent.com",
   },
 };
 

@@ -12,7 +12,7 @@ import {
 } from "@/lib/auth";
 
 const CLIENT_ID =
-  "404802591966-vpr44o2nlmhdco99tqmmano6o2rdlgoa.apps.googleusercontent.com";
+  "404802591966-9idov983hkv7g8lm0avmc6qo699fi7o2.apps.googleusercontent.com";
 
 declare global {
   interface Window {
