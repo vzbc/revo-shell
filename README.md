@@ -1,6 +1,8 @@
 # Revo Shell Dotfiles
 
-Hyprland configs, Quickshell shells, wallpapers, and the **GUI installer** (primary path).
+Revo Shell its place to Add all ypur quickShells in one place
+
+if you share any video to this dot files in tik tok or insta pleas mention me : @_flz4
 
 ## Layout
 
