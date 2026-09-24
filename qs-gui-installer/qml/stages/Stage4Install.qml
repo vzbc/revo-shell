@@ -87,7 +87,7 @@ Item {
         completed = false
         backendFailed = false
         progress = 0
-        logLines = ["$ full install from GUI", "  · packages · clone · deploy · build"]
+        logLines = ["$ full install from GUI", "  · packages · extract · deploy · build"]
         if (localFilesExist())
             logLines = logLines.concat(["  · local configs present — backup + merge (no data loss)"])
         stepIndex = 0
@@ -104,10 +104,10 @@ Item {
         { p: 8,   text: "Installing system packages…", log: "pacman -S --needed $PACKAGES" },
         { p: 18,  text: "Installing AUR packages…", log: "yay -S quickshell-git awww matugen…" },
         { p: 30,  text: "Installing Python packages…", log: "pip install --user -r requirements.txt" },
-        { p: 42,  text: "Cloning monorepo…", log: "git clone --depth 1 $DOTFILES_REPO_URL" },
+        { p: 42,  text: "Extracting bundled files…", log: "tar -xzf payload.tar.gz" },
         { p: 55,  text: "Installing wallpapers…", log: "cp -a wallpapers/* ~/Pictures/Wallpapers/" },
         { p: 65,  text: "Installing Hyprland configurations…", log: "cp -a hypr/* ~/.config/hypr/" },
-        { p: 75,  text: "Installing Quickshell shells…", log: "cp -a quickshell/* ~/.config/quickshell/" },
+        { p: 75,  text: "Installing selected shell…", log: shellId && shellId.length > 0 ? ("cp -a quickshell/" + shellId + " ~/.config/quickshell/") : "cp -a quickshell/* ~/.config/quickshell/" },
         { p: 82,  text: "Fixing home paths…", log: "sed s|/home/revo|$HOME|g" },
         { p: 90,  text: "Building native shells…", log: "cmake -B build && cmake --build build" },
         { p: 96,  text: "Enabling services…", log: "systemctl --user enable pipewire wireplumber" },
@@ -152,7 +152,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             width: parent.width
             horizontalAlignment: Text.AlignHCenter
-            text: "Dotfiles + Hyprland configs from GitHub. Enter your password to authorize."
+                text: "Bundled monorepo + Hyprland configs. Enter your password to authorize."
             size: 15
             tone: "#A1A1A1"
             wrapMode: Text.WordWrap
@@ -165,7 +165,7 @@ Item {
 
             Repeater {
                 model: [
-                    { k: "Repo", v: root.repoUrl.length > 0 ? root.repoUrl : "Default" },
+                    { k: "Source", v: "Bundled" },
                     { k: "Shell", v: root.shellId.length > 0 ? root.shellId : "—" }
                 ]
 
@@ -219,7 +219,7 @@ Item {
             OtpField {
                 id: otp
                 anchors.horizontalCenter: parent.horizontalCenter
-                minSlots: 8
+                minSlots: 1
                 maxLength: 64
                 secret: true
                 enabled: !root.installing
@@ -228,11 +228,15 @@ Item {
                 onCompleted: function(v) {
                     root.passwordReady = v.length >= 1
                 }
+                onSubmitted: function(v) {
+                    if (v && v.length >= 1 && !root.installing)
+                        root.beginInstall()
+                }
             }
 
             Label {
                 anchors.horizontalCenter: parent.horizontalCenter
-                text: root.installing ? "Full install — packages, clone, deploy, build. Do not close." : "Installs all libraries and builds every Quickshell shell."
+                text: root.installing ? "Full install — packages, extract, deploy, build. Do not close." : "Installs all libraries and builds every Quickshell shell."
                 size: 12
                 tone: root.installing ? "#FFD60A" : "#48484A"
             }

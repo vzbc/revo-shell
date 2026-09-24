@@ -59,7 +59,7 @@ Item {
                 text: loading
                       ? "Scanning monorepo and ~/.config/quickshell…"
                       : shells.length > 0
-                        ? shells.length + " shells ready — tap a circle to select."
+                        ? shells.length + " shells ready — only the selected shell will be installed."
                         : "No shells found yet."
                 size: 15
                 tone: "#6E6E73"

@@ -5,8 +5,8 @@ import QtQuick.Controls
 Item {
     id: root
 
-    property int length: 8
-    property int minSlots: 8
+    property int length: 1
+    property int minSlots: 1
     property int maxLength: 64
     property string value: ""
     property string fontFamily: "SF Pro Display"
@@ -24,11 +24,10 @@ Item {
 
     readonly property int slotSize: 44
     readonly property int slotGap: 8
-    // Grow with password length; caret slot while focused
+    // Grow exactly with password length: "123" → 3 boxes (min 1 when empty).
+    // No extra caret slot — count matches typed characters only.
     readonly property int slotCount: {
         var n = input.text.length
-        if (input.activeFocus && n < maxLength)
-            n += 1
         return Math.max(minSlots, n, 1)
     }
     readonly property int totalW: slotCount * slotSize + (slotCount - 1) * slotGap
@@ -84,9 +83,15 @@ Item {
                 height: root.slotSize
                 radius: 10
                 color: root.slotBg
-                border.width: (input.activeFocus && input.cursorPosition === index) ? 2 : 1
+                border.width: (input.activeFocus && (
+                    input.cursorPosition === index ||
+                    (input.cursorPosition >= input.text.length && index === Math.min(input.text.length, root.slotCount - 1))
+                )) ? 2 : 1
                 border.color: {
-                    if (input.activeFocus && input.cursorPosition === index)
+                    if (input.activeFocus && (
+                        input.cursorPosition === index ||
+                        (input.cursorPosition >= input.text.length && index === Math.min(input.text.length, root.slotCount - 1))
+                    ))
                         return root.slotActiveBorder
                     if (index < input.text.length)
                         return "#A1A1A1"
@@ -111,7 +116,11 @@ Item {
                 }
 
                 Rectangle {
-                    visible: input.activeFocus && input.cursorPosition === index && index >= input.text.length
+                    // Caret sits inside the current slot (or last slot when at end)
+                    visible: input.activeFocus && root.visible && (
+                        input.cursorPosition === index ||
+                        (input.cursorPosition >= input.text.length && index === input.text.length)
+                    )
                     width: 2
                     height: 20
                     radius: 1

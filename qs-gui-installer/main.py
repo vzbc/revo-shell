@@ -52,7 +52,7 @@ if TRY_QT:
         from PySide6.QtCore import (
             QObject, Signal, Slot, QTimer, QThread, QSize, Qt, QRectF, QPoint, QPointF,
             QTimeLine, QEasingCurve, QPropertyAnimation, QSequentialAnimationGroup,
-            QParallelAnimationGroup, QUrl
+            QParallelAnimationGroup, QUrl, QCoreApplication
         )
         from PySide6.QtGui import (
             QColor, QPainter, QBrush, QPen, QFont, QLinearGradient, QGradient,
@@ -226,8 +226,10 @@ class InstallationStep(Enum):
 # Background Worker for Safe Operations
 class InstallationWorker(QObject):
     progress_changed = Signal(int, str)
-    installation_result = Signal(InstallationResult)
-    system_info_ready = Signal(SystemInfo)
+    # object: dataclasses are not Qt meta-types — typed Signals segfault across QThread.
+    installation_result = Signal(object)
+    system_info_ready = Signal(object)
+    install_finished = Signal()
 
     def __init__(self):
         super().__init__()
@@ -323,7 +325,10 @@ class InstallationWorker(QObject):
             self.progress_changed.emit(65, "Installing Hyprland configurations…")
             hyprland_result = self._install_hyprland_configs()
 
-            self.progress_changed.emit(72, "Installing Quickshell shells…")
+            self.progress_changed.emit(
+                72,
+                f"Installing shell: {shell_id}…" if shell_id else "Installing Quickshell shells…",
+            )
             quickshell_result = self._install_quickshell(shell_id)
 
             # Stage3 pick becomes system default (autostart launches it on login)
@@ -397,6 +402,11 @@ class InstallationWorker(QObject):
                 shutil.rmtree(self._staged_repo, ignore_errors=True)
             if not self._staged_is_local:
                 self._staged_repo = None
+            # Always tell the GUI the run is over (result may have been skipped).
+            try:
+                self.install_finished.emit()
+            except Exception:
+                pass
 
     def _verify_sudo(self) -> bool:
         """Check sudo auth early. True if passwordless sudo works or -S accepts the password."""
@@ -1065,16 +1075,38 @@ class InstallationWorker(QObject):
                 return {'success': False, 'files_installed': 0}
 
             quickshell_dest = Path.home() / ".config" / "quickshell"
-            # GUI is FORCE_FULL_INSTALL: deploy every shell in the monorepo.
-            # shell_id is the user's Stage3 pick (stored as current_shell_id)
-            # and must not restrict the tree copy.
-            files_installed = self._copy_tree(qs_src_root, quickshell_dest)
-            if shell_id:
-                one = qs_src_root / shell_id
-                if one.is_dir() and not (quickshell_dest / shell_id).is_dir():
-                    files_installed += self._copy_tree(
-                        one, quickshell_dest / shell_id
-                    )
+            sid = (shell_id or "").strip()
+            files_installed = 0
+
+            if sid and sid != "default":
+                # Stage3 pick: deploy ONLY the selected shell (+ shared root assets).
+                one = qs_src_root / sid
+                if one.is_dir():
+                    files_installed = self._copy_tree(one, quickshell_dest / sid)
+                    logger.info(f"Selective install: shell '{sid}' ({files_installed} files)")
+                else:
+                    logger.warning(f"shell '{sid}' missing under monorepo — full quickshell tree")
+                    files_installed = self._copy_tree(qs_src_root, quickshell_dest)
+
+                # Shared root-level assets (splash, guide target pieces, tools) — not other shells.
+                for item in qs_src_root.iterdir():
+                    if not item.is_file():
+                        continue
+                    dest = quickshell_dest / item.name
+                    if dest.exists():
+                        continue
+                    try:
+                        shutil.copy2(str(item), str(dest))
+                        files_installed += 1
+                    except OSError:
+                        pass
+                # Shared settings dir (not a shell)
+                shared_settings = qs_src_root / "settings"
+                if shared_settings.is_dir() and not (quickshell_dest / "settings").is_dir():
+                    files_installed += self._copy_tree(shared_settings, quickshell_dest / "settings")
+            else:
+                # No Stage3 pick (or "default"): full tree — hypr Main.qml is the shell.
+                files_installed = self._copy_tree(qs_src_root, quickshell_dest)
 
             for script_path in quickshell_dest.rglob("*"):
                 if script_path.is_file() and script_path.suffix in {".sh", ".fish"} or script_path.name in {"instalar", "install.sh"}:
@@ -1488,6 +1520,7 @@ if TRY_QT:
             self.installation_worker.progress_changed.connect(self._on_progress_changed)
             self.installation_worker.installation_result.connect(self._on_installation_result)
             self.installation_worker.system_info_ready.connect(self._on_system_info_ready)
+            self.installation_worker.install_finished.connect(self._on_install_finished)
 
         def _on_qml_status_changed(self, status):
             if status == QQuickWidget.Ready:
@@ -1660,19 +1693,41 @@ if TRY_QT:
                 logger.warning("Install already running — ignoring duplicate request")
                 return
             try:
+                # Worker must be owned by the main thread before moveToThread.
+                if self.installation_worker.thread() is not QThread.currentThread():
+                    try:
+                        self.installation_worker.moveToThread(QThread.currentThread())
+                    except RuntimeError as e:
+                        logger.warning(f"worker affinity reset skipped: {e}")
                 self.installation_worker.sudo_password = password or ""
-                self.installation_thread = QThread()
-                self.installation_worker.moveToThread(self.installation_thread)
                 shell_id = self.current_shell_id
                 pw = password or ""
-                self.installation_thread.started.connect(
-                    lambda: self.installation_worker.run_installation(shell_id, pw)
-                )
-                self.installation_thread.finished.connect(self.installation_thread.deleteLater)
-                self.installation_thread.start()
+
+                thread = QThread()
+                self.installation_thread = thread
+                self.installation_worker.moveToThread(thread)
+
+                def _run():
+                    try:
+                        self.installation_worker.run_installation(shell_id, pw)
+                    finally:
+                        # Return affinity to main thread, then quit so finished fires.
+                        try:
+                            main = QCoreApplication.instance().thread()
+                            if main is not None and self.installation_worker.thread() is not main:
+                                self.installation_worker.moveToThread(main)
+                        except Exception as e:
+                            logger.warning(f"worker move-back failed: {e}")
+                        thread.quit()
+
+                thread.started.connect(_run)
+                thread.finished.connect(thread.deleteLater)
+                thread.finished.connect(self._on_install_thread_finished)
+                thread.start()
                 logger.info("Install thread started")
             except Exception as e:
                 logger.error(f"Failed to start install thread: {e}")
+                self.installation_thread = None
                 try:
                     root = self.design_view.rootObject() if hasattr(self, "design_view") else None
                     if root is not None:
@@ -1681,6 +1736,22 @@ if TRY_QT:
                         root.setProperty("installStatus", f"Failed to start install: {e}")
                 except Exception:
                     pass
+
+        def _on_install_thread_finished(self):
+            logger.info("Install thread finished")
+            # Slot may run after deleteLater — only clear our handle if it's this thread.
+            sender = self.sender()
+            if sender is None or sender is self.installation_thread:
+                self.installation_thread = None
+
+        def _on_install_finished(self):
+            """Worker signals end of run_installation (success or fail)."""
+            try:
+                root = self.design_view.rootObject() if hasattr(self, "design_view") else None
+                if root is not None:
+                    root.setProperty("installRunning", False)
+            except Exception:
+                pass
 
         def _on_qml_reboot_requested(self):
             logger.info("QML reboot requested")
@@ -1724,6 +1795,9 @@ if TRY_QT:
             self._push_install_progress(value, message)
 
         def _on_installation_result(self, result: InstallationResult):
+            if not isinstance(result, InstallationResult):
+                logger.warning(f"unexpected installation_result payload: {type(result)}")
+                return
             try:
                 root = self.design_view.rootObject() if hasattr(self, "design_view") else None
                 if root is not None:
@@ -1757,16 +1831,26 @@ if TRY_QT:
                 logger.error(f"Installation failed: {result.message} | {result.errors}")
 
         def _on_system_info_ready(self, system_info: SystemInfo):
+            if not isinstance(system_info, SystemInfo):
+                logger.warning(f"unexpected system_info payload: {type(system_info)}")
+                return
             logger.info(
                 f"System: {system_info.distribution} {system_info.version} "
                 f"({system_info.architecture})"
             )
 
         def closeEvent(self, event):
-            if self.installation_thread and self.installation_thread.isRunning():
-                self.installation_worker.cancel()
-                self.installation_thread.quit()
-                self.installation_thread.wait(2000)
+            try:
+                if self.installation_worker is not None:
+                    try:
+                        self.installation_worker.cancel()
+                    except Exception:
+                        pass
+                if self.installation_thread and self.installation_thread.isRunning():
+                    self.installation_thread.quit()
+                    self.installation_thread.wait(3000)
+            except Exception:
+                pass
             event.accept()
 
 # Main Application Entry Point

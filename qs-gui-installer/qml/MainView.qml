@@ -276,10 +276,30 @@ Rectangle {
                         stack.currentItem.applyBackendFailed(root.installStatus)
                     return
                 }
-                if (typeof b === "function")
-                    b(pw)
-                else if (b.install)
-                    b.install(pw)
+                // QObject hooks: typeof is "object", typeof b.install === "function".
+                var invoked = false
+                var lastErr = ""
+                try {
+                    if (b && typeof b.install === "function") {
+                        b.install(pw)
+                        invoked = true
+                    } else if (typeof b === "function") {
+                        b(pw)
+                        invoked = true
+                    } else if (b) {
+                        b(pw)
+                        invoked = true
+                    }
+                } catch (e) {
+                    lastErr = String(e)
+                }
+                if (!invoked) {
+                    root.installRunning = false
+                    root.installFailed = true
+                    root.installStatus = "Install backend call failed: " + (lastErr || "unknown")
+                    if (stage === 3 && stack.currentItem)
+                        stack.currentItem.applyBackendFailed(root.installStatus)
+                }
             }
         }
     }

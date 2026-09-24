@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Full CLI installer: packages + clone + deploy + build for ALL Quickshell shells.
+# Full CLI installer: packages + clone + deploy + build for Quickshell shells.
 # Primary path is still the GUI (qs-gui-installer) — this mirrors it for terminal.
 set -euo pipefail
 
@@ -9,10 +9,56 @@ BACKUP_ROOT="${BACKUP_ROOT:-$HOME/.config/revo-shell-backup-$TS}"
 DRY_RUN="${DRY_RUN:-0}"
 REPO_URL="${DOTFILES_REPO_URL:-https://github.com/vzbc/revo-shell.git}"
 SUDO="${SUDO:-sudo}"
+SHELLS_FLAG="${SHELLS_FLAG:-}"
+SELECTED_SHELLS=()
+QS_SKIP_NAMES=(previews guide modules config settings build dist node_modules)
 
 log()  { printf '[install] %s\n' "$*"; }
 run()  { if [[ "$DRY_RUN" == "1" ]]; then log "DRY: $*"; else eval "$*"; fi; }
 have() { command -v "$1" >/dev/null 2>&1; }
+
+usage() {
+  cat <<'EOF'
+Usage: ./install.sh [options]
+
+Options:
+  --shells LIST     Comma-separated shell ids to deploy (e.g. macos,ii,k4)
+                    Use "all" to deploy every shell (default when non-interactive).
+  -h, --help        Show this help
+
+Environment:
+  DRY_RUN=1         Print commands without changing the system
+  DOTFILES_REPO_URL Override clone URL
+  SHELLS=LIST       Same as --shells (env form)
+
+Interactive mode (TTY): a numbered multi-select menu is shown for shells.
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --shells)
+      SHELLS_FLAG="${2:-}"
+      shift 2
+      ;;
+    --shells=*)
+      SHELLS_FLAG="${1#*=}"
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      log "unknown argument: $1"
+      usage
+      exit 1
+      ;;
+  esac
+done
+if [[ -z "$SHELLS_FLAG" && -n "${SHELLS:-}" ]]; then
+  SHELLS_FLAG="$SHELLS"
+fi
 
 copy_tree() {
   local src="$1" dest="$2"
@@ -28,6 +74,246 @@ copy_tree() {
     run "rsync -a --exclude '.git' '$src/' '$dest/'"
   else
     run "cp -a '$src/.' '$dest/'"
+  fi
+}
+
+# ── Shell selection (CLI multi-select like Stage3) ──────────
+is_skip_shell_dir() {
+  local name="$1" n
+  for n in "${QS_SKIP_NAMES[@]}"; do
+    [[ "$name" == "$n" ]] && return 0
+  done
+  [[ "$name" == .* ]] && return 0
+  return 1
+}
+
+list_available_shells() {
+  local d
+  [[ -d "$ROOT/quickshell" ]] || return 0
+  for d in "$ROOT/quickshell"/*/; do
+    [[ -d "$d" ]] || continue
+    local base
+    base="$(basename "$d")"
+    is_skip_shell_dir "$base" && continue
+    # shell must look like a quickshell root (shell.qml or any root *.qml)
+    if [[ -f "$d/shell.qml" ]] || compgen -G "$d/*.qml" >/dev/null 2>&1; then
+      printf '%s\n' "$base"
+    fi
+  done | sort -f
+}
+
+parse_shell_list() {
+  local raw="$1" item
+  SELECTED_SHELLS=()
+  raw="${raw// /}"
+  [[ -z "$raw" ]] && return 0
+  if [[ "$raw" == "all" || "$raw" == "*" ]]; then
+    SELECTED_SHELLS=()
+    SELECTED_SHELLS_ALL=1
+    return 0
+  fi
+  SELECTED_SHELLS_ALL=0
+  IFS=',' read -r -a _items <<<"$raw"
+  for item in "${_items[@]}"; do
+    [[ -z "$item" ]] && continue
+    SELECTED_SHELLS+=("$item")
+  done
+}
+
+prompt_shell_selection() {
+  local -a avail=()
+  local line i=0
+  while IFS= read -r line; do
+    [[ -n "$line" ]] && avail+=("$line")
+  done < <(list_available_shells)
+
+  if [[ ${#avail[@]} -eq 0 ]]; then
+    log "no shells found under $ROOT/quickshell — full tree deploy"
+    SELECTED_SHELLS_ALL=1
+    SELECTED_SHELLS=()
+    return 0
+  fi
+
+  # Non-interactive / explicit "all" / empty flag → full deploy
+  if [[ ! -t 0 ]] || [[ -n "${NO_SHELL_PROMPT:-}" ]]; then
+    SELECTED_SHELLS_ALL=1
+    SELECTED_SHELLS=()
+    return 0
+  fi
+
+  log "select Quickshell shells to install (multi-select)"
+  printf '  [0] all\n'
+  for i in "${!avail[@]}"; do
+    printf '  [%d] %s\n' "$((i + 1))" "${avail[$i]}"
+  done
+  printf 'Enter numbers (e.g. 1,3,5), names, or "all" [%s]: ' "${SHELLS_FLAG:-all}"
+  local answer=""
+  read -r answer || answer=""
+  answer="${answer:-${SHELLS_FLAG:-all}}"
+  log "selection: $answer"
+
+  if [[ "$answer" == "all" || "$answer" == "*" || "$answer" == "0" ]]; then
+    SELECTED_SHELLS_ALL=1
+    SELECTED_SHELLS=()
+    return 0
+  fi
+
+  SELECTED_SHELLS_ALL=0
+  SELECTED_SHELLS=()
+  local token
+  local IFS_save=$IFS
+  answer="${answer// /}"
+  IFS=',' read -r -a tokens <<<"$answer"
+  IFS=$IFS_save
+  for token in "${tokens[@]}"; do
+    [[ -z "$token" ]] && continue
+    if [[ "$token" =~ ^[0-9]+$ ]]; then
+      if [[ "$token" -eq 0 ]]; then
+        SELECTED_SHELLS_ALL=1
+        SELECTED_SHELLS=()
+        return 0
+      fi
+      local idx=$((token - 1))
+      if [[ $idx -ge 0 && $idx -lt ${#avail[@]} ]]; then
+        SELECTED_SHELLS+=("${avail[$idx]}")
+      else
+        log "ignore out-of-range index: $token"
+      fi
+    else
+      SELECTED_SHELLS+=("$token")
+    fi
+  done
+
+  # de-dupe
+  if [[ ${#SELECTED_SHELLS[@]} -gt 0 ]]; then
+    local -A seen=()
+    local -a uniq=()
+    local s
+    for s in "${SELECTED_SHELLS[@]}"; do
+      [[ -n "${seen[$s]:-}" ]] && continue
+      seen[$s]=1
+      uniq+=("$s")
+    done
+    SELECTED_SHELLS=("${uniq[@]}")
+  fi
+
+  if [[ ${#SELECTED_SHELLS[@]} -eq 0 ]]; then
+    log "empty selection — deploying all shells"
+    SELECTED_SHELLS_ALL=1
+  fi
+}
+
+deploy_quickshell() {
+  local src="$ROOT/quickshell"
+  local dest="$HOME/.config/quickshell"
+  [[ -d "$src" ]] || { log "skip (missing): $src"; return 0; }
+
+  if [[ "$SELECTED_SHELLS_ALL" == "1" ]] || [[ ${#SELECTED_SHELLS[@]} -eq 0 ]]; then
+    copy_tree "$src" "$dest"
+    return 0
+  fi
+
+  if [[ -d "$dest" ]] && [[ -n "$(ls -A "$dest" 2>/dev/null || true)" ]]; then
+    log "backup → $BACKUP_ROOT/quickshell"
+    run "mkdir -p '$BACKUP_ROOT'"
+    run "cp -a '$dest' '$BACKUP_ROOT/quickshell'"
+  fi
+  run "mkdir -p '$dest'"
+  log "copy shared quickshell root → $dest"
+  # root files only (shell.qml, assets, tools, …)
+  local item base
+  for item in "$src"/*; do
+    [[ -e "$item" ]] || continue
+    base="$(basename "$item")"
+    is_skip_shell_dir "$base" && continue
+    if [[ -d "$item" ]]; then
+      continue
+    fi
+    run "cp -a '$item' '$dest/$base'"
+  done
+  # shared non-shell dirs (settings, previews excluded by skip list)
+  if [[ -d "$src/settings" ]]; then
+    run "mkdir -p '$dest/settings'"
+    run "cp -a '$src/settings/.' '$dest/settings/'"
+  fi
+  # selected shells only
+  local sid
+  for sid in "${SELECTED_SHELLS[@]}"; do
+    if [[ -d "$src/$sid" ]]; then
+      log "copy shell: $sid"
+      run "mkdir -p '$dest/$sid'"
+      if have rsync; then
+        run "rsync -a --exclude '.git' '$src/$sid/' '$dest/$sid/'"
+      else
+        run "cp -a '$src/$sid/.' '$dest/$sid/'"
+      fi
+    else
+      log "MISS shell (not in repo): $sid"
+    fi
+  done
+}
+
+set_default_shell() {
+  local shell_id="$1"
+  shell_id="${shell_id// /}"
+  [[ -z "$shell_id" || "$shell_id" == "default" ]] && return 0
+  local qs_dir="$HOME/.config/quickshell/$shell_id"
+  [[ -d "$qs_dir" ]] || { log "default shell missing on disk: $qs_dir — skip"; return 0; }
+
+  local launch=""
+  local toggle="$HOME/.config/hypr/scripts/toggle_qs_dots.sh"
+  if [[ -f "$toggle" ]]; then
+    run "chmod +x '$toggle' || true"
+    launch="exec-once = ~/.config/hypr/scripts/toggle_qs_dots.sh $shell_id"
+  elif [[ -f "$qs_dir/shell.qml" ]]; then
+    launch="exec-once = quickshell -p ~/.config/quickshell/$shell_id/shell.qml"
+  else
+    log "no shell.qml under $qs_dir — skip default rewrite"
+    return 0
+  fi
+
+  local marker="# REVO_DEFAULT_SHELL"
+  local conf
+  for conf in \
+    "$HOME/.config/hypr/configs/autostart.conf" \
+    "$HOME/.config/hypr/config/autostart.conf"; do
+    [[ -f "$conf" ]] || continue
+    local tmp
+    tmp="$(mktemp)"
+    # drop old markers + previous toggle launches; comment stock Main/TopBar/Floating
+    awk -v marker="$marker" '
+      index($0, marker) { next }
+      /^[ \t]*#/ { print; next }
+      /^[ \t]*exec-once/ && /toggle_qs_dots\.sh/ { next }
+      /^[ \t]*exec-once/ && /quickshell/ && (/Main\.qml/ || /TopBar\.qml/ || /Floating\.qml/) {
+        print "# " $0
+        next
+      }
+      { print }
+    ' "$conf" >"$tmp"
+    printf '%s\n%s\n' "$marker" "$launch" >>"$tmp"
+    if [[ "$DRY_RUN" == "1" ]]; then
+      log "DRY: set default shell $shell_id in $conf"
+      rm -f "$tmp"
+    else
+      # backup once per conf basename into session backup root
+      run "mkdir -p '$BACKUP_ROOT'"
+      run "cp -a '$conf' '$BACKUP_ROOT/$(basename "$conf").autostart'"
+      run "mv '$tmp' '$conf'"
+      log "default shell → $shell_id in $conf"
+    fi
+  done
+
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log "DRY: write ~/.config/hypr/.revo_default_shell = $shell_id"
+  else
+    run "mkdir -p '$HOME/.config/hypr'"
+    run "printf '%s\\n' '$shell_id' > '$HOME/.config/hypr/.revo_default_shell'"
+  fi
+
+  if have hyprctl && [[ "${HYPRLAND_INSTANCE_SIGNATURE:-}" != "" ]]; then
+    run "hyprctl reload || true" || true
+    run "bash '$toggle' '$shell_id' >/dev/null 2>&1 || true" || true
   fi
 }
 
@@ -142,6 +428,12 @@ fix_paths() {
   # guide symlink
   local guide="$HOME/.config/quickshell/guide"
   local target="$HOME/.config/hypr/scripts/quickshell/guide"
+  if [[ "$DRY_RUN" == "1" ]]; then
+    if [[ -L "$guide" || ! -e "$guide" ]]; then
+      log "DRY: rm -f '$guide'; ln -s '$target' '$guide'"
+    fi
+    return 0
+  fi
   if [[ -L "$guide" || ! -e "$guide" ]]; then
     rm -f "$guide"
     [[ -d "$target" ]] && ln -s "$target" "$guide" || true
@@ -162,9 +454,27 @@ enable_services() {
 log "root: $ROOT"
 log "repo: $REPO_URL"
 
+# ── Shell multi-select (before deploy) ──────────────────────
+SELECTED_SHELLS_ALL=0
+if [[ -n "$SHELLS_FLAG" ]]; then
+  parse_shell_list "$SHELLS_FLAG"
+  if [[ "$SELECTED_SHELLS_ALL" == "1" ]]; then
+    log "shells: all"
+  else
+    log "shells: ${SELECTED_SHELLS[*]}"
+  fi
+else
+  prompt_shell_selection
+  if [[ "$SELECTED_SHELLS_ALL" == "1" ]]; then
+    log "shells: all"
+  else
+    log "shells: ${SELECTED_SHELLS[*]:-all}"
+  fi
+fi
+
 # ── Deploy FIRST (files must land even if package install fails) ──
 copy_tree "$ROOT/hypr" "$HOME/.config/hypr"
-copy_tree "$ROOT/quickshell" "$HOME/.config/quickshell"
+deploy_quickshell
 copy_tree "$ROOT/wallpapers" "$HOME/Pictures/Wallpapers"
 copy_tree "$ROOT/rofi" "$HOME/.config/rofi"
 copy_tree "$ROOT/kitty" "$HOME/.config/kitty"
@@ -176,6 +486,11 @@ if [[ "$DRY_RUN" != "1" ]]; then
 fi
 
 fix_paths
+
+# Default shell = first selected (same marker as GUI _set_default_shell)
+if [[ "$SELECTED_SHELLS_ALL" != "1" ]] && [[ ${#SELECTED_SHELLS[@]} -gt 0 ]]; then
+  set_default_shell "${SELECTED_SHELLS[0]}"
+fi
 
 # ── Packages (non-fatal: one failed package must not abort) ──
 install_packages || log "package install had errors — continuing (configs already deployed)"
@@ -463,7 +778,12 @@ verify() {
 }
 
 log "done — packages, rofi/kitty configs, shells built"
-log "deployed: hypr quickshell wallpapers rofi kitty"
+if [[ "$SELECTED_SHELLS_ALL" == "1" ]]; then
+  log "deployed: hypr quickshell wallpapers rofi kitty (all shells)"
+else
+  log "deployed: hypr quickshell wallpapers rofi kitty (shells: ${SELECTED_SHELLS[*]:-all})"
+  log "default shell: ${SELECTED_SHELLS[0]:-unchanged}"
+fi
 if [[ -d "$BACKUP_ROOT" ]]; then
   log "previous configs: $BACKUP_ROOT"
 fi

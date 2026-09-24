@@ -29,29 +29,50 @@ cd revo-shell
 ./install.sh
 ```
 
+On a TTY you get a **multi-select shell menu** (same idea as the GUI Stage 3):
+
+```text
+select Quickshell shells to install (multi-select)
+  [0] all
+  [1] ii
+  [2] k4
+  [3] lucid
+  …
+Enter numbers (e.g. 1,3,5), names, or "all" [all]:
+```
+
+Non-interactive runs (scripts, no TTY) deploy **all** shells unless you pass `--shells`.
+
 What `install.sh` does:
 
-1. Detects your package manager (pacman / apt / dnf)
-2. Installs **all system packages** needed by every shell
-3. Installs AUR packages via yay/paru when available (`quickshell-git`, fonts, …)
-4. Installs Python deps (`pip --user`)
-5. Deploys `hypr/`, `quickshell/`, `rofi/`, `kitty/` → `~/.config/`, `wallpapers/` → `~/Pictures/Wallpapers`
-6. Rewrites hardcoded `/home/revo` → `$HOME`
-7. Builds CMake shells (caelestia + Clavis)
-8. Enables pipewire / NetworkManager / bluetooth
-9. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR), and **installs the HyprGlass plugin via hyprpm** if missing/disabled
+1. Lets you pick which shells to install (menu / `--shells` / all)
+2. Detects your package manager (pacman / apt / dnf)
+3. Installs **system packages** needed by the installer and shells
+4. Installs AUR packages via yay/paru when available (`quickshell-git`, fonts, …)
+5. Installs Python deps (`pip --user`)
+6. Deploys `hypr/`, selected `quickshell/` shells (+ shared root assets), `rofi/`, `kitty/` → `~/.config/`, `wallpapers/` → `~/Pictures/Wallpapers`
+7. Sets the **first selected shell** as the Hyprland default (`# REVO_DEFAULT_SHELL` in autostart)
+8. Rewrites hardcoded `/home/revo` → `$HOME`
+9. Builds CMake shells (caelestia + Clavis)
+10. Enables pipewire / NetworkManager / bluetooth
+11. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR), and **installs the HyprGlass plugin via hyprpm** if missing/disabled
 
 Flags:
 
 ```bash
-DRY_RUN=1 ./install.sh          # show what would run, change nothing
-DOTFILES_REPO_URL=... ./install.sh   # override clone URL
+./install.sh --shells macos,ii,k4   # deploy only these shells (first = default)
+./install.sh --shells all           # every shell
+./install.sh --help
+DRY_RUN=1 ./install.sh              # show what would run, change nothing
+DRY_RUN=1 ./install.sh --shells ii  # dry-run selective deploy
+DOTFILES_REPO_URL=... ./install.sh  # override clone URL
+SHELLS=macos,k4 ./install.sh        # env form of --shells
 ```
 
 After install, verify again anytime:
 
 ```bash
-./install.sh   # re-runs verify at the end
+./install.sh   # re-runs verify at the end (non-interactive → all shells already deployed)
 ```
 
 Launch a shell:
