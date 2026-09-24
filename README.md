@@ -4,6 +4,12 @@ Revo Shell its place to Add all ypur quickShells in one place
 
 if you share any video to this dot files in tik tok or insta pleas mention me : @_flz4
 
+## Showcase
+
+<video src="./showcase/showcase.mp4" controls width="720" poster="./showcase/poster.jpg"></video>
+
+[▶ Open showcase video](./showcase/showcase.mp4)
+
 ## Layout
 
 | Path | Deploy target |
@@ -14,6 +20,7 @@ if you share any video to this dot files in tik tok or insta pleas mention me : 
 | `rofi/` | `~/.config/rofi` |
 | `kitty/` | `~/.config/kitty` |
 | `qs-gui-installer/` | **run this (GUI)** |
+| `showcase/` | demo video |
 
 ## Install (GUI — recommended)
 
