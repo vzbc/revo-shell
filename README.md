@@ -6,18 +6,9 @@ if you share any video to this dot files in tik tok or insta pleas mention me : 
 
 ## Showcase
 
-<video
-  src="https://raw.githubusercontent.com/vzbc/revo-shell/main/showcase/showcase.mp4"
-  poster="https://raw.githubusercontent.com/vzbc/revo-shell/main/showcase/poster.jpg"
-  controls
-  muted
-  autoplay
-  loop
-  playsinline
-  width="720"
->
-  Your browser does not support the video tag.
-</video>
+[![Revo Shell showcase](./showcase/poster.jpg)](https://github.com/vzbc/revo-shell/blob/main/showcase/showcase.mp4)
+
+[▶ Play showcase video](https://github.com/vzbc/revo-shell/blob/main/showcase/showcase.mp4)
 
 ## Layout
 
