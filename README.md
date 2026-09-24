@@ -10,7 +10,7 @@ if you share any video to this dot files in tik tok or insta pleas mention me : 
 |------|----------------|
 | `hypr/` | `~/.config/hypr` |
 | `quickshell/` | `~/.config/quickshell` |
-| `wallpapers/` | `~/Pictures/Wallpapers` |
+| `wallpapers/` | `~/.config/wallpapers` |
 | `rofi/` | `~/.config/rofi` |
 | `kitty/` | `~/.config/kitty` |
 | `qs-gui-installer/` | **run this (GUI)** |
