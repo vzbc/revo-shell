@@ -39,7 +39,7 @@ What `install.sh` does:
 6. Rewrites hardcoded `/home/revo` → `$HOME`
 7. Builds CMake shells (caelestia + Clavis)
 8. Enables pipewire / NetworkManager / bluetooth
-9. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, and **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR)
+9. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR), and **installs the HyprGlass plugin via hyprpm** if missing/disabled
 
 Flags:
 

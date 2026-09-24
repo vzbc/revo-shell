@@ -386,6 +386,70 @@ verify() {
     printf '  [MISS] no quickshell shells deployed\n'
     fail=$((fail + 1))
   fi
+  # hyprpm + HyprGlass plugin
+  HYPRGLASS_URL="https://github.com/hyprnux/hyprglass"
+  if have hyprpm; then
+    printf '  [ok]   hyprpm\n'
+    pass=$((pass + 1))
+    # check if hyprglass is installed + enabled
+    if hyprpm list 2>/dev/null | grep -qi 'HyprGlass'; then
+      if hyprpm list 2>/dev/null | grep -A2 -i 'HyprGlass' | grep -q 'enabled.*true'; then
+        printf '  [ok]   hyprglass (enabled)\n'
+        pass=$((pass + 1))
+      else
+        printf '  [MISS] hyprglass installed but disabled — enabling\n'
+        run "hyprpm enable hyprglass" || true
+        if hyprpm list 2>/dev/null | grep -A2 -i 'HyprGlass' | grep -q 'enabled.*true'; then
+          printf '  [fixed] hyprglass\n'
+          pass=$((pass + 1))
+        else
+          fail=$((fail + 1))
+        fi
+      fi
+    else
+      printf '  [MISS] hyprglass — installing via hyprpm\n'
+      if [[ "$DRY_RUN" == "1" ]]; then
+        log "DRY: hyprpm add $HYPRGLASS_URL && hyprpm enable hyprglass"
+      else
+        hyprpm add "$HYPRGLASS_URL" || true
+        hyprpm enable hyprglass || true
+      fi
+      if hyprpm list 2>/dev/null | grep -qi 'HyprGlass'; then
+        printf '  [fixed] hyprglass\n'
+        pass=$((pass + 1))
+      else
+        printf '  [MISS] hyprglass (install failed)\n'
+        fail=$((fail + 1))
+      fi
+    fi
+  else
+    printf '  [MISS] hyprpm\n'
+    fail=$((fail + 1))
+    # hyprpm ships with hyprland — try install
+    install_missing_pkgs "hyprland"
+    if have hyprpm; then
+      printf '  [fixed] hyprpm\n'
+      pass=$((pass + 1))
+      # now try hyprglass
+      if ! hyprpm list 2>/dev/null | grep -qi 'HyprGlass'; then
+        if [[ "$DRY_RUN" == "1" ]]; then
+          log "DRY: hyprpm add $HYPRGLASS_URL && hyprpm enable hyprglass"
+        else
+          hyprpm add "$HYPRGLASS_URL" || true
+          hyprpm enable hyprglass || true
+        fi
+      fi
+      if hyprpm list 2>/dev/null | grep -qi 'HyprGlass'; then
+        printf '  [fixed] hyprglass\n'
+        pass=$((pass + 1))
+      else
+        printf '  [MISS] hyprglass\n'
+        fail=$((fail + 1))
+      fi
+    else
+      fail=$((fail + 1))
+    fi
+  fi
   log "verify: $pass ok, $fail missing"
   if [[ $fail -gt 0 ]]; then
     [[ ${#missing_cmds[@]} -gt 0 ]] && log "still missing: ${missing_cmds[*]}"
