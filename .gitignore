@@ -50,3 +50,4 @@ quickshell_repo/
 # Next.js site
 site/.next/
 site/out/
+site/
