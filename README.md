@@ -6,9 +6,9 @@ if you share any video to this dot files in tik tok or insta pleas mention me : 
 
 ## Showcase
 
-<video src="./showcase/showcase.mp4" controls width="720" poster="./showcase/poster.jpg"></video>
+[![Revo Shell showcase](./showcase/poster.jpg)](https://github.com/vzbc/revo-shell/raw/main/showcase/showcase.mp4)
 
-[▶ Open showcase video](./showcase/showcase.mp4)
+[▶ Watch showcase video](https://github.com/vzbc/revo-shell/raw/main/showcase/showcase.mp4)
 
 ## Layout
 
@@ -20,7 +20,6 @@ if you share any video to this dot files in tik tok or insta pleas mention me : 
 | `rofi/` | `~/.config/rofi` |
 | `kitty/` | `~/.config/kitty` |
 | `qs-gui-installer/` | **run this (GUI)** |
-| `showcase/` | demo video |
 
 ## Install (GUI — recommended)
 
