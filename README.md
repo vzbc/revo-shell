@@ -6,9 +6,7 @@ if you share any video to this dot files in tik tok or insta pleas mention me : 
 
 ## Showcase
 
-[![Revo Shell showcase](./showcase/poster.jpg)](https://github.com/vzbc/revo-shell/blob/main/showcase/showcase.mp4)
-
-[▶ Play showcase video](https://github.com/vzbc/revo-shell/blob/main/showcase/showcase.mp4)
+https://github.com/user-attachments/assets/42df3de9-9fab-4843-9afc-35f82d5852f7
 
 ## Layout
 
