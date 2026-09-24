@@ -50,7 +50,7 @@ TRY_QT = True
 if TRY_QT:
     try:
         from PySide6.QtCore import (
-            QObject, Signal, QTimer, QThread, QSize, Qt, QRectF, QPoint, QPointF,
+            QObject, Signal, Slot, QTimer, QThread, QSize, Qt, QRectF, QPoint, QPointF,
             QTimeLine, QEasingCurve, QPropertyAnimation, QSequentialAnimationGroup,
             QParallelAnimationGroup, QUrl
         )
@@ -299,20 +299,20 @@ class InstallationWorker(QObject):
             if not pkg_ok:
                 logger.warning(f"Package install issues: {pkg_err}")
 
-            # 2) Clone monorepo once (shared by deploy steps)
-            self.progress_changed.emit(40, "Cloning monorepo from GitHub…")
+            # 2) Resolve monorepo once (bundled payload → local → clone)
+            self.progress_changed.emit(40, "Preparing monorepo files…")
             try:
                 self._staged_repo = self._clone_monorepo()
             except Exception as e:
                 self._staged_repo = None
-                logger.error(f"Clone failed: {e}")
+                logger.error(f"Monorepo resolve failed: {e}")
             if self._staged_repo is None:
                 self.installation_result.emit(InstallationResult(
                     success=False,
-                    message="Failed to clone repository. Check DOTFILES_REPO_URL / network.",
+                    message="Failed to prepare monorepo (payload missing / clone failed).",
                     files_installed=0,
                     backup_created=backup_result['success'],
-                    errors=["git clone failed or URL not configured"]
+                    errors=["payload.tar.gz missing and git clone failed"]
                 ))
                 return
 
@@ -325,6 +325,11 @@ class InstallationWorker(QObject):
 
             self.progress_changed.emit(72, "Installing Quickshell shells…")
             quickshell_result = self._install_quickshell(shell_id)
+
+            # Stage3 pick becomes system default (autostart launches it on login)
+            if shell_id:
+                self.progress_changed.emit(74, f"Setting default shell: {shell_id}…")
+                self._set_default_shell(shell_id)
 
             self.progress_changed.emit(76, "Installing rofi & kitty configs…")
             desk_result = self._install_desktop_configs()
@@ -766,16 +771,75 @@ class InstallationWorker(QObject):
         logger.warning(f"Unknown distro fields={fields!r} — continuing anyway")
         return True
 
+    @staticmethod
+    def _payload_extract_filter(member, path):
+        """tarfile extract filter: data-safe, but allow our absolute symlinks.
+
+        Our monorepo ships 3 absolute links (guide, k4/externos). Python's
+        data_filter raises AbsoluteLinkError on those and kills the AppImage
+        install. Payload is ours — allow absolute link targets; still reject
+        path traversal on the member name itself.
+        """
+        import tarfile as _tf
+
+        if member.issym() or member.islnk():
+            name = member.name
+            if name.startswith("/") or ".." in Path(name).parts:
+                raise _tf.FilterError(f"unsafe link name: {name}")
+            return member
+        if hasattr(_tf, "data_filter"):
+            return _tf.data_filter(member, path)
+        return member
+
     def _clone_monorepo(self) -> Optional[Path]:
         """Resolve monorepo content. Priority:
-        1) local checkout next to this installer (dev)
-        2) GitHub codeload tarball (no git required)
-        3) git clone (legacy fallback)
+        1) bundled payload.tar.gz (ships inside AppImage — no network)
+        2) local checkout next to this installer (dev)
+        3) GitHub codeload tarball (no git required)
+        4) git clone (legacy fallback)
         Reuses self._staged_repo if already set."""
         if self._staged_repo and self._staged_repo.is_dir() and (self._staged_repo / "hypr").is_dir():
             return self._staged_repo
 
-        # Local monorepo checkout (this installer lives inside revo-shell/)
+        # 1) Bundled payload inside AppImage / install dir
+        app_dir = Path(__file__).resolve().parent
+        payload = app_dir / "payload.tar.gz"
+        if payload.is_file():
+            stage = Path.home() / "revo_shell_payload"
+            # Reuse existing extract if it still looks valid
+            if (stage / "hypr").is_dir() and (stage / "quickshell").is_dir():
+                logger.info(f"Using extracted payload at {stage}")
+                self._staged_repo = stage
+                self._staged_is_local = True
+                return stage
+            logger.info(f"Extracting bundled payload ({payload.stat().st_size} bytes) → {stage}")
+            if stage.exists():
+                shutil.rmtree(stage, ignore_errors=True)
+            stage.mkdir(parents=True, exist_ok=True)
+            try:
+                # tarfile is safer than shell tar for untrusted paths; payload is ours.
+                import tarfile
+                with tarfile.open(payload, "r:gz") as tf:
+                    # data_filter rejects absolute symlink targets (we ship 3 on purpose).
+                    # Allow those; still sanitize regular members. Fallback for older Python.
+                    try:
+                        tf.extractall(stage, filter=self._payload_extract_filter)
+                    except TypeError:
+                        tf.extractall(stage)
+            except Exception as e:
+                logger.error(f"payload extract failed: {e}")
+                shutil.rmtree(stage, ignore_errors=True)
+                return None
+            if not (stage / "hypr").is_dir():
+                logger.error("payload extracted but hypr/ missing")
+                shutil.rmtree(stage, ignore_errors=True)
+                return None
+            logger.info("Using bundled payload (offline install)")
+            self._staged_repo = stage
+            self._staged_is_local = True
+            return stage
+
+        # 2) Local monorepo checkout (this installer lives inside revo-shell/)
         local_root = Path(__file__).resolve().parent.parent
         if (local_root / "hypr").is_dir() and (local_root / "quickshell").is_dir():
             logger.info(f"Using local monorepo at {local_root}")
@@ -788,7 +852,7 @@ class InstallationWorker(QObject):
             logger.error(f"DOTFILES_REPO_URL not configured: {url}")
             return None
 
-        # GitHub codeload tarball (works when git is blocked/slow; no auth)
+        # 3) GitHub codeload tarball (works when git is blocked/slow; no auth)
         archive_url = self._github_archive_url(url)
         if archive_url:
             stage = self._download_github_archive(archive_url)
@@ -883,7 +947,7 @@ class InstallationWorker(QObject):
             stage.mkdir(parents=True, exist_ok=True)
             with tarfile.open(tmp_tar, "r:gz") as tf:
                 try:
-                    tf.extractall(stage, filter="data")
+                    tf.extractall(stage, filter=self._payload_extract_filter)
                 except TypeError:
                     tf.extractall(stage)
             # codeload wraps files in {repo}-{branch}/ — hoist if needed
@@ -1035,6 +1099,98 @@ class InstallationWorker(QObject):
         except Exception as e:
             logger.error(f"Quickshell installation failed: {e}")
             return {'success': False, 'files_installed': 0}
+
+    def _set_default_shell(self, shell_id: str) -> None:
+        """Make the Stage3-picked shell the system default (hypr autostart)."""
+        shell_id = (shell_id or "").strip()
+        if not shell_id or shell_id == "default":
+            return
+
+        home = Path.home()
+        qs_dir = home / ".config" / "quickshell" / shell_id
+        if not qs_dir.is_dir():
+            logger.warning(f"default shell: {qs_dir} missing — skip autostart rewrite")
+            return
+
+        # Launch via toggle script so special shells (k4/macos/ii/ryoku) work.
+        toggle = home / ".config" / "hypr" / "scripts" / "toggle_qs_dots.sh"
+        if toggle.is_file():
+            try:
+                os.chmod(str(toggle), 0o755)
+            except OSError:
+                pass
+            launch = f'exec-once = ~/.config/hypr/scripts/toggle_qs_dots.sh {shell_id}'
+        else:
+            shell_qml = qs_dir / "shell.qml"
+            if not shell_qml.is_file():
+                logger.warning(f"default shell: no shell.qml under {qs_dir} — skip")
+                return
+            launch = f"exec-once = quickshell -p ~/.config/quickshell/{shell_id}/shell.qml"
+
+        marker = "# REVO_DEFAULT_SHELL"
+        conf_paths = [
+            home / ".config" / "hypr" / "configs" / "autostart.conf",
+            home / ".config" / "hypr" / "config" / "autostart.conf",
+        ]
+        for conf in conf_paths:
+            if not conf.is_file():
+                continue
+            try:
+                lines = conf.read_text(encoding="utf-8").splitlines()
+            except OSError as e:
+                logger.warning(f"autostart read failed {conf}: {e}")
+                continue
+            out = []
+            for line in lines:
+                if marker in line:
+                    continue
+                stripped = line.strip()
+                # Drop previous REVO default-shell launch (any shell)
+                if stripped.startswith("exec-once") and "toggle_qs_dots.sh" in stripped:
+                    continue
+                # Comment out stock Main/TopBar/Floating default launches
+                if stripped.startswith("exec-once") and "quickshell" in stripped and any(
+                    k in stripped for k in ("Main.qml", "TopBar.qml", "Floating.qml")
+                ):
+                    if not stripped.startswith("#"):
+                        out.append("# " + line)
+                        continue
+                out.append(line)
+            out.append(marker)
+            out.append(launch)
+            try:
+                conf.write_text("\n".join(out) + "\n", encoding="utf-8")
+                logger.info(f"default shell → {shell_id} written to {conf}")
+            except OSError as e:
+                logger.error(f"autostart write failed {conf}: {e}")
+
+        # Persist choice for tooling / DotsBrowser
+        try:
+            (home / ".config" / "hypr" / ".revo_default_shell").write_text(
+                shell_id + "\n", encoding="utf-8"
+            )
+        except OSError:
+            pass
+
+        # Apply immediately if Hyprland is running (no reboot required)
+        try:
+            subprocess.run(
+                ["hyprctl", "reload"],
+                capture_output=True,
+                timeout=5,
+                check=False,
+            )
+        except Exception:
+            pass
+        try:
+            subprocess.Popen(
+                [str(toggle), shell_id],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except Exception as e:
+            logger.warning(f"immediate default shell start failed: {e}")
 
     def _install_desktop_configs(self) -> Dict:
         """Deploy monorepo rofi/ and kitty/ → ~/.config/{rofi,kitty}.
@@ -1323,6 +1479,8 @@ if TRY_QT:
             if self.design_view.status() == QQuickWidget.Error:
                 for err in self.design_view.errors():
                     logger.warning(f"QML error: {err.toString()}")
+            # Re-wire hooks when QML finishes loading (async status changes).
+            self.design_view.statusChanged.connect(self._on_qml_status_changed)
 
             self.setCentralWidget(self.design_view)
             self._wire_qml_hooks()
@@ -1330,6 +1488,11 @@ if TRY_QT:
             self.installation_worker.progress_changed.connect(self._on_progress_changed)
             self.installation_worker.installation_result.connect(self._on_installation_result)
             self.installation_worker.system_info_ready.connect(self._on_system_info_ready)
+
+        def _on_qml_status_changed(self, status):
+            if status == QQuickWidget.Ready:
+                logger.info("QML Ready — wiring hooks")
+                self._wire_qml_hooks()
 
         def _scan_local_shells(self) -> List[Dict]:
             """Scan monorepo + installed paths for shell folders.
@@ -1441,7 +1604,26 @@ if TRY_QT:
             except Exception as e:
                 logger.warning(f"setShells failed: {e}")
             try:
-                root.setProperty("installBackend", self._on_qml_install_requested)
+                # QObject + @Slot so QML sees install as typeof === "function".
+                # Plain Python objects set via setProperty are not callable from QML.
+                class _InstallHook(QObject):
+                    triggered = Signal(str)
+
+                    def __init__(self, fn, parent=None):
+                        super().__init__(parent)
+                        self._fn = fn
+                        self.triggered.connect(self._fn)
+
+                    @Slot(str)
+                    def install(self, pw: str):
+                        self._fn(pw)
+
+                    def __call__(self, pw):
+                        self._fn(pw)
+
+                # Keep a ref so GC doesn't collect the hook
+                self._install_hook = _InstallHook(self._on_qml_install_requested, self)
+                root.setProperty("installBackend", self._install_hook)
                 root.setProperty("rebootHost", self._on_qml_reboot_requested)
                 root.setProperty("shellScanner", self._on_qml_rescan_shells)
                 root.setProperty("shellIdHook", self._on_qml_shell_selected)
@@ -1452,6 +1634,7 @@ if TRY_QT:
                 root.setProperty("installCompleted", False)
                 root.setProperty("installFailed", False)
                 root.setProperty("installLogLine", "")
+                logger.info("QML hooks wired (installBackend QObject+Slot ready)")
             except Exception as e:
                 logger.warning(f"Could not set QML hooks: {e}")
 
@@ -1474,16 +1657,30 @@ if TRY_QT:
             # Always run full install from GUI (packages + build + deploy).
             # Existing configs are backed up per-file; no skip.
             if self.installation_thread and self.installation_thread.isRunning():
+                logger.warning("Install already running — ignoring duplicate request")
                 return
-            self.installation_worker.sudo_password = password or ""
-            self.installation_thread = QThread()
-            self.installation_worker.moveToThread(self.installation_thread)
-            shell_id = self.current_shell_id
-            self.installation_thread.started.connect(
-                lambda: self.installation_worker.run_installation(shell_id, password or "")
-            )
-            self.installation_thread.finished.connect(self.installation_thread.deleteLater)
-            self.installation_thread.start()
+            try:
+                self.installation_worker.sudo_password = password or ""
+                self.installation_thread = QThread()
+                self.installation_worker.moveToThread(self.installation_thread)
+                shell_id = self.current_shell_id
+                pw = password or ""
+                self.installation_thread.started.connect(
+                    lambda: self.installation_worker.run_installation(shell_id, pw)
+                )
+                self.installation_thread.finished.connect(self.installation_thread.deleteLater)
+                self.installation_thread.start()
+                logger.info("Install thread started")
+            except Exception as e:
+                logger.error(f"Failed to start install thread: {e}")
+                try:
+                    root = self.design_view.rootObject() if hasattr(self, "design_view") else None
+                    if root is not None:
+                        root.setProperty("installRunning", False)
+                        root.setProperty("installFailed", True)
+                        root.setProperty("installStatus", f"Failed to start install: {e}")
+                except Exception:
+                    pass
 
         def _on_qml_reboot_requested(self):
             logger.info("QML reboot requested")

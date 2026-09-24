@@ -162,8 +162,24 @@ enable_services() {
 log "root: $ROOT"
 log "repo: $REPO_URL"
 
-install_packages
-install_python
+# ── Deploy FIRST (files must land even if package install fails) ──
+copy_tree "$ROOT/hypr" "$HOME/.config/hypr"
+copy_tree "$ROOT/quickshell" "$HOME/.config/quickshell"
+copy_tree "$ROOT/wallpapers" "$HOME/Pictures/Wallpapers"
+copy_tree "$ROOT/rofi" "$HOME/.config/rofi"
+copy_tree "$ROOT/kitty" "$HOME/.config/kitty"
+
+if [[ "$DRY_RUN" != "1" ]]; then
+  find "$HOME/.config/hypr" -type f -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
+  find "$HOME/.config/quickshell" -type f \( -name '*.sh' -o -name '*.fish' -o -name 'instalar' -o -name 'install.sh' \) -exec chmod +x {} + 2>/dev/null || true
+  chmod +x "$ROOT/install.sh" 2>/dev/null || true
+fi
+
+fix_paths
+
+# ── Packages (non-fatal: one failed package must not abort) ──
+install_packages || log "package install had errors — continuing (configs already deployed)"
+install_python || log "python deps had errors — continuing"
 
 # Ensure rofi + kitty packages (install if user does not have them)
 ensure_term_apps() {
@@ -197,24 +213,10 @@ ensure_term_apps() {
       ;;
   esac
 }
+ensure_term_apps || true
 
-# Deploy trees (from this checkout — works offline after clone)
-copy_tree "$ROOT/hypr" "$HOME/.config/hypr"
-copy_tree "$ROOT/quickshell" "$HOME/.config/quickshell"
-copy_tree "$ROOT/wallpapers" "$HOME/Pictures/Wallpapers"
-copy_tree "$ROOT/rofi" "$HOME/.config/rofi"
-copy_tree "$ROOT/kitty" "$HOME/.config/kitty"
-ensure_term_apps
-
-if [[ "$DRY_RUN" != "1" ]]; then
-  find "$HOME/.config/hypr" -type f -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
-  find "$HOME/.config/quickshell" -type f \( -name '*.sh' -o -name '*.fish' -o -name 'instalar' -o -name 'install.sh' \) -exec chmod +x {} + 2>/dev/null || true
-  chmod +x "$ROOT/install.sh" 2>/dev/null || true
-fi
-
-fix_paths
-build_native
-enable_services
+build_native || log "native shell build had errors — continuing"
+enable_services || true
 
 # ── 7) Verify + auto-install missing requirements ───────────
 REQUIRED_CMDS=(
