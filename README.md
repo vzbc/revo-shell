@@ -14,12 +14,54 @@ https://github.com/user-attachments/assets/42df3de9-9fab-4843-9afc-35f82d5852f7
 |------|----------------|
 | `hypr/` | `~/.config/hypr` |
 | `quickshell/` | `~/.config/quickshell` |
-| `wallpapers/` | `~/.config/wallpapers` |
+| `wallpapers/` | `~/Pictures/Wallpapers` |
 | `rofi/` | `~/.config/rofi` |
 | `kitty/` | `~/.config/kitty` |
 | `qs-gui-installer/` | **run this (GUI)** |
 
-## Install (GUI — recommended)
+## Install (CLI — recommended)
+
+One-time clone, then run the installer:
+
+```bash
+git clone https://github.com/vzbc/revo-shell.git revo-shell
+cd revo-shell
+./install.sh
+```
+
+What `install.sh` does:
+
+1. Detects your package manager (pacman / apt / dnf)
+2. Installs **all system packages** needed by every shell
+3. Installs AUR packages via yay/paru when available (`quickshell-git`, fonts, …)
+4. Installs Python deps (`pip --user`)
+5. Deploys `hypr/`, `quickshell/`, `rofi/`, `kitty/` → `~/.config/`, `wallpapers/` → `~/Pictures/Wallpapers`
+6. Rewrites hardcoded `/home/revo` → `$HOME`
+7. Builds CMake shells (caelestia + Clavis)
+8. Enables pipewire / NetworkManager / bluetooth
+9. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, and **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR)
+
+Flags:
+
+```bash
+DRY_RUN=1 ./install.sh          # show what would run, change nothing
+DOTFILES_REPO_URL=... ./install.sh   # override clone URL
+```
+
+After install, verify again anytime:
+
+```bash
+./install.sh   # re-runs verify at the end
+```
+
+Launch a shell:
+
+```bash
+qs -p ~/.config/quickshell/lucid
+qs -p ~/.config/quickshell/brain_shell
+```
+
+## Install (GUI)
 
 ```bash
 git clone https://github.com/vzbc/revo-shell.git revo-shell
@@ -43,14 +85,6 @@ The GUI **full install** does everything:
 Logs: `~/.local/state/qs-gui-installer/install.log`
 
 Enter your sudo password in Stage 4 → **Install Now**.
-
-## Install (CLI)
-
-```bash
-./install.sh
-```
-
-Same steps as the GUI (packages → deploy → build → services).
 
 ## After clone — repo URL
 

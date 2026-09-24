@@ -216,9 +216,190 @@ fix_paths
 build_native
 enable_services
 
+# ── 7) Verify + auto-install missing requirements ───────────
+REQUIRED_CMDS=(
+  hyprland Hyprland hyprctl
+  qs quickshell
+  kitty rofi
+  python python3 pip pip3
+  git curl jq cmake ninja
+  playerctl grim slurp wl-copy wl-paste
+  swww matugen swaync
+  pipewire wireplumber
+  systemctl
+)
+# Map each binary → package name per PM (cmd:arch:debian:fedora)
+CMD_PKGS=(
+  "hyprland:hyprland:hyprland:hyprland"
+  "hyprctl:hyprland:hyprland:hyprland"
+  "qs:quickshell-git:quickshell:quickshell"
+  "quickshell:quickshell-git:quickshell:quickshell"
+  "kitty:kitty:kitty:kitty"
+  "rofi:rofi-wayland:rofi:rofi"
+  "python:python:python3:python3"
+  "python3:python:python3:python3"
+  "pip:python-pip:python3-pip:python3-pip"
+  "pip3:python-pip:python3-pip:python3-pip"
+  "git:git:git:git"
+  "curl:curl:curl:curl"
+  "jq:jq:jq:jq"
+  "cmake:cmake:cmake:cmake"
+  "ninja:ninja:ninja-build:ninja-build"
+  "playerctl:playerctl:playerctl:playerctl"
+  "grim:grim:grim:grim"
+  "slurp:slurp:slurp:slurp"
+  "wl-copy:wl-clipboard:wl-clipboard:wl-clipboard"
+  "wl-paste:wl-clipboard:wl-clipboard:wl-clipboard"
+  "swww:swww:swww:swww"
+  "matugen:matugen:matugen:matugen"
+  "swaync:swaync:swaync:swaync"
+  "pipewire:pipewire:pipewire:pipewire"
+  "wireplumber:wireplumber:wireplumber:wireplumber"
+  "systemctl:systemd:systemd:systemd"
+)
+REQUIRED_DIRS=(
+  "$HOME/.config/hypr"
+  "$HOME/.config/quickshell"
+  "$HOME/.config/rofi"
+  "$HOME/.config/kitty"
+  "$HOME/Pictures/Wallpapers"
+)
+
+# Look up package names for a missing cmd on current PM
+lookup_pkg() {
+  local cmd="$1" entry c a d f
+  for entry in "${CMD_PKGS[@]}"; do
+    IFS=: read -r c a d f <<<"$entry"
+    if [[ "$c" == "$cmd" ]]; then
+      case "$PM" in
+        arch) echo "$a" ;;
+        debian) echo "$d" ;;
+        fedora) echo "$f" ;;
+        *) echo "" ;;
+      esac
+      return 0
+    fi
+  done
+  echo ""
+}
+
+# Install a list of packages on current PM
+install_missing_pkgs() {
+  local -a pkgs=("$@")
+  [[ ${#pkgs[@]} -eq 0 ]] && return 0
+  [[ "$DRY_RUN" == "1" ]] && { log "DRY: would install ${pkgs[*]}"; return 0; }
+  log "installing missing: ${pkgs[*]}"
+  case "$PM" in
+    arch)
+      run "$SUDO pacman -S --noconfirm --needed ${pkgs[*]}" || true
+      # quickshell-git etc. live on AUR
+      local -a aur=()
+      local p
+      for p in "${pkgs[@]}"; do
+        [[ "$p" == *-git || "$p" == "awww" || "$p" == "kde-material-you-colors" ]] && aur+=("$p")
+      done
+      if [[ ${#aur[@]} -gt 0 ]]; then
+        local helper=""
+        have yay && helper=yay
+        have paru && helper=paru
+        if [[ -n "$helper" ]]; then
+          run "$helper -S --noconfirm --needed ${aur[*]}" || true
+        fi
+      fi
+      ;;
+    debian)
+      run "$SUDO DEBIAN_FRONTEND=noninteractive apt-get install -y ${pkgs[*]}" || true
+      ;;
+    fedora)
+      run "$SUDO dnf -y install ${pkgs[*]}" || true
+      ;;
+  esac
+}
+
+verify() {
+  local pass=0 fail=0
+  local -a missing_cmds=() missing_pkgs=()
+  log "── verify requirements ──────────────────────────"
+  for c in "${REQUIRED_CMDS[@]}"; do
+    if have "$c"; then
+      printf '  [ok]   %s\n' "$c"
+      pass=$((pass + 1))
+    else
+      printf '  [MISS] %s\n' "$c"
+      missing_cmds+=("$c")
+      local pkg
+      pkg="$(lookup_pkg "$c")"
+      if [[ -n "$pkg" ]]; then
+        missing_pkgs+=("$pkg")
+      else
+        log "  no package mapping for: $c"
+      fi
+      fail=$((fail + 1))
+    fi
+  done
+  # dedupe package list
+  if [[ ${#missing_pkgs[@]} -gt 0 ]]; then
+    local -A seen=()
+    local -a uniq=()
+    local p
+    for p in "${missing_pkgs[@]}"; do
+      [[ -n "${seen[$p]:-}" ]] && continue
+      seen[$p]=1
+      uniq+=("$p")
+    done
+    missing_pkgs=("${uniq[@]}")
+    # auto-install missing packages
+    install_missing_pkgs "${missing_pkgs[@]}"
+    # re-check commands after install
+    local -a still=()
+    for c in "${missing_cmds[@]}"; do
+      if have "$c"; then
+        printf '  [fixed] %s\n' "$c"
+        pass=$((pass + 1))
+        fail=$((fail - 1))
+      else
+        still+=("$c")
+      fi
+    done
+    if [[ ${#still[@]} -gt 0 ]]; then
+      missing_cmds=("${still[@]}")
+    else
+      missing_cmds=()
+    fi
+  fi
+  for d in "${REQUIRED_DIRS[@]}"; do
+    if [[ -d "$d" ]]; then
+      printf '  [ok]   %s\n' "$d"
+      pass=$((pass + 1))
+    else
+      printf '  [MISS] %s\n' "$d"
+      fail=$((fail + 1))
+    fi
+  done
+  # quickshell shells present?
+  local shell_count
+  shell_count=$(find "$HOME/.config/quickshell" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+  if [[ "$shell_count" -gt 0 ]]; then
+    printf '  [ok]   %s quickshell shell(s)\n' "$shell_count"
+    pass=$((pass + 1))
+  else
+    printf '  [MISS] no quickshell shells deployed\n'
+    fail=$((fail + 1))
+  fi
+  log "verify: $pass ok, $fail missing"
+  if [[ $fail -gt 0 ]]; then
+    [[ ${#missing_cmds[@]} -gt 0 ]] && log "still missing: ${missing_cmds[*]}"
+    log "hint: re-run ./install.sh, or install missing packages manually"
+    return 1
+  fi
+  log "all requirements present ✓"
+  return 0
+}
+
 log "done — packages, rofi/kitty configs, shells built"
 log "deployed: hypr quickshell wallpapers rofi kitty"
 if [[ -d "$BACKUP_ROOT" ]]; then
   log "previous configs: $BACKUP_ROOT"
 fi
 log "launch a shell: qs -p ~/.config/quickshell/<name>"
+verify || true
