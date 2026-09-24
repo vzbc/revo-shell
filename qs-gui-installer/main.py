@@ -12,6 +12,7 @@ Key Features:
 """
 
 import os
+import re
 import sys
 import json
 import shutil
@@ -82,7 +83,7 @@ else:
 # Installer Configuration
 class InstallerConfig:
     # Monorepo (hypr/ + quickshell/ + wallpapers/) — set after you create the GitHub repo
-    DOTFILES_REPO_URL = "https://github.com/X3jo/revo-shell.git"
+    DOTFILES_REPO_URL = "https://github.com/vzbc/revo-shell.git"
     # Same monorepo paths (kept for tests / older hooks)
     QUIKSHELL_REPO_URL = DOTFILES_REPO_URL
     HYPRLAND_CONFIGS_REPO_URL = DOTFILES_REPO_URL
@@ -766,8 +767,11 @@ class InstallationWorker(QObject):
         return True
 
     def _clone_monorepo(self) -> Optional[Path]:
-        """Clone monorepo into a staged dir. Reuses self._staged_repo if set.
-        Offline fallback: monorepo sitting next to qs-gui-installer/ (local checkout)."""
+        """Resolve monorepo content. Priority:
+        1) local checkout next to this installer (dev)
+        2) GitHub codeload tarball (no git required)
+        3) git clone (legacy fallback)
+        Reuses self._staged_repo if already set."""
         if self._staged_repo and self._staged_repo.is_dir() and (self._staged_repo / "hypr").is_dir():
             return self._staged_repo
 
@@ -779,13 +783,23 @@ class InstallationWorker(QObject):
             self._staged_is_local = True
             return local_root
 
-        repo_dir = Path.home() / "revo_shell_repo"
-        if repo_dir.exists():
-            shutil.rmtree(repo_dir, ignore_errors=True)
         url = self.config.DOTFILES_REPO_URL
         if "USERNAME" in url or "yourusername" in url.lower():
             logger.error(f"DOTFILES_REPO_URL not configured: {url}")
             return None
+
+        # GitHub codeload tarball (works when git is blocked/slow; no auth)
+        archive_url = self._github_archive_url(url)
+        if archive_url:
+            stage = self._download_github_archive(archive_url)
+            if stage is not None:
+                self._staged_repo = stage
+                self._staged_is_local = False
+                return stage
+
+        repo_dir = Path.home() / "revo_shell_repo"
+        if repo_dir.exists():
+            shutil.rmtree(repo_dir, ignore_errors=True)
         logger.info(f"Cloning monorepo from {url}")
         # Never hang on interactive username/password prompts.
         # Keep system/credential helpers (e.g. gh) so an authed machine still works;
@@ -836,6 +850,65 @@ class InstallationWorker(QObject):
         self._staged_repo = repo_dir
         self._staged_is_local = False
         return repo_dir
+
+    @staticmethod
+    def _github_archive_url(repo_url: str) -> Optional[str]:
+        """Map https://github.com/owner/repo(.git) → codeload tarball for default branch."""
+        try:
+            m = re.match(
+                r"^https?://github\.com/([^/]+)/([^/]+?)(?:\.git)?/?$",
+                repo_url.strip(),
+            )
+            if not m:
+                return None
+            owner, repo = m.group(1), m.group(2)
+            return f"https://codeload.github.com/{owner}/{repo}/tar.gz/refs/heads/main"
+        except Exception:
+            return None
+
+    def _download_github_archive(self, archive_url: str) -> Optional[Path]:
+        """Download + extract monorepo tarball → ~/revo_shell_repo. Returns stage dir or None."""
+        import tarfile
+        import urllib.request
+
+        stage = Path.home() / "revo_shell_repo"
+        tmp_tar = Path.home() / "revo_shell_repo.tar.gz"
+        logger.info(f"Fetching monorepo archive from {archive_url}")
+        try:
+            if stage.exists():
+                shutil.rmtree(stage, ignore_errors=True)
+            req = urllib.request.Request(archive_url, headers={"User-Agent": "revo-shell-installer"})
+            with urllib.request.urlopen(req, timeout=600) as resp, open(tmp_tar, "wb") as out:
+                shutil.copyfileobj(resp, out, length=1024 * 1024)
+            stage.mkdir(parents=True, exist_ok=True)
+            with tarfile.open(tmp_tar, "r:gz") as tf:
+                try:
+                    tf.extractall(stage, filter="data")
+                except TypeError:
+                    tf.extractall(stage)
+            # codeload wraps files in {repo}-{branch}/ — hoist if needed
+            if not (stage / "hypr").is_dir():
+                subs = [p for p in stage.iterdir() if p.is_dir()]
+                if len(subs) == 1:
+                    sub = subs[0]
+                    for child in list(sub.iterdir()):
+                        child.rename(stage / child.name)
+                    sub.rmdir()
+            if (stage / "hypr").is_dir() and (stage / "quickshell").is_dir():
+                logger.info(f"Archive extracted → {stage}")
+                return stage
+            logger.error("Archive extracted but hypr/quickshell missing")
+            shutil.rmtree(stage, ignore_errors=True)
+            return None
+        except Exception as e:
+            logger.error(f"Archive download failed: {e}")
+            shutil.rmtree(stage, ignore_errors=True)
+            return None
+        finally:
+            try:
+                tmp_tar.unlink(missing_ok=True)
+            except OSError:
+                pass
 
     @staticmethod
     def _copy_tree(src: Path, dest: Path) -> int:

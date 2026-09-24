@@ -7,7 +7,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TS="$(date +%Y%m%d_%H%M%S)"
 BACKUP_ROOT="${BACKUP_ROOT:-$HOME/.config/revo-shell-backup-$TS}"
 DRY_RUN="${DRY_RUN:-0}"
-REPO_URL="${DOTFILES_REPO_URL:-https://github.com/X3jo/revo-shell.git}"
+REPO_URL="${DOTFILES_REPO_URL:-https://github.com/vzbc/revo-shell.git}"
 SUDO="${SUDO:-sudo}"
 
 log()  { printf '[install] %s\n' "$*"; }

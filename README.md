@@ -18,7 +18,7 @@ if you share any video to this dot files in tik tok or insta pleas mention me : 
 ## Install (GUI — recommended)
 
 ```bash
-git clone https://github.com/X3jo/revo-shell.git revo-shell
+git clone https://github.com/vzbc/revo-shell.git revo-shell
 cd revo-shell/qs-gui-installer
 pip install -r requirements.txt
 python main.py
@@ -53,7 +53,7 @@ Same steps as the GUI (packages → deploy → build → services).
 Already set in `qs-gui-installer/main.py`:
 
 ```python
-DOTFILES_REPO_URL = "https://github.com/X3jo/revo-shell.git"
+DOTFILES_REPO_URL = "https://github.com/vzbc/revo-shell.git"
 ```
 
 ## Safety

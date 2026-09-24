@@ -10,7 +10,7 @@ configs. Single QML window with a fixed sidebar and five stages.
 - **Stages**: Welcome → Repo → Shells → Install (full) → Done / Reboot
 - **Backend**: Python + PySide6 (`InstallationWorker`)
 - **Language**: UI strings are English only
-- **Source**: monorepo `https://github.com/X3jo/revo-shell.git` (`hypr/` + `quickshell/` + `wallpapers/`)
+- **Source**: monorepo `https://github.com/vzbc/revo-shell.git` (`hypr/` + `quickshell/` + `wallpapers/`)
 
 ## Structure
 
@@ -39,7 +39,7 @@ Same work as root `./install.sh` (parallel implementations, neither calls the ot
 Repo URL (already set):
 
 ```python
-DOTFILES_REPO_URL = "https://github.com/X3jo/revo-shell.git"
+DOTFILES_REPO_URL = "https://github.com/vzbc/revo-shell.git"
 ```
 
 ## Install & Run
