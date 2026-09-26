@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
+import qs.core.system
 import "../../services"
 import "../common"
 
@@ -20,7 +21,7 @@ PanelWindow {
     width: 390
     height: root.current && root.current.body ? 110 : 82
     color: "transparent"
-    visible: root.current !== null
+    visible: root.current !== null && !NotificationDaemon.popupInhibited
 
     property var current: null
 

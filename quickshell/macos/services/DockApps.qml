@@ -16,8 +16,8 @@ Singleton {
 
     property var pinned: [
         { name: "Finder", icon: "Finder.png", desktop: "org.gnome.Nautilus", exec: "nautilus", appIds: ["org.gnome.Nautilus", "nautilus"] },
-        { name: "Launchpad", icon: "Apps.png", desktop: "macos-launcher", exec: "macos-launcher", appIds: ["macos-launcher", "Launcher"] },
-        { name: "Safari", icon: "Safari.png", desktop: "", exec: "pafari", appIds: ["pafari"] },
+        { name: "Launchpad", icon: "Apps.png", desktop: "macos-launcher", exec: "qs ipc -p /home/revo/.config/quickshell/macos call launchpad toggle", appIds: ["macos-launcher", "Launcher"] },
+                { name: "Safari", icon: "Safari.png", desktop: "org.gnome.Pafari", exec: "pafari", appIds: ["org.gnome.Pafari", "pafari"] },
         { name: "Telegram", icon: "Telegram.png", desktop: "org.telegram.desktop", exec: "telegram-desktop", appIds: ["org.telegram.desktop", "telegram-desktop"] },
         { name: "Steam", icon: "Steam.png", desktop: "steam", exec: "steam", appIds: ["steam", "com.valvesoftware.Steam"] },
         { name: "Photos", icon: "Photos.png", desktop: "org.kde.gwenview", exec: "gwenview", appIds: ["org.kde.gwenview", "gwenview"] },
@@ -33,7 +33,7 @@ Singleton {
         { name: "VS Code", icon: "code.png", desktop: "code-oss", exec: "code", appIds: ["code-oss", "code", "com.visualstudio.code"] },
         { name: "Terminal", icon: "Terminal.png", desktop: "kitty", exec: "kitty", appIds: ["kitty"] },
         { name: "App Store", icon: "App Store.png", desktop: "pearos-appstore", exec: "pearos-appstore", appIds: ["pearos-appstore"] },
-        { name: "System Settings", icon: "System Settings.png", desktop: "pearos-settings", exec: "pearos-settings", appIds: ["pearos-settings"] }
+        { name: "System Settings", icon: "System Settings.png", desktop: "macos-settings", exec: "qs ipc -p /home/revo/.config/quickshell/macos call settings toggle", appIds: ["macos-settings"] }
     ]
 
     property bool trashEmpty: true
@@ -180,16 +180,33 @@ Singleton {
         return root._iconCache[appId] || root.pinnedIcon(appId) || "Placeholder.png";
     }
 
+    // The shell's own windows all report appId "org.quickshell".
+    // Map them onto the dock entry they belong to so they never show up
+    // as a separate "quickshell" icon.
+    function _normalizeId(t) {
+        const id = t.appId;
+        if (!id) return "";
+        if (id === "org.quickshell" || id === "quickshell") {
+            const title = (t.title || "").toLowerCase().replace(/\s+/g, "");
+            if (title.indexOf("systemsettings") !== -1) return "macos-settings";
+            return "";
+        }
+        return id;
+    }
+
     function allRunningIds() {
         const ids = [];
         for (const t of ToplevelManager.toplevels.values) {
-            const id = t.appId;
+            const id = root._normalizeId(t);
             if (id && !ids.includes(id)) ids.push(id);
         }
         return ids;
     }
 
     function isRunning(appIds) {
+        // The launchpad is a shell surface, not an xdg toplevel: mirror its
+        // open state so the dock shows it as a running app and stops bouncing.
+        if (appIds.includes("macos-launcher")) return ShellController.launcherOpen;
         for (const id of appIds) {
             if (root._running.includes(id)) return true;
         }
@@ -199,6 +216,10 @@ Singleton {
     function focusApp(appIds) {
         for (const id of appIds) {
             root.clearBadge(id);
+        }
+        if (appIds.includes("macos-launcher")) {
+            ShellController.toggle("launcher");
+            return;
         }
         for (const t of ToplevelManager.toplevels.values) {
             if (appIds.includes(t.appId)) {
@@ -310,7 +331,7 @@ Singleton {
     function refresh() {
         const ids = [];
         for (const t of ToplevelManager.toplevels.values) {
-            const id = t.appId;
+            const id = root._normalizeId(t);
             if (id && !ids.includes(id)) ids.push(id);
         }
         root._running = ids;

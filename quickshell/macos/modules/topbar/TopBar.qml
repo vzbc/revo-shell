@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.VectorImage
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -7,6 +8,8 @@ import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
 import "../../services"
 import "../common"
+import qs.core.system
+import "./eqsh" as Eq
 
 PanelWindow {
     id: root
@@ -139,6 +142,7 @@ PanelWindow {
     function openOne(name) {
         root.closeAllMenus();
         ShellController.closeAll();
+        if (!name || name === "none") return;
         if (name === "apple") root.appleOpen = true;
         else if (name === "wifi") root.wifiOpen = true;
         else if (name === "battery") root.batteryOpen = true;
@@ -959,6 +963,22 @@ PanelWindow {
         function onControlCenterOpenChanged() { if (ShellController.controlCenterOpen) root.closeAllMenus(); }
         function onOpenRequested(name) { if (name === "closeall") root.closeAllMenus(); }
     }
+    Connections {
+        target: root
+        function syncGrab() {
+            const mine = [appleMenu, wifiPopup, batteryPopup, menuPopup];
+            const list = GlobalFocusGrab.dismissable.filter(w => mine.indexOf(w) === -1);
+            if (root.appleOpen) list.push(appleMenu);
+            if (root.wifiOpen) list.push(wifiPopup);
+            if (root.batteryOpen) list.push(batteryPopup);
+            if (root.openMenu !== "") list.push(menuPopup);
+            GlobalFocusGrab.dismissable = list;
+        }
+        function onAppleOpenChanged() { syncGrab(); }
+        function onWifiOpenChanged() { syncGrab(); }
+        function onBatteryOpenChanged() { syncGrab(); }
+        function onOpenMenuChanged() { syncGrab(); }
+    }
 
     component PopItem: Rectangle {
         id: pit
@@ -1062,7 +1082,7 @@ PanelWindow {
             MouseArea {
                 anchors.fill: parent; hoverEnabled: true
                 onEntered: appleButtonBg.color = root.barHover; onExited: appleButtonBg.color = "transparent"
-                onClicked: root.openOne(root.appleOpen ? "none" : "apple")
+                onClicked: { if (root.appleOpen) { root.closeAllMenus(); } else { root.openOne("apple"); } }
             }
         }
 
@@ -1098,7 +1118,21 @@ PanelWindow {
 
         Item { Layout.fillWidth: true; Layout.preferredHeight: 1 }
 
-        // ---- Right side (left→right: Recording → Mic → Battery → Keyboard → WiFi → Tray → Spotlight → CC → Clock) ----
+        // ---- Right side (left->right: Tray -> Recording -> Mic -> Battery -> Keyboard -> WiFi -> Spotlight -> CC -> Clock) ----
+
+        // ---- System Tray (eqsh) ----
+        Item {
+            id: systemTrayHost
+            visible: Appearance.menubarTray
+            Layout.leftMargin: 4
+            Layout.preferredHeight: parent.height
+            Layout.preferredWidth: eqshTray.visible ? eqshTray.implicitWidth : 0
+            Eq.SystemTray {
+                id: eqshTray
+                height: Appearance.barHeight
+                anchors.verticalCenter: parent.verticalCenter
+            }
+        }
 
         // ---- Screen Recording / Sharing indicator (purple) ----
         Item {
@@ -1268,19 +1302,23 @@ PanelWindow {
             Timer { id: _resetSwitching; interval: 1000; onTriggered: kbdItem.switching = false }
         }
 
-        // ---- Wi-Fi ----
+        // ---- Wi-Fi (eqsh icon) ----
         Item {
             id: wifiItem
             visible: Appearance.menubarWifi
             Layout.preferredWidth: 30; Layout.preferredHeight: parent.height
+            readonly property string signalIcon: {
+                if (!Network.wifiOn) return "0";
+                const s = (typeof NetworkManager !== "undefined" && NetworkManager.active)
+                    ? NetworkManager.active.strength : 100;
+                return s > 90 ? "100" : s > 66 ? "66" : s > 33 ? "33" : "0";
+            }
             Rectangle { id: wifiBg; anchors.fill: parent; radius: 5; color: "transparent" }
-            Image {
+            VectorImage {
                 anchors.centerIn: parent; width: 24; height: 24
-                source: Network.wifiOn
-                    ? Qt.resolvedUrl("../../assets/icons/tb_network-wireless-100.svg")
-                    : Qt.resolvedUrl("../../assets/icons/tb_network-wireless-0.svg")
-                sourceSize: Qt.size(24, 24)
-                opacity: Network.wifiOn ? 1 : 0.5
+                preferredRendererType: VectorImage.CurveRenderer
+                source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/wifi/nm-signal-" + wifiItem.signalIcon + "-symbolic.svg")
+                opacity: Network.wifiOn ? 1 : 0.45
             }
             MouseArea {
                 anchors.fill: parent; hoverEnabled: true
@@ -1289,66 +1327,16 @@ PanelWindow {
             }
         }
 
-        // ---- System Tray ----
-        Row {
-            id: systemTrayRow
-            Layout.leftMargin: 4; spacing: 4
-            property int dragIdx: -1
-            property int dropIdx: -1
-            Repeater {
-                model: SystemTray.items
-                delegate: Item {
-                    required property var modelData
-                    required property int index
-                    width: 22; height: 22
-                    visible: Appearance.menubarTray
-                    Image {
-                        anchors.centerIn: parent; width: 18; height: 18
-                        source: modelData.icon || ""; sourceSize: Qt.size(18, 18); asynchronous: true
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        property bool held: false
-                        property real pressX: 0
-                        onPressed: (mouse) => {
-                            held = false;
-                            pressX = mouse.x;
-                            trayHold.start();
-                        }
-                        onReleased: {
-                            trayHold.stop();
-                            if (!held) {
-                                if (typeof modelData.activate === "function") modelData.activate();
-                            }
-                            held = false;
-                        }
-                        onPositionChanged: (mouse) => {
-                            if (held) {
-                                systemTrayRow.dragIdx = index;
-                            }
-                        }
-                        Timer {
-                            id: trayHold
-                            interval: 500
-                            onTriggered: {
-                                if (parent.pressed) parent.held = true;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // ---- Spotlight (magnifying glass icon) ----
+        // ---- Spotlight (eqsh icon) ----
         Item {
             id: spotItem
             visible: Appearance.menubarSpotlight
             Layout.preferredWidth: 30; Layout.preferredHeight: parent.height
             Rectangle { id: spotlightBg; anchors.fill: parent; radius: 5; color: "transparent" }
-            Icon {
-                anchors.centerIn: parent; width: 22; height: 22
-                path: "M 11 4.5 A 6.5 6.5 0 1 0 11 17.5 A 6.5 6.5 0 1 0 11 4.5 M 16.4 16.4 L 20 20"
-                color: root.barFg; strokeWidth: 3
+            VectorImage {
+                anchors.centerIn: parent; width: 19; height: 19
+                preferredRendererType: VectorImage.CurveRenderer
+                source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/search.svg")
             }
             MouseArea {
                 anchors.fill: parent; hoverEnabled: true
@@ -1357,16 +1345,16 @@ PanelWindow {
             }
         }
 
-        // ---- Control Center ----
+        // ---- Control Center (eqsh icon) ----
         Item {
             id: ccItem
             visible: Appearance.menubarControlCenter
-            Layout.preferredWidth: 24; Layout.preferredHeight: parent.height
+            Layout.preferredWidth: 30; Layout.preferredHeight: parent.height
             Rectangle { id: controlBg; anchors.fill: parent; radius: 5; color: "transparent" }
-            Icon {
-                anchors.centerIn: parent; width: 18; height: 18
-                path: "M 5.5 2 H 18.5 A 3.5 3.5 0 0 1 22 5.5 A 3.5 3.5 0 0 1 18.5 9 H 5.5 A 3.5 3.5 0 0 1 2 5.5 A 3.5 3.5 0 0 1 5.5 2 Z M 7 5.5 m -1.2 0 a 1.2 1.2 0 1 0 2.4 0 a 1.2 1.2 0 1 0 -2.4 0 M 5.5 15 H 18.5 A 3.5 3.5 0 0 1 22 18.5 A 3.5 3.5 0 0 1 18.5 22 H 5.5 A 3.5 3.5 0 0 1 2 18.5 A 3.5 3.5 0 0 1 5.5 15 Z M 17 18.5 m -1.2 0 a 1.2 1.2 0 1 0 2.4 0 a 1.2 1.2 0 1 0 -2.4 0"
-                color: root.barFg; strokeWidth: 2
+            VectorImage {
+                anchors.centerIn: parent; width: 24; height: 24
+                preferredRendererType: VectorImage.CurveRenderer
+                source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/control-center.svg")
             }
             MouseArea {
                 anchors.fill: parent; hoverEnabled: true
@@ -1397,7 +1385,7 @@ PanelWindow {
     PopupWindow {
         id: wifiPopup
         parentWindow: root; screen: Quickshell.screens[0]
-        width: 280; height: 340; visible: root.wifiOpen; color: "transparent"
+        implicitWidth: 280; implicitHeight: 340; visible: root.wifiOpen; color: "transparent"
         Rectangle {
             anchors.fill: parent; radius: 12
             color: Qt.rgba(0.18, 0.18, 0.22, 0.45)
@@ -1517,7 +1505,7 @@ PanelWindow {
     PopupWindow {
         id: batteryPopup
         parentWindow: root; screen: Quickshell.screens[0]
-        width: 280; height: 360; visible: root.batteryOpen; color: "transparent"
+        implicitWidth: 280; implicitHeight: 360; visible: root.batteryOpen; color: "transparent"
         property real pct: Battery.percentage
         property bool charging: Battery.isCharging
         property bool full: Battery.isFull
@@ -1634,7 +1622,7 @@ PanelWindow {
         id: appleMenu
         parentWindow: root; screen: Quickshell.screens[0]
         relativeX: 2; relativeY: Appearance.barHeight + 8
-        width: 232; height: 370; visible: root.appleOpen; color: "transparent"
+        implicitWidth: 232; implicitHeight: 370; visible: root.appleOpen; color: "transparent"
         Rectangle {
             anchors.fill: parent; radius: 12; 
             color: Qt.rgba(0.18, 0.18, 0.22, 0.45) // خلفية شفافة
@@ -1643,10 +1631,19 @@ PanelWindow {
                 anchors.fill: parent; anchors.margins: 5; spacing: 1
                 // ... بقية المحتوى
                 component AMItem: Rectangle {
-                    id: ai; property string label: ""; property string sublabel: ""; property var onClick: null
+                    id: ai; property string label: ""; property string sublabel: ""; property url icon: ""; property var onClick: null
                     Layout.fillWidth: true; Layout.preferredHeight: 28; radius: 6; color: "transparent"
+                    VectorImage {
+                        visible: ai.icon.toString() !== ""
+                        width: 16; height: 16
+                        preferredRendererType: VectorImage.CurveRenderer
+                        anchors.left: parent.left; anchors.leftMargin: 9
+                        anchors.verticalCenter: parent.verticalCenter
+                        source: ai.icon
+                    }
                     Text {
-                        anchors.left: parent.left; anchors.leftMargin: 10
+                        anchors.left: parent.left
+                        anchors.leftMargin: ai.icon.toString() !== "" ? 31 : 10
                         anchors.verticalCenter: parent.verticalCenter
                         text: ai.label
                         font { family: Appearance.fontFamily; pixelSize: 13 }
@@ -1662,21 +1659,21 @@ PanelWindow {
                     MouseArea { anchors.fill: parent; hoverEnabled: true; onEntered: ai.color = Appearance.menuHighlight; onExited: ai.color = "transparent"; onClicked: { root.appleOpen = false; if (ai.onClick) ai.onClick(); } }
                 }
                 component ASep: Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; Layout.topMargin: 4; Layout.bottomMargin: 4; color: Qt.rgba(1, 1, 1, 0.12) }
-                AMItem { label: "\uF8FF  About This Mac"; onClick: () => ShellController.openAbout() }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/icon.svg"); label: "About This Mac"; onClick: () => ShellController.openAbout() }
                 ASep {}
-                AMItem { label: "\u2699  System Settings\u2026"; onClick: () => Apps.launch("pearos-settings") }
-                AMItem { label: "\u2727  App Store\u2026"; onClick: () => Apps.launch("pearos-appstore") }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/settings.svg"); label: "System Settings…"; onClick: () => Apps.launch("pearos-settings") }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/store.svg"); label: "App Store…"; onClick: () => Apps.launch("pearos-appstore") }
                 ASep {}
-                AMItem { label: "\u231B  Recent Items"; sublabel: "\u25B6" }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/clock.svg"); label: "Recent Items"; sublabel: "▶" }
                 ASep {}
-                AMItem { label: "\u26A0  Force Quit..."; onClick: () => ShellController.openForceQuit() }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/quit.svg"); label: "Force Quit..."; onClick: () => ShellController.openForceQuit() }
                 ASep {}
-                AMItem { label: "\u23FE  Sleep"; onClick: () => ShellController.action("sleep") }
-                AMItem { label: "\u21BB  Restart..."; onClick: () => ShellController.requestAction("restart") }
-                AMItem { label: "\u23FB  Shut Down..."; onClick: () => ShellController.requestAction("shutdown") }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/sleep.svg"); label: "Sleep"; onClick: () => ShellController.action("sleep") }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/arrow-counterclockwise.svg"); label: "Restart..."; onClick: () => ShellController.requestAction("restart") }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/power.svg"); label: "Shut Down..."; onClick: () => ShellController.requestAction("shutdown") }
                 ASep {}
-                AMItem { label: "\u267E  Lock Screen"; sublabel: "\u2303\u2318Q"; onClick: () => ShellController.action("lock") }
-                AMItem { label: "\u2194  Log Out Revo..."; sublabel: "\u21e7\u2318Q"; onClick: () => ShellController.requestAction("logout") }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/lock.svg"); label: "Lock Screen"; sublabel: "⌃⌘Q"; onClick: () => ShellController.action("lock") }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/arrow-right.svg"); label: "Log Out Revo..."; sublabel: "⇧⌘Q"; onClick: () => ShellController.requestAction("logout") }
             }
         }
     }
@@ -1685,8 +1682,8 @@ PanelWindow {
     PopupWindow {
         id: menuPopup
         parentWindow: root; screen: Quickshell.screens[0]
-        width: 280; visible: root.openMenu !== ""; color: "transparent"
-        height: Math.min(600, (root.menuItems(root.openMenu).length * 29) + 24)
+        implicitWidth: 280; visible: root.openMenu !== ""; color: "transparent"
+        implicitHeight: Math.min(600, (root.menuItems(root.openMenu).length * 29) + 24)
         Rectangle {
             anchors.fill: parent; radius: 12; 
             color: Qt.rgba(0.18, 0.18, 0.22, 0.45) // خلفية شفافة

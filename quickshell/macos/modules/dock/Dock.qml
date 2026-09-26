@@ -42,7 +42,7 @@ PanelWindow {
     color: "transparent"
     WlrLayershell.namespace: "macos:dock"
 
-    readonly property int iconZoomFactor: Appearance.dockMagnification ? 30 : 0
+    readonly property int iconZoomFactor: Appearance.dockMagnification ? 55 : 0
     readonly property int iconBase: Appearance.dockIconSize
     property int instantHoveredIndex: -1
     property real instantHoveredFraction: 0.5

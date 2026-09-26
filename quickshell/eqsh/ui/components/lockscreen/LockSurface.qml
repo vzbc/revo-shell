@@ -1,0 +1,754 @@
+import Quickshell
+import QtQuick
+import QtQuick.Layouts
+import QtQuick.Controls.Material
+import QtQuick.Effects
+import QtQuick.Controls.Fusion
+import Quickshell.Wayland
+import Quickshell.Widgets
+import Quickshell.Hyprland
+import Quickshell
+import qs.ui.controls.auxiliary
+import qs.ui.controls.advanced
+
+import qs.ui.advanced.shader
+import qs.ui.advanced.shader.glass
+
+import qs.ui.controls.providers
+import qs.ui.controls.primitives
+import qs.config
+import qs.core.system
+import qs.services
+import qs.ui.components.panel
+import qs
+
+Rectangle {
+	id: root
+	required property LockContext context
+	required property var screen
+	readonly property ColorGroup colors: Window.active ? palette.active : palette.inactive
+	property string wallpaperImage: Config.lockScreen.useCustomWallpaper ? Config.lockScreen.customWallpaperPath : Config.wallpaper.path
+
+	function unlock() {
+		if (fadeOutAnim.running)
+			return;
+		fadeOutAnim.start();
+		scaleAnim.start();
+		scaleAnim2.start();
+		scaleAnim3.start();
+	}
+
+	PropertyAnimation {
+		id: fadeOutAnim
+		target: locksur
+		property: "opacity"
+		to: 0
+		duration: Config.lockScreen.fadeDuration
+		onStopped: {
+			if (root.context) root.context.unlocked();
+		}
+	}
+	PropertyAnimation {
+		id: scaleAnim
+		target: contentItem
+		property: "scale"
+		to: Config.general.reduceMotion ? 1 : Config.lockScreen.zoom
+		duration: Config.lockScreen.zoomDuration
+		easing.type: Easing.InOutQuad
+	}
+	PropertyAnimation {
+		id: scaleAnim2
+		target: contentItem
+		property: "opacity"
+		to: 0
+		duration: Config.lockScreen.zoomDuration
+		easing.type: Easing.InOutQuad
+	}
+	PropertyAnimation {
+		id: scaleAnim3
+		target: backgroundImageBlur
+		property: "scale"
+		to: 1
+		duration: Config.lockScreen.fadeDuration / 1.5
+		easing.type: Easing.InOutQuad
+	}
+
+	opacity: 0;
+	color: "transparent"
+
+	Behavior on opacity {
+		NumberAnimation { duration: Config.lockScreen.fadeDuration; easing.type: Easing.InOutQuad }
+	}
+
+	Component.onCompleted: {
+		root.opacity = 1;
+	}
+
+	BackgroundImage {
+		id: backgroundImage
+		source: wallpaperImage
+		opacity: 1
+		visible: true
+		anchors.fill: parent
+		Rectangle {
+			id: backgroundImageDim
+			anchors.fill: parent
+			color: Config.lockScreen.dimColor
+			opacity: Config.lockScreen.dimOpacity
+		}
+	}
+
+	MultiEffect {
+		id: backgroundImageBlur
+		anchors.fill: backgroundImage
+		source: backgroundImage
+		blurEnabled: true
+		autoPaddingEnabled: false
+		blur: 0
+		blurMax: 64 * Config.lockScreen.blurStrength
+		blurMultiplier: 1
+		scale: 1
+		layer.enabled: true
+		Component.onCompleted: {
+			backgroundImageBlur.scale = Config.general.reduceMotion ? 1 : Config.lockScreen.zoom;
+			backgroundImageBlur.blur = Config.lockScreen.blur;
+		}
+		Behavior on scale {
+			NumberAnimation { duration: Config.lockScreen.zoomDuration; easing.type: Easing.InOutQuad }
+		}
+		Behavior on blur {
+			NumberAnimation { duration: Config.lockScreen.zoomDuration; easing.type: Easing.InOutQuad }
+		}
+	}
+
+	Item {
+		id: contentItem
+		anchors.fill: parent
+		scale: Config.general.reduceMotion ? 1 : Config.lockScreen.zoom
+		property alias transformY: trans.y
+		transform: Translate {
+			id: trans
+			y: Config.general.reduceMotion ? 0 : -50
+			Behavior on y {
+				NumberAnimation { duration: Config.lockScreen.clockZoomDuration*2; easing.type: Easing.InOutQuad }
+			}
+		}
+		opacity: Config.general.reduceMotion ? 1 : 0
+		readonly property bool showInteractive: {
+			Config.lockScreen.useFocusedScreen ? ((CompositorService.isHyprland ? Hyprland.focusedMonitor.name : NiriService.currentOutput) == screen?.name) :
+			Config.lockScreen.mainScreen != "" ? Config.lockScreen.mainScreen == screen.name :
+			Config.lockScreen.interactiveScreens.includes(screen.name)
+		}
+		onShowInteractiveChanged: {
+			if (showInteractive) {
+				contentItem.scale = 1;
+				contentItem.opacity = 1;
+			} else {
+				contentItem.scale = Config.general.reduceMotion ? 1 : Config.lockScreen.zoom;
+				contentItem.opacity = 0;
+			}
+		}
+		Component.onCompleted: {
+			contentItem.scale = 1;
+			contentItem.opacity = 1;
+			trans.y = 0;
+		}
+		Behavior on scale {
+			NumberAnimation { duration: Config.lockScreen.clockZoomDuration; easing.type: Easing.InOutQuad }
+		}
+		Behavior on opacity {
+			NumberAnimation { duration: Config.lockScreen.clockZoomDuration; easing.type: Easing.InOutQuad }
+		}
+
+		MultiEffect {
+			id: mediaBackgroundBlur
+			anchors.fill: contentItem
+			source: backgroundImageBlur
+			blurEnabled: true
+			autoPaddingEnabled: false
+			blur: 0.1
+			blurMax: 64 * Config.lockScreen.blurStrength
+			blurMultiplier: 1
+		}
+		PropertyAnimation {
+			target: mediaBackgroundBlur
+			property: "blur"
+			from: 0
+			to: 0.5
+			duration: 2000
+			id: mediaGlassShow1Animation
+		}
+		ShaderEffectSource {
+			id: mediaBlurSource
+			sourceItem: mediaBackgroundBlur
+			sourceRect: Qt.rect(
+				mediaGlass.x,
+				mediaGlass.y,
+				mediaGlass.width,
+				mediaGlass.height
+			)
+			hideSource: true
+			live: true
+			visible: false
+		}
+
+		ShaderEffectSource {
+			id: clockBlurSource
+			anchors {
+				left: clock.left
+				top: clock.top
+				right: clock.right
+				bottom: clock.bottom
+			}
+			sourceItem: backgroundImage
+			sourceRect: Qt.rect(clock.x, clock.y, clock.width, clock.height)
+			hideSource: false
+			live: true
+			samples: 128
+		}
+
+		MultiEffect {
+			id: clockBlur
+			anchors.centerIn: clock
+			width: clock.width
+			height: clock.height
+			source: clockBlurSource
+			blurEnabled: true
+			blur: 1
+			blurMax: 64
+			blurMultiplier: 1.2
+			brightness: 0.4
+			autoPaddingEnabled: false
+			maskEnabled: true
+			maskSource: clock
+			maskSpreadAtMin: 0.1
+			maskThresholdMin: 0.1
+			antialiasing: true
+		}
+
+		Label {
+			id: clock
+
+			anchors {
+				horizontalCenter: parent.horizontalCenter
+				top: parent.top
+				topMargin: 100
+			}
+
+			renderType: Text.NativeRendering
+			color: "#33ffffff"
+			font.family: Fonts.sFProRoundedRegular.family
+			font.pointSize: 80
+			font.weight: 900
+			layer.enabled: true
+			layer.smooth: true
+
+			//text: root.context.currentText == "" ? Time.getTime(Config.lockScreen.timeFormat) : root.context.currentText
+			text: Time.getTime(Config.lockScreen.timeFormat)
+		}
+
+		CFClippingRect {
+			id: mediaGlass
+			anchors.bottom: inputArea.top
+			anchors.horizontalCenter: inputArea.horizontalCenter
+			anchors.bottomMargin: 60
+			width: 330
+			height: 200
+			radius: 30
+			GlassMaterial {
+				id: mediaGlassInternal
+				anchors.fill: parent
+				visible: MusicPlayerProvider.isAvailable
+				opacity: contentItem.opacity == 1 ? 1 : 0
+				Behavior on opacity {
+					NumberAnimation { duration: 400 }
+				}
+				Behavior on width {
+					NumberAnimation { duration: 400; easing.type: Easing.OutBack; easing.overshoot: 3 }
+				}
+				pos: Qt.point(1, 1)
+				size: Qt.point(328, 198)
+				source: mediaBlurSource
+				blurSource: mediaBlurSource
+				bloomSource: mediaBlurSource
+				glassRefractionDim: 30
+				glassRefractionMag: 0
+				property real rimLightOpacity: 0.0
+				rimLightColor: Qt.vector4d(1, 1, 1, rimLightOpacity)
+				ParallelAnimation {
+					id: mediaGlassShow2Animation
+					PropertyAnimation {
+						target: mediaGlassInternal
+						property: "glassRefractionMag"
+						from: 0
+						to: 100
+						duration: 1000
+					}
+					PropertyAnimation {
+						target: mediaGlassInternal
+						property: "rimLightOpacity"
+						from: 0
+						to: 0.15
+						duration: 1000
+					}
+				}
+				Component.onCompleted: {
+					mediaGlassShow1Animation.restart()
+					mediaGlassShow2Animation.restart()
+				}
+				glassRefractionAberration: 10
+				radius: 30
+				//glassTintColor: Qt.alpha(AccentColor.preferredAccentTextColor == "white" ? "#1e1e1e" : "#ffffff", 0.5)
+			}	
+		}
+
+		Loader {
+			active: MusicPlayerProvider.isAvailable
+			enabled: MusicPlayerProvider.isAvailable
+			visible: MusicPlayerProvider.isAvailable
+			anchors.fill: mediaGlass
+			anchors.margins: 25
+			Item {
+				anchors.fill: parent
+				MultiEffect {
+					source: thumbnail
+					anchors.fill: thumbnail
+					blurEnabled: true
+					blur: 1
+					blurMultiplier: 1
+					blurMax: 64
+					scale: 2
+					autoPaddingEnabled: true
+				}
+				ClippingRectangle {
+					id: thumbnail
+					anchors.bottom: time.top
+					anchors.left: parent.left
+					anchors.margins: 10
+					anchors.bottomMargin: 20
+					width: 60
+					height: 60
+					radius: 15
+					color: "#10ffffff"
+					Image {
+						anchors.fill: parent
+						fillMode: Image.PreserveAspectCrop
+						source: MusicPlayerProvider.thumbnail
+						smooth: true
+						mipmap: true
+					}
+				}
+				CFText {
+					id: title
+					anchors {
+						top: thumbnail.top
+						left: thumbnail.right
+						right: parent.right
+						topMargin: 10
+						leftMargin: 10
+						rightMargin: 10
+					}
+					text: MusicPlayerProvider.title
+					elide: Text.ElideRight
+					font.weight: 600
+				}
+				Text {
+					id: artist
+					anchors {
+						top: title.bottom
+						left: thumbnail.right
+						right: parent.right
+						leftMargin: 10
+						rightMargin: 10
+					}
+					text: MusicPlayerProvider.artist
+					color: "#aaffffff"
+					elide: Text.ElideRight
+					font.weight: 400
+				}
+				// Progress Bar
+				CFText {
+					id: time
+					anchors {
+						left: parent.left
+						leftMargin: 10
+						bottom: controls.top
+						bottomMargin: 10
+					}
+					// position is in seconds
+					text: Qt.formatTime(new Date(MusicPlayerProvider.position * 1000), "mm:ss")
+					color: "#aaffffff"
+					elide: Text.ElideRight
+				}
+				ProgressBar {
+					id: control
+					anchors {
+						left: time.right
+						leftMargin: 10
+						right: remainingTime.left
+						rightMargin: 10
+						verticalCenter: time.verticalCenter
+					}
+					height: 5
+					value: MusicPlayerProvider.position / MusicPlayerProvider.duration
+					background: Rectangle {
+						implicitHeight: 5
+						color: '#50aaaaaa'
+						radius: 5
+					}
+					contentItem: Item {
+						implicitHeight: 5
+
+						// Progress indicator for determinate state.
+						Rectangle {
+							width: control.visualPosition * parent.width
+							height: parent.height
+							radius: 5
+							color: '#ffffff'
+							visible: !control.indeterminate
+						}
+					}
+				}
+				CFText {
+					id: remainingTime
+					anchors {
+						right: parent.right
+						rightMargin: 10
+						bottom: controls.top
+						bottomMargin: 10
+					}
+					// position is in seconds
+					text: Qt.formatTime(new Date((MusicPlayerProvider.duration-MusicPlayerProvider.position) * 1000), "-mm:ss")
+					color: "#aaffffff"
+					elide: Text.ElideLeft
+				}
+				Row {
+					id: controls
+					anchors.bottom: parent.bottom
+					anchors.bottomMargin: 10
+					anchors.horizontalCenter: parent.horizontalCenter
+					spacing: 0
+					Button {
+						width: 50
+						height: 50
+						background: Item {}
+						icon {
+							width: 35
+							height: 35
+							color: "#ffffff"
+							source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/backward.svg")
+						}
+						onClicked: {
+							MusicPlayerProvider.previous()
+						}
+					}
+					Button {
+						width: 50
+						height: 50
+						background: Item {}
+						icon {
+							width: 50
+							height: 50
+							color: "#ffffff"
+							source: MusicPlayerProvider.isPlaying ? Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/pause.svg") : Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/play.svg")
+						}
+						onClicked: {
+							MusicPlayerProvider.togglePlay()
+						}
+					}
+					Button {
+						width: 50
+						height: 50
+						background: Item {}
+						icon {
+							width: 35
+							height: 35
+							color: "#ffffff"
+							source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/forward.svg")
+						}
+						onClicked: {
+							MusicPlayerProvider.next()
+						}
+					}
+				}
+			}
+		}
+
+		ShaderEffectSource {
+			id: dateClockBlurSource
+			sourceItem: backgroundImage
+			sourceRect: Qt.rect(dateClock.x, dateClock.y, dateClock.width, dateClock.height)
+			hideSource: false
+			live: true
+		}
+
+		MultiEffect {
+			id: dateClockBlur
+			anchors.centerIn: dateClock
+			width: dateClock.width
+			height: dateClock.height
+			source: dateClockBlurSource
+			blurEnabled: true
+			blur: 1
+			blurMax: 64
+			blurMultiplier: 1.2
+			autoPaddingEnabled: false
+			maskEnabled: true
+			maskSource: dateClock
+		}
+
+		Label {
+			id: dateClock
+
+			anchors {
+				horizontalCenter: parent.horizontalCenter
+				top: parent.top
+				topMargin: 75
+			}
+
+			renderType: Text.NativeRendering
+			color: "#aaffffff"
+			font.family: Fonts.sFProRounded.family
+			font.pointSize: 18
+			font.weight: Font.Bold
+
+			text: {Time.getTime(Config.lockScreen.dateFormat)}
+		}
+
+		Rectangle {
+			id: batteryIndicator
+			anchors {
+				top: parent.top
+				right: parent.right
+				topMargin: 20
+				rightMargin: 60
+			}
+			Battery {}
+		}
+
+		Rectangle {
+			id: wifiIndicator
+			anchors {
+				top: parent.top
+				right: parent.right
+				topMargin: 20
+				rightMargin: 30
+			}
+			Wifi {}
+		}
+
+		ColumnLayout {
+			id: inputArea
+			anchors {
+				horizontalCenter: parent.horizontalCenter
+				bottom: parent.bottom
+				bottomMargin: 20
+			}
+
+			width: parent.width
+
+			Text {
+				Layout.alignment: Qt.AlignHCenter
+				text: Config.lockScreen.userNote
+				color: "#fff"
+				font.pointSize: 12
+				font.weight: Font.Normal
+				Layout.bottomMargin: 10
+				layer.enabled: true
+				layer.effect: MultiEffect {
+					shadowEnabled: true
+					shadowColor: "#000000"
+				}
+			}
+
+			ClippingRectangle {
+				id: avatarContainer
+				width: Config.lockScreen.avatarSize
+				height: Config.lockScreen.avatarSize
+				radius: 50
+				clip: true
+				visible: Config.lockScreen.showAvatar
+
+				Layout.alignment: Qt.AlignHCenter
+
+				Image {
+					anchors.fill: parent
+					source: Config.account.avatarPath
+					fillMode: Image.PreserveAspectCrop
+					opacity: 0.95
+				}
+			}
+
+			RowLayout {
+				id: passwordBoxLayout
+				Layout.alignment: Qt.AlignHCenter
+				Item {
+					Layout.alignment: Qt.AlignHCenter
+					width: 200
+					height: 35
+					Text {
+						text: Config.account.name
+						width: 200
+						height: 35
+						visible: Config.lockScreen.showName
+						font.pointSize: 12
+						verticalAlignment: Text.AlignVCenter
+						horizontalAlignment: Text.AlignHCenter
+						color: "#fff"
+						opacity: passwordBoxContainer.opacity == 0 ? 1 : 0
+						Behavior on opacity {
+							NumberAnimation { duration: 300; easing.type: Easing.InOutQuad }
+						}
+					}
+					Backdrop {
+						id: sourceBackdrop
+						sourceItem: backgroundImageBlur
+						sourceX: inputArea.x+passwordBoxLayout.x+passwordBoxContainer.x
+						sourceY: inputArea.y+passwordBoxLayout.y+passwordBoxContainer.y+contentItem.transformY
+						sourceW: passwordBoxContainer.width
+						sourceH: passwordBoxContainer.height
+						hideSource: true
+						visible: false
+					}
+					//BackdropBlur {
+					//	id: passwordBoxBlur
+					//	anchors.centerIn: passwordBoxContainer
+					//	width: passwordBoxContainer.width
+					//	height: passwordBoxContainer.height
+					//	clipRadius: 100
+					//	opacity: 1
+					//	blur: 0.2
+					//	contrast: 0.1
+					//	brightness: 0.14
+					//	source: sourceBackdrop
+					//	anchors.fill: parent
+					//}
+					Backdrop {
+						id: blurSourceBackdrop
+						sourceItem: sourceBackdrop
+						hideSource: true
+						visible: false
+					}
+					Item {
+						id: passwordBoxContainer
+						width: 200
+						height: 35
+						opacity: 0
+						Behavior on opacity {
+							NumberAnimation { duration: 100; easing.type: Easing.InOutQuad }
+						}
+						GlassMaterial {
+							anchors.fill: parent
+							pos: Qt.point(1, 1)
+							size: Qt.point(198, 33)
+							radius: 16.5
+							glassRefractionDim: 20
+							glassRefractionMag: 20
+							glassRefractionAberration: 10
+							opacity: parent.opacity
+							source: sourceBackdrop
+							blurSource: sourceBackdrop
+							bloomSource: sourceBackdrop
+						}
+						SequentialAnimation {
+							id: wiggleAnim
+							running: false
+							loops: 1
+							PropertyAnimation { target: passwordBoxContainer; property: "x"; to: passwordBoxContainer.x - 10; duration: 100; easing.type: Easing.InOutQuad }
+							PropertyAnimation { target: passwordBoxContainer; property: "x"; to: passwordBoxContainer.x + 10; duration: 100; easing.type: Easing.InOutQuad }
+							PropertyAnimation { target: passwordBoxContainer; property: "x"; to: passwordBoxContainer.x - 7; duration: 100; easing.type: Easing.InOutQuad }
+							PropertyAnimation { target: passwordBoxContainer; property: "x"; to: passwordBoxContainer.x + 7; duration: 100; easing.type: Easing.InOutQuad }
+							PropertyAnimation { target: passwordBoxContainer; property: "x"; to: passwordBoxContainer.x; duration: 100; easing.type: Easing.InOutQuad }
+						}
+						TextField {
+							id: passwordBox
+							anchors.left: parent.left
+							anchors.verticalCenter: parent.verticalCenter
+
+							background: Rectangle {
+								color: "transparent"
+								anchors.fill: parent
+								CFText {
+									anchors.fill: parent
+									verticalAlignment: Text.AlignVCenter
+									text: passwordBox.text == "" ? root.context.showFailure ? Translation.tr("Incorrect Password") : Translation.tr("Enter Password") : ""
+									color: root.context.showFailure ? '#aaaaaa' : '#bbdedede'
+									anchors.leftMargin: 10
+									font.weight: 600
+								}
+							}
+							color: "#a0ffffff";
+
+							implicitWidth: 170
+							implicitHeight: 35
+							padding: 10
+							font.pixelSize: 12
+							font.family: Fonts.sFProDisplayRegular.family
+							renderType: Text.NativeRendering
+
+							selectionColor: '#50ffffff'
+							selectedTextColor: '#a0ffffff'
+
+							focus: true
+							enabled: !root.context.unlockInProgress
+							echoMode: TextInput.Password
+							inputMethodHints: Qt.ImhSensitiveData
+
+							onTextChanged: {
+								root.context.currentText = this.text;
+								passwordBoxContainer.opacity = 1;
+							}
+
+							onAccepted: root.context.tryUnlock();
+
+							Connections {
+								target: root.context
+
+								function onCurrentTextChanged() {
+									passwordBox.text = root.context.currentText;
+								}
+
+								function onShowFailureChanged() {
+									if (root.context.showFailure) {
+										wiggleAnim.start();
+									}
+								}
+							}
+						}
+						CFRing {
+							id: ring
+							anchors {
+								right: parent.right
+								rightMargin: 4
+								verticalCenter: parent.verticalCenter
+							}
+							size: 27
+							lineWidth: 2
+							opacity: passwordBox.text == "" ? 0 : 1
+							color: "#a0ffffff"
+							CFVI {
+								anchors.centerIn: parent
+								size: 15
+								color: "#a0ffffff"
+								icon: "arrow-right.svg"
+							}
+						}
+					}
+				}
+			}
+
+			CFText {
+				Layout.alignment: Qt.AlignHCenter
+				horizontalAlignment: Text.AlignHCenter
+				text: Config.lockScreen.usageInfo
+				color: "#88ffffff"
+				width: 180
+				Layout.preferredWidth: 180
+				wrapMode: Text.WordWrap
+				font.pointSize: 9
+				font.weight: 600
+				Layout.topMargin: 0
+			}
+		}
+	}
+}

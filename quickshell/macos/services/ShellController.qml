@@ -10,6 +10,7 @@ Singleton {
     id: root
 
     property bool spotlightOpen: false
+    property bool launcherOpen: false
     property bool controlCenterOpen: false
     property bool sessionOpen: false
     property bool aboutOpen: false
@@ -24,6 +25,7 @@ Singleton {
 
     function isOpen(name) {
         if (name === "spotlight") return root.spotlightOpen;
+        if (name === "launcher") return root.launcherOpen;
         if (name === "controlcenter") return root.controlCenterOpen;
         if (name === "session") return root.sessionOpen;
         if (name === "forcequit") return root.forceQuitOpen;
@@ -32,6 +34,7 @@ Singleton {
 
     function closeAll(except) {
         if (except !== "spotlight") root.spotlightOpen = false;
+        if (except !== "launcher") root.launcherOpen = false;
         if (except !== "controlcenter") root.controlCenterOpen = false;
         if (except !== "session") root.sessionOpen = false;
         if (except !== "forcequit") root.forceQuitOpen = false;
@@ -43,6 +46,7 @@ Singleton {
         const currentlyOpen = root.isOpen(name);
         root.closeAll(name);
         if (name === "spotlight") root.spotlightOpen = !currentlyOpen;
+        else if (name === "launcher") root.launcherOpen = !currentlyOpen;
         else if (name === "controlcenter") root.controlCenterOpen = !currentlyOpen;
         else if (name === "session") root.sessionOpen = !currentlyOpen;
     }

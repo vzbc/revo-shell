@@ -1,0 +1,1 @@
+/home/revo/.config/quickshell/eqsh/Ipc.qml

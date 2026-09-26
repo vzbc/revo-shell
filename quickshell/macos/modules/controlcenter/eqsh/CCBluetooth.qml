@@ -1,0 +1,1 @@
+/home/revo/.config/quickshell/eqsh/ui/components/panel/CCBluetooth.qml

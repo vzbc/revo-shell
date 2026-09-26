@@ -1,10 +1,15 @@
 import QtQuick
+import QtQuick.VectorImage
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
+import Quickshell.Widgets
 import Quickshell.Io
 import Quickshell.Wayland
 import "../../services"
+import qs
+import "../common"
 
 PanelWindow {
     id: root
@@ -13,366 +18,428 @@ PanelWindow {
     anchors { top: true; left: true; right: true; bottom: true }
     color: "transparent"
     visible: ShellController.launcherOpen
-    WlrLayershell.namespace: "macos:launcher"
+    WlrLayershell.namespace: "macos:launchpad"
     WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: ShellController.launcherOpen ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
 
-    property string searchText: ""
-    property bool showAllApps: true
-    property string selectedCategory: "All"
-    property var filteredApps: []
-    property var allApps: []
-    property var categories: []
+    readonly property int panelW: Math.round(screen.width * 0.479)
+    readonly property int panelH: Math.round(screen.height * 0.572)
+    readonly property int pad: 22
+    readonly property int gridCols: 7
+    readonly property int cellW: Math.floor((panelW - 2 * pad) / gridCols)
+    readonly property int iconSize: Math.round(cellW * 0.5)
+    readonly property int labelSize: Math.max(13, Math.round(cellW * 0.125))
+    readonly property int titleSize: Math.round(panelW * 0.026)
+    readonly property int tabSize: Math.round(panelW * 0.0145)
+    readonly property int glyphSize: Math.round(panelW * 0.025)
 
-    readonly property int iconSize: 64
-    readonly property int cellSize: 110
-    readonly property int columns: 5
-    readonly property real innerPadding: 15
-    readonly property int searchHeight: 40
-    readonly property int categoryHeight: 32
+    property string selectedTab: "All"
+    property var tabs: []
+    property var sections: []
+    property bool menuOpen: false
 
-    // TahoeLauncher exact colors - deep dark blue/purple glass
-    readonly property color fgColor: "#ffffff"
-    readonly property color bgColor: Qt.rgba(0.04, 0.04, 0.12, 0.88)
-    readonly property color dimmedFg: Qt.rgba(1, 1, 1, 0.7)
-    readonly property color contrastBg: Qt.rgba(1, 1, 1, 0.12)
-    readonly property color pillSelectedBg: Qt.rgba(255, 255, 255, 0.5)
-    readonly property color pillUnselectedBg: Qt.rgba(255, 255, 255, 0.15)
+    readonly property var mainCategories: ["AudioVideo", "Development", "Education", "Game", "Graphics", "Network", "Office", "Science", "Settings", "System", "Utility"]
 
-    Component.onCompleted: _appScanner.running = true
-
-    Process {
-        id: _appScanner
-        running: false
-        command: ["bash", "-c", "find /usr/share/applications /usr/local/share/applications ~/.local/share/applications -name '*.desktop' 2>/dev/null | head -300"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var lines = text.trim().split("\n");
-                for (var i = 0; i < lines.length; i++) {
-                    var path = lines[i].trim();
-                    if (!path) continue;
-                    _desktopParser.file = path;
-                    _desktopParser.running = true;
-                }
-            }
+    function friendly(cat) {
+        switch (cat) {
+        case "Office": return "Productivity & Finance";
+        case "Utility": return "Utilities";
+        case "Development": return "Tools";
+        case "Graphics": case "AudioVideo": return "Creativity";
+        case "Game": return "Games";
+        case "Network": return "Internet";
+        case "Science": return "Science";
+        case "Education": return "Education";
+        case "Settings": return "Settings";
+        case "System": return "System";
+        case "Other": return "Other";
+        default: return cat;
         }
     }
 
-    property var _pendingApps: []
+    function rebuild() {
+        var apps = [];
+        var counts = {};
+        var values = DesktopEntries.applications.values;
+        for (var i = 0; i < values.length; i++) {
+            var e = values[i];
+            if (!e.name) continue;
+            var cats = [];
+            try { cats = [...e.categories]; } catch (err) { cats = []; }
+            var main = "Other";
+            for (var c = 0; c < cats.length; c++) {
+                if (root.mainCategories.indexOf(cats[c]) !== -1) { main = cats[c]; break; }
+            }
+            if (main === "Other" && cats.length > 0) main = cats[0];
+            apps.push({ name: e.name, icon: e.icon, entry: e, cats: cats, main: main });
+            if (!counts[main]) counts[main] = 0;
+            counts[main] = counts[main] + 1;
+        }
 
-    Process {
-        id: _desktopParser
-        running: false
-        property string file: ""
-        command: ["bash", "-c", "grep -E '^(Name|Exec|Icon|Categories|NoDisplay)=' " + file + " 2>/dev/null | head -10"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var name = "", exec = "", icon = "", cats = "", noDisplay = "";
-                var lines = text.trim().split("\n");
-                for (var i = 0; i < lines.length; i++) {
-                    var l = lines[i];
-                    if (l.startsWith("Name=")) name = l.substring(5);
-                    else if (l.startsWith("Exec=")) exec = l.substring(5).split("%")[0].trim();
-                    else if (l.startsWith("Icon=")) icon = l.substring(5);
-                    else if (l.startsWith("Categories=")) cats = l.substring(11);
-                    else if (l.startsWith("NoDisplay=true")) noDisplay = "true";
-                }
-                if (name && exec && noDisplay !== "true") {
-                    root._pendingApps.push({ name: name, exec: exec, icon: icon, categories: cats });
-                }
-            }
-        }
-        onRunningChanged: {
-            if (!running && root._pendingApps.length > 0) {
-                root.allApps = root._pendingApps.slice();
-                root._pendingApps = [];
-                root.buildCategories();
-                root.updateFiltered();
-            }
-        }
+        var catsSorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]).filter(k => counts[k] >= 4);
+        var t = ["All"];
+        for (var k = 0; k < Math.min(catsSorted.length, 4); k++) t.push(catsSorted[k]);
+        if (t.indexOf(root.selectedTab) === -1) root.selectedTab = "All";
+        root.tabs = t;
+        root._apps = apps;
+        root._counts = counts;
+        rebuildSections();
     }
 
-    function buildCategories() {
-        var cats = {};
-        for (var i = 0; i < allApps.length; i++) {
-            var c = allApps[i].categories.split(";");
-            for (var j = 0; j < c.length; j++) {
-                var cat = c[j].trim();
-                if (cat && !cats[cat]) cats[cat] = true;
-            }
-        }
-        var result = Object.keys(cats).sort();
-        result.unshift("All Applications");
-        categories = result;
-        selectedCategory = "All Applications";
-    }
+    property var _apps: []
+    property var _counts: ({})
 
-    function updateFiltered() {
+    function rebuildSections() {
         var result = [];
-        var catKey = selectedCategory === "All Applications" ? "" : selectedCategory.toLowerCase();
-        for (var i = 0; i < allApps.length; i++) {
-            var app = allApps[i];
-            var matchSearch = !searchText || app.name.toLowerCase().includes(searchText.toLowerCase());
-            var matchCat = !catKey || app.categories.toLowerCase().includes(catKey);
-            if (matchSearch && matchCat) result.push(app);
+
+        if (root.selectedTab !== "All") {
+            var list = [];
+            for (var i = 0; i < root._apps.length; i++) {
+                var a = root._apps[i];
+                if (a.cats.indexOf(root.selectedTab) === -1) continue;
+                list.push(a);
+            }
+            list.sort((x, y) => x.name.localeCompare(y.name));
+            if (list.length > 0) result.push({ title: root.friendly(root.selectedTab), apps: list });
+        } else {
+            var groups = {};
+            for (var j = 0; j < root._apps.length; j++) {
+                var b = root._apps[j];
+                var key = b.main || "Other";
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(b);
+            }
+            var keys = Object.keys(groups).sort((x, y) => (root._counts[y] || 0) - (root._counts[x] || 0));
+            for (var m = 0; m < keys.length; m++) {
+                var arr = groups[keys[m]];
+                arr.sort((x, y) => x.name.localeCompare(y.name));
+                result.push({ title: root.friendly(keys[m]), apps: arr });
+            }
         }
-        result.sort(function(a, b) { return a.name.localeCompare(b.name); });
-        filteredApps = result;
+        root.sections = result;
+    }
+
+    Component.onCompleted: {
+        Ipc.mixin("eqdesktop.launchpad", "toggle", () => ShellController.toggle("launcher"));
+        rebuild();
     }
 
     Connections {
         target: ShellController
         function onLauncherOpenChanged() {
             if (ShellController.launcherOpen) {
-                searchText = "";
-                selectedCategory = "All Applications";
-                showAllApps = true;
-                _pendingApps = [];
-                _appScanner.running = true;
-                Qt.callLater(function() { searchField.forceActiveFocus(); });
+                root.selectedTab = "All";
+                root.menuOpen = false;
+                root.rebuild();
+                Qt.callLater(() => { if (panelItem) panelItem.forceActiveFocus(); });
+            } else {
+                root.menuOpen = false;
             }
         }
     }
 
-    function launchApp(exec) {
-        ShellController.run("setsid -f " + exec + " >/dev/null 2>&1 &");
+    function launchApp(app) {
         ShellController.toggle("launcher");
+        try { app.entry.execute(); } catch (err) { console.log("[launchpad] execute failed:", err); }
     }
 
-    Rectangle {
-        anchors.fill: parent
-        color: "transparent"
-        MouseArea { anchors.fill: parent; onClicked: ShellController.toggle("launcher") }
+        Rectangle {
+            id: panelItem
+            anchors.fill: parent
+            color: "transparent"
+            focus: true
+        Keys.onEscapePressed: {
+            if (root.menuOpen) { root.menuOpen = false; event.accepted = true; }
+            else ShellController.toggle("launcher");
+        }
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                if (root.menuOpen) root.menuOpen = false;
+                else ShellController.toggle("launcher");
+            }
+        }
 
         Rectangle {
-            id: container
+            id: panel
             anchors.centerIn: parent
-            width: Math.min(parent.width - 120, root.columns * root.cellSize + root.innerPadding * 2)
-            height: mainCol.implicitHeight + root.innerPadding * 2
-            radius: 18
-            color: root.bgColor
-            border.color: Qt.rgba(1, 1, 1, 0.15)
+            width: root.panelW
+            height: root.panelH
+            radius: 36
+            color: Qt.rgba(0.10, 0.10, 0.11, 0.55)
             border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.16)
+            clip: true
 
-            // Top blue-purple glow
             Rectangle {
                 anchors.fill: parent
-                radius: 18
-                color: "transparent"
+                radius: parent.radius
                 gradient: Gradient {
-                    GradientStop { position: 0.0; color: Qt.rgba(0.2, 0.15, 0.5, 0.25) }
-                    GradientStop { position: 0.3; color: Qt.rgba(0.1, 0.08, 0.3, 0.08) }
-                    GradientStop { position: 0.6; color: "transparent" }
+                    GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.07) }
+                    GradientStop { position: 0.28; color: Qt.rgba(1, 1, 1, 0.0) }
                 }
             }
 
             ColumnLayout {
-                id: mainCol
                 anchors.fill: parent
-                anchors.margins: root.innerPadding
-                spacing: 0
+                anchors.margins: root.pad
+                spacing: 14
 
-                // ---- Search Bar ----
+                // ---- header ----
                 RowLayout {
                     Layout.fillWidth: true
-                    Layout.preferredHeight: root.searchHeight
-                    spacing: 8
+                    spacing: 12
 
-                    // Apps icon (A symbol like TahoeLauncher)
-                    Text {
-                        text: "\udb80\udeb8"
-                        font { pixelSize: 20; weight: Font.Bold }
-                        color: root.dimmedFg
-                        Layout.leftMargin: 4
-                    }
-
-                    TextField {
-                        id: searchField
-                        Layout.fillWidth: true
-                        Layout.fillHeight: true
-                        placeholderText: "Applications"
-                        placeholderTextColor: root.dimmedFg
-                        color: root.fgColor
-                        font { family: Appearance.fontFamily; pixelSize: 18; weight: Font.Normal }
-                        background: Rectangle { color: "transparent" }
-                        focus: true
-                        onTextChanged: {
-                            root.searchText = text;
-                            root.updateFiltered();
+                    VectorImage {
+                        id: headerGlyph
+                        Layout.preferredWidth: root.glyphSize
+                        Layout.preferredHeight: root.glyphSize
+                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/spotlight/applications.svg")
+                        preferredRendererType: VectorImage.CurveRenderer
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            colorization: 1.0
+                            colorizationColor: "#8e8e93"
                         }
-                        Keys.onEscapePressed: ShellController.toggle("launcher")
                     }
 
-                    // Menu button (three dots like TahoeLauncher)
+                    Text {
+                        text: "Applications"
+                        font { family: Appearance.fontFamily; pixelSize: root.titleSize; weight: Font.Bold }
+                        color: Qt.rgba(1, 1, 1, 0.95)
+                    }
+
+                    Item { Layout.fillWidth: true }
+
                     Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: menuMa.pressed ? root.contrastBg : "transparent"
+                        id: menuBtn
+                        Layout.preferredWidth: 34
+                        Layout.preferredHeight: 34
+                        radius: 10
+                        color: menuMa.containsMouse || root.menuOpen ? Qt.rgba(1, 1, 1, 0.12) : "transparent"
                         Text {
                             anchors.centerIn: parent
-                            text: "\u22ee"
-                            font { pixelSize: 16 }
-                            color: root.dimmedFg
+                            text: "\u22EF"
+                            font { family: Appearance.fontFamily; pixelSize: 20; weight: Font.Bold }
+                            color: Qt.rgba(1, 1, 1, 0.7)
                         }
                         MouseArea {
                             id: menuMa
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: ShellController.toggle("session")
+                            onClicked: root.menuOpen = !root.menuOpen
                         }
                     }
                 }
 
-                // ---- Category Pills ----
-                ScrollView {
+                // ---- category tabs ----
+                Rectangle {
+                    id: tabBar
                     Layout.fillWidth: true
-                    Layout.preferredHeight: root.categoryHeight
-                    clip: true
-                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
-                    ScrollBar.vertical.policy: ScrollBar.AlwaysOff
+                    Layout.preferredHeight: 48
+                    radius: 12
+                    color: Qt.rgba(1, 1, 1, 0.09)
 
-                    ListView {
-                        id: catListView
-                        orientation: ListView.Horizontal
-                        spacing: 7
+                    Row {
+                        id: tabBarRow
                         anchors.fill: parent
-                        anchors.topMargin: (parent.height - 26) / 2
-                        model: root.categories
+                        anchors.margins: 4
 
-                        delegate: Rectangle {
-                            property bool isSelected: root.selectedCategory === modelData
-                            width: pillText.implicitWidth + 16
-                            height: 26
-                            radius: 8
-                            color: isSelected ? root.pillSelectedBg : root.pillUnselectedBg
+                        Repeater {
+                            model: root.tabs
 
-                            Text {
-                                id: pillText
-                                anchors.centerIn: parent
-                                text: modelData
-                                font { family: Appearance.fontFamily; pixelSize: 10; weight: Font.Medium }
-                                color: isSelected ? Qt.rgba(0, 0, 0, 0.8) : Qt.rgba(1, 1, 1, 0.4)
-                            }
+                            delegate: Item {
+                                required property string modelData
+                                required property int index
+                                readonly property bool active: root.selectedTab === modelData
+                                width: tabBarRow.width / root.tabs.length
+                                height: tabBarRow.height
 
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    root.selectedCategory = modelData;
-                                    root.updateFiltered();
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.margins: 3
+                                    radius: 9
+                                    color: active ? Qt.rgba(1, 1, 1, 0.95)
+                                         : tabMa.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
+                                }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    width: parent.width - 16
+                                    text: modelData === "All" ? "All" : root.friendly(modelData)
+                                    font { family: Appearance.fontFamily; pixelSize: root.tabSize; weight: active ? Font.DemiBold : Font.Medium }
+                                    color: active ? Qt.rgba(0.08, 0.08, 0.09, 0.9) : Qt.rgba(1, 1, 1, 0.6)
+                                    horizontalAlignment: Text.AlignHCenter
+                                    elide: Text.ElideRight
+                                }
+
+                                MouseArea {
+                                    id: tabMa
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        root.selectedTab = modelData;
+                                        root.rebuildSections();
+                                    }
                                 }
                             }
-
-                            Behavior on color { ColorAnimation { duration: 150 } }
                         }
                     }
                 }
 
-                // ---- App Grid ----
+                // ---- app grid ----
                 ScrollView {
+                    id: gridScroll
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
                     ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
                     ScrollBar.vertical.policy: ScrollBar.AsNeeded
 
-                    GridView {
-                        id: appGrid
-                        anchors.fill: parent
-                        cellWidth: root.cellSize
-                        cellHeight: root.cellSize + 10
-                        model: root.filteredApps
-                        focus: true
-                        currentIndex: 0
-                        highlightMoveDuration: 0
+                    Column {
+                        width: gridScroll.availableWidth
 
-                        highlight: Rectangle {
-                            radius: 14
-                            color: "transparent"
-                            border.width: 2
-                            border.color: root.dimmedFg
-                            opacity: 0.4
-                        }
-                        highlightFollowsCurrentItem: true
+                        Repeater {
+                            model: root.sections
 
-                        delegate: Item {
-                            id: gridDelegate
-                            width: appGrid.cellWidth
-                            height: appGrid.cellHeight
-                            property var appData: modelData
+                            delegate: Column {
+                                property var sec: modelData
+                                width: parent ? parent.width : 0
+                                topPadding: 14
+                                bottomPadding: 6
+                                spacing: 4
 
-                            Column {
-                                anchors.centerIn: parent
-                                spacing: 6
+                                Text {
+                                    text: sec.title
+                                    font { family: Appearance.fontFamily; pixelSize: root.labelSize; weight: Font.DemiBold }
+                                    color: Qt.rgba(1, 1, 1, 0.5)
+                                    leftPadding: 6
+                                    bottomPadding: 4
+                                    visible: sec.apps.length > 0
+                                }
 
-                                // Icon with drop shadow
-                                Item {
-                                    width: root.iconSize
-                                    height: root.iconSize
-                                    anchors.horizontalCenter: parent.horizontalCenter
+                                Flow {
+                                    width: parent.width
+                                    spacing: 0
 
-                                    // Shadow
-                                    Rectangle {
-                                        anchors.fill: appIconImg
-                                        anchors.topMargin: 3
-                                        radius: 16
-                                        color: Qt.rgba(0, 0, 0, 0.35)
-                                        scale: 0.92
-                                    }
+                                    Repeater {
+                                        model: sec.apps
 
-                                    Image {
-                                        id: appIconImg
-                                        anchors.centerIn: parent
-                                        width: root.iconSize
-                                        height: root.iconSize
-                                        source: "file:///usr/share/icons/hicolor/64x64/apps/" + (gridDelegate.appData.icon || "application-x-executable") + ".png"
-                                        sourceSize: Qt.size(width, height)
-                                        asynchronous: true
-                                        mipmap: true
-                                        smooth: true
-                                        onStatusChanged: {
-                                            if (status === Image.Error) {
-                                                source = "file:///usr/share/icons/hicolor/64x64/apps/application-x-executable.png";
+                                        delegate: Item {
+                                            required property var modelData
+                                            width: root.cellW
+                                            height: root.iconSize + root.labelSize + 24
+
+                                            Rectangle {
+                                                anchors.fill: parent
+                                                anchors.margins: 4
+                                                radius: 18
+                                                color: appMa.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
+                                            }
+
+                                            Column {
+                                                anchors.centerIn: parent
+                                                spacing: 8
+
+                                                IconImage {
+                                                    anchors.horizontalCenter: parent.horizontalCenter
+                                                    width: root.iconSize
+                                                    height: root.iconSize
+                                                    source: modelData.icon
+                                                        ? Quickshell.iconPath(modelData.icon, "application-x-executable")
+                                                        : Quickshell.iconPath("application-x-executable")
+                                                    smooth: true
+                                                }
+
+                                                Text {
+                                                    anchors.horizontalCenter: parent.horizontalCenter
+                                                    width: root.cellW - 14
+                                                    text: modelData.name
+                                                    font { family: Appearance.fontFamily; pixelSize: root.labelSize; weight: Font.Medium }
+                                                    color: Qt.rgba(1, 1, 1, 0.88)
+                                                    horizontalAlignment: Text.AlignHCenter
+                                                    elide: Text.ElideRight
+                                                }
+                                            }
+
+                                            MouseArea {
+                                                id: appMa
+                                                anchors.fill: parent
+                                                hoverEnabled: true
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: root.launchApp(modelData)
                                             }
                                         }
                                     }
-
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            appGrid.currentIndex = index;
-                                            root.launchApp(gridDelegate.appData.exec);
-                                        }
-                                    }
-                                }
-
-                                // App name
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    width: root.cellSize - 16
-                                    text: gridDelegate.appData.name
-                                    font { family: Appearance.fontFamily; pixelSize: 10; weight: 650 }
-                                    color: root.fgColor
-                                    horizontalAlignment: Text.AlignHCenter
-                                    elide: Text.ElideMiddle
-                                    maximumLineCount: 2
-                                    wrapMode: Text.Wrap
                                 }
                             }
                         }
                     }
                 }
             }
-        }
-    }
 
-    Keys.onPressed: (event) => {
-        if (event.key === Qt.Key_Escape) ShellController.toggle("launcher");
-        else if (event.key === Qt.Key_Up) appGrid.moveCurrentIndexUp();
-        else if (event.key === Qt.Key_Down) appGrid.moveCurrentIndexDown();
-        else if (event.key === Qt.Key_Left) appGrid.moveCurrentIndexLeft();
-        else if (event.key === Qt.Key_Right) appGrid.moveCurrentIndexRight();
-        else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-            if (appGrid.currentItem) root.launchApp(appGrid.currentItem.appData.exec);
+            // ---- options menu ----
+            Rectangle {
+                id: menu
+                visible: root.menuOpen
+                z: 5
+                x: root.panelW - root.pad - width
+                y: root.pad + 46
+                width: 176
+                height: menuCol.implicitHeight + 12
+                radius: 12
+                color: Qt.rgba(0.12, 0.12, 0.14, 0.97)
+                border.width: 1
+                border.color: Qt.rgba(1, 1, 1, 0.14)
+
+                Column {
+                    id: menuCol
+                    anchors.fill: parent
+                    anchors.margins: 6
+                    spacing: 2
+
+                    Repeater {
+                        model: ["Show All", "Reload Apps", "Close"]
+
+                        delegate: Rectangle {
+                            required property string modelData
+                            width: menuCol.width
+                            height: 32
+                            radius: 8
+                            color: itemMa.containsMouse ? Qt.rgba(1, 1, 1, 0.10) : "transparent"
+
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                anchors.left: parent.left
+                                anchors.leftMargin: 10
+                                text: modelData
+                                font { family: Appearance.fontFamily; pixelSize: 13; weight: Font.Medium }
+                                color: Qt.rgba(1, 1, 1, 0.85)
+                            }
+
+                            MouseArea {
+                                id: itemMa
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.menuOpen = false;
+                                    if (modelData === "Show All") {
+                                        root.selectedTab = "All";
+                                        root.rebuildSections();
+                                    } else if (modelData === "Reload Apps") {
+                                        root.rebuild();
+                                    } else {
+                                        ShellController.toggle("launcher");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
