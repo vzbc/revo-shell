@@ -10,14 +10,21 @@ Singleton {
 
     property real volume: 0.5
     property bool muted: false
+    property bool micMuted: false
     property bool hasSink: true
     property var sinks: []      // [{id, name, isDefault}]
     property var sources: []    // [{id, name, isDefault}]
 
     function poll() {
         _getVolume.running = true;
+        _getMicMute.running = true;
         _sinks.running = true;
         _sources.running = true;
+    }
+
+    function toggleMicMute() {
+        _setMicMute.running = true;
+        root.micMuted = !root.micMuted;
     }
 
     function setDefaultSink(id) {
@@ -116,6 +123,27 @@ Singleton {
         id: _setMute
         running: false
         command: ["bash", "-c", "timeout 3 wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"]
+        stdout: StdioCollector {}
+        stderr: StdioCollector {}
+    }
+
+    Process {
+        id: _getMicMute
+        running: false
+        command: ["bash", "-c", "timeout 3 wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null || echo failed"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const raw = (typeof text === "string") ? text : "";
+                if (raw.trim() !== "failed")
+                    root.micMuted = raw.includes("MUTED");
+            }
+        }
+    }
+
+    Process {
+        id: _setMicMute
+        running: false
+        command: ["bash", "-c", "timeout 3 wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"]
         stdout: StdioCollector {}
         stderr: StdioCollector {}
     }

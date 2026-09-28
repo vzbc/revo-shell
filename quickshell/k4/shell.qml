@@ -604,48 +604,31 @@ exclusionMode: ExclusionMode.Ignore
                         startX: 0
                         startY: 0
 
-                        // esquina invertida izquierda
-                        PathArc {
-                            x: islandPath.g
-                            y: islandPath.g
-                            radiusX: islandPath.g
-                            radiusY: islandPath.g
-                            direction: PathArc.Clockwise
-                        }
-
-                        PathLine { x: islandPath.g; y: islandPath.h - islandPath.r }
+                        // notch: costados rectos pegados al borde superior
+                        PathLine { x: 0; y: islandPath.h - islandPath.r }
 
                         // inferior izquierda
                         PathArc {
-                            x: islandPath.g + islandPath.r
+                            x: islandPath.r
                             y: islandPath.h
                             radiusX: islandPath.r
                             radiusY: islandPath.r
                             direction: PathArc.Counterclockwise
                         }
 
-                        PathLine { x: islandPath.w - islandPath.g - islandPath.r; y: islandPath.h }
+                        PathLine { x: islandPath.w - islandPath.r; y: islandPath.h }
 
                         // inferior derecha
                         PathArc {
-                            x: islandPath.w - islandPath.g
+                            x: islandPath.w
                             y: islandPath.h - islandPath.r
                             radiusX: islandPath.r
                             radiusY: islandPath.r
                             direction: PathArc.Counterclockwise
                         }
 
-                        PathLine { x: islandPath.w - islandPath.g; y: islandPath.g }
-
-                        // esquina invertida derecha
-                        PathArc {
-                            x: islandPath.w
-                            y: 0
-                            radiusX: islandPath.g
-                            radiusY: islandPath.g
-                            direction: PathArc.Clockwise
-                        }
-
+                        // costado derecho y cierre por arriba
+                        PathLine { x: islandPath.w; y: 0 }
                         PathLine { x: 0; y: 0 }
                     }
                 }

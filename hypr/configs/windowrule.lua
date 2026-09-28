@@ -72,6 +72,11 @@ hl.window_rule({
     no_shadow = true,
     tag = "+hyprglass_preset_liquid_true",
 })
+
+hl.window_rule({
+    match = { class = "^(org\\.gnome\\.Nautilus)$" },
+    tag = "+hyprglass_preset_liquid_true",
+})
 hl.window_rule({
     match = {
         class = "^(pcmanfm)$",
@@ -83,4 +88,11 @@ hl.window_rule({
     no_focus = true,
     -- إعدادات إضافية لجعلها ثابتة تماماً بالخلفية بدون تأثيرات شفافة تزعجك
     suppress_event = "maximize",
+})
+hl.window_rule({
+    match = { class = "^(?i)(uxplay)$" },
+    float = true,
+    size = "393 852",       -- مقاس آيفون 14 برو الدقيق
+    pin = true,
+    opacity = "1 1",
 })

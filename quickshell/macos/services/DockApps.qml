@@ -33,7 +33,7 @@ Singleton {
         { name: "VS Code", icon: "code.png", desktop: "code-oss", exec: "code", appIds: ["code-oss", "code", "com.visualstudio.code"] },
         { name: "Terminal", icon: "Terminal.png", desktop: "kitty", exec: "kitty", appIds: ["kitty"] },
         { name: "App Store", icon: "App Store.png", desktop: "pearos-appstore", exec: "pearos-appstore", appIds: ["pearos-appstore"] },
-        { name: "System Settings", icon: "System Settings.png", desktop: "macos-settings", exec: "qs ipc -p /home/revo/.config/quickshell/macos call settings toggle", appIds: ["macos-settings"] }
+        { name: "System Settings", icon: "System Settings.png", desktop: "pearos-settings", exec: "/usr/local/bin/pearos-settings", appIds: ["pearos-settings", "pearos-settings-app"] },
     ]
 
     property bool trashEmpty: true

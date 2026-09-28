@@ -30,6 +30,15 @@ PanelWindow {
     property bool wifiOpen: false
     property bool batteryOpen: false
 
+    // 10-step battery icon set (battery-000 .. battery-100, +charging)
+    function batteryIconSrc() {
+        var p = Math.round(Battery.percentage * 100);
+        var lvl = Math.max(0, Math.min(100, Math.round(p / 10) * 10));
+        var n = ("00" + lvl).slice(-3);
+        return Qt.resolvedUrl("../../assets/icons/battery/battery-" + n
+            + (Battery.isCharging ? "-charging" : "") + ".svg");
+    }
+
     readonly property color barFg: "#ffffff"
     readonly property color barFgDim: "#a0a0a8"
     readonly property color barHover: Qt.rgba(1, 1, 1, 0.18)
@@ -44,6 +53,16 @@ PanelWindow {
         readonly property string activeAppName: {
         const id = activeAppId;
         if (!id || id === "finder") return "Finder";
+        const items = DockApps.dockItems || [];
+        for (let i = 0; i < items.length; i++) {
+            const it = items[i];
+            const ids = it.appIds || [it.name];
+            for (let j = 0; j < ids.length; j++) {
+                const a = String(ids[j] || "").toLowerCase();
+                if (!a) continue;
+                if (id === a || id.includes(a) || a.includes(id)) return it.name;
+            }
+        }
         if (id.includes("afterfx.exe")) return "After Effects"; // الشرط الذكي للأفتر إفكتس
         const seg = id.split(".").pop();
         if (!seg) return "Finder";
@@ -114,6 +133,7 @@ PanelWindow {
         "krita": ["file", "edit", "view", "image", "layer", "select", "filter", "tools", "window", "help"],
                 // Settings
         "gnome-control-center": ["file", "edit", "view", "help"],
+        "settings": ["file", "edit", "view", "window", "help"],
         "systemsettings": ["file", "edit", "view", "help"],
         // Default
         "_default": ["file", "edit", "view", "window", "help"],
@@ -1143,7 +1163,11 @@ PanelWindow {
             Timer { interval: 2000; running: true; repeat: true; onTriggered: _recCheckProc.running = true }
             Process {
                 id: _recCheckProc; running: false
-                command: ["bash", "-c", "hyprctl clients -j 2>/dev/null | python3 -c \"import sys,json\ntry:\n d=json.load(sys.stdin)\n for c in d:\n  t=(c.get('title','')+' '+c.get('class','')).lower()\n  if any(k in t for k in ['obs','screen','record','share','cast','screencode']): print('1'); break\n else: print('0')\nexcept: print('0')\" 2>/dev/null"]
+                command: ["bash", "-c",
+                    "if hyprctl clients -j 2>/dev/null | python3 -c \"import sys,json\ntry:\n d=json.load(sys.stdin)\n for c in d:\n  t=(c.get('title','')+' '+c.get('class','')).lower()\n  if any(k in t for k in ['obs','screen','record','share','cast','screencode']): print('1'); break\n else: print('0')\nexcept: print('0')\" 2>/dev/null | grep -q 1; then echo 1; exit; fi; " +
+                    "if pw-dump 2>/dev/null | grep -qiE '\"(media.name|media.class)\": \"[^\"]*(screencast|screen cast|screen-capture|screen capture)\"'; then echo 1; exit; fi; " +
+                    "if wpctl status 2>/dev/null | sed -n '/Video/,$p' | grep -qiE 'screencast|screen.?capture|portal-hyprland'; then echo 1; exit; fi; " +
+                    "echo 0"]
                 stdout: StdioCollector {
                     onStreamFinished: recordItem.recording = text.trim() === "1"
                 }
@@ -1154,26 +1178,14 @@ PanelWindow {
                 anchors.fill: parent; radius: 7
                 color: "#bf5af2"
             }
-            Canvas {
+            Image {
                 anchors.centerIn: parent; width: 16; height: 16
-                onPaint: {
-                    var ctx = getContext("2d"); ctx.reset()
-                    ctx.fillStyle = "#ffffff"
-                    ctx.beginPath()
-                    ctx.roundedRect(4, 0.5, 5, 8, 2.5, 2.5)
-                    ctx.fill()
-                    ctx.fillRect(6, 8.5, 1, 2.5)
-                    ctx.fillRect(3, 11, 5, 1)
-                    ctx.beginPath()
-                    ctx.arc(6.5, 7, 4.5, 0, Math.PI)
-                    ctx.strokeStyle = "#ffffff"
-                    ctx.lineWidth = 1
-                    ctx.stroke()
-                }
+                source: Qt.resolvedUrl("../../assets/icons/screenshare.svg")
+                sourceSize: Qt.size(16, 16)
             }
         }
 
-        // ---- Mic indicator (orange) ----
+        // ---- Mic indicator: mic / mic-off icons, orange while in use ----
         Item {
             id: micIndicator
             Layout.preferredWidth: 30; Layout.preferredHeight: parent.height
@@ -1191,22 +1203,18 @@ PanelWindow {
                 anchors.fill: parent; radius: 7
                 color: "#ff9500"
             }
-            Canvas {
+            Image {
                 anchors.centerIn: parent; width: 16; height: 16
-                onPaint: {
-                    var ctx = getContext("2d"); ctx.reset()
-                    ctx.fillStyle = "#ffffff"
-                    ctx.beginPath()
-                    ctx.roundedRect(4, 0.5, 5, 8, 2.5, 2.5)
-                    ctx.fill()
-                    ctx.fillRect(6, 8.5, 1, 2.5)
-                    ctx.fillRect(3, 11, 5, 1)
-                    ctx.beginPath()
-                    ctx.arc(6.5, 7, 4.5, 0, Math.PI)
-                    ctx.strokeStyle = "#ffffff"
-                    ctx.lineWidth = 1
-                    ctx.stroke()
-                }
+                source: Audio.micMuted
+                    ? Qt.resolvedUrl("../../assets/icons/mic-off.svg")
+                    : Qt.resolvedUrl("../../assets/icons/mic.svg")
+                sourceSize: Qt.size(16, 16)
+            }
+            MouseArea {
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: Audio.toggleMicMute()
             }
         }
 
@@ -1218,17 +1226,7 @@ PanelWindow {
             Rectangle { id: batteryBg; anchors.fill: parent; radius: 5; color: "transparent" }
             Image {
                 anchors.centerIn: parent; width: 22; height: 22
-                source: {
-                    var p = Battery.percentage * 100;
-                    if (Battery.isCharging) {
-                        if (p <= 20) return Qt.resolvedUrl("../../assets/icons/tb-battery-low-charging.svg");
-                        return Qt.resolvedUrl("../../assets/icons/tb-battery-charging.svg");
-                    }
-                    if (Battery.isFull || p > 95) return Qt.resolvedUrl("../../assets/icons/tb-battery-charged.svg");
-                    if (p <= 20) return Qt.resolvedUrl("../../assets/icons/tb-battery-low.svg");
-                    if (p <= 50) return Qt.resolvedUrl("../../assets/icons/tb-battery-good.svg");
-                    return Qt.resolvedUrl("../../assets/icons/tb-battery-full.svg");
-                }
+                source: root.batteryIconSrc()
                 sourceSize: Qt.size(22, 22)
             }
             MouseArea {

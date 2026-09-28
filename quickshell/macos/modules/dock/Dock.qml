@@ -3,17 +3,47 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Quickshell.Io
 import "../../services"
 import "../common"
 
 PanelWindow {
-    id: root
+        id: root
 
+    // ── 1. الخصائص العادية والمخصصة (يجب أن تكون في البداية معاً) ──
     screen: Quickshell.screens[0]
     anchors {
         bottom: true
         left: true
         right: true
+    }
+    
+    height: root.capsuleHeight + root.iconZoomFactor
+    property bool isTrashFull: false
+
+    // ── 2. العناصر المستقلة (تأتي بعد الخصائص مباشرة) ──
+    Process {
+        id: trashChecker
+        command: ["sh", "-c", "ls -A ~/.local/share/Trash/files"]
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: (text) => { root.isTrashFull = text.trim().length > 0; }
+        }
+    }
+
+    Process {
+        id: trashOpener
+        command: ["nautilus", "trash:///"]
+        running: false
+    }
+
+    Timer {
+        id: trashTimer
+        interval: 1500
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: { if (!trashChecker.running) trashChecker.running = true; }
     }
 
     // ── الألوان وتصميم الزجاج ──
@@ -28,7 +58,7 @@ PanelWindow {
     readonly property color accent: "#0c84ff"
 
     readonly property int slotWidth: Appearance.dockIconSize + 12
-    readonly property int capsuleHeight: 92
+    readonly property int capsuleHeight: 80
     readonly property int totalSlots: DockApps.dockItems.length + 1
     readonly property int sepCount: DockApps.runningApps.length > 0 ? 1 : 0
     readonly property int capsuleWidth: root.totalSlots * root.slotWidth + root.sepCount * 9 + 20
@@ -38,8 +68,7 @@ PanelWindow {
         left: Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
         right: Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
     }
-    height: root.capsuleHeight
-    color: "transparent"
+   color: "transparent"
     WlrLayershell.namespace: "macos:dock"
 
     readonly property int iconZoomFactor: Appearance.dockMagnification ? 55 : 0
@@ -250,17 +279,21 @@ PanelWindow {
         }
     }
 
-    Item {
+  Item {
     id: capsule
     anchors.fill: parent
 
     ShaderLiquidGlass {
         id: capsuleBg
-        anchors.fill: parent
+        anchors.bottom: parent.bottom
+        anchors.left: parent.left
+        anchors.right: parent.right
+        height: root.capsuleHeight
         radius: 26
         tint: "#121217"
-        tintAlpha: 0.5
+        tintAlpha: 0.30
     }
+
 
         MouseArea {
             id: capsuleMouse
@@ -278,15 +311,17 @@ PanelWindow {
             spacing: 0
             z: 2
 
-            component DockSeparator: Rectangle {
+                        component DockSeparator: Rectangle {
                 Layout.preferredWidth: 1
-                Layout.preferredHeight: parent.height - 30
+                Layout.preferredHeight: root.capsuleHeight - 30
                 Layout.leftMargin: 4
                 Layout.rightMargin: 4
-                Layout.alignment: Qt.AlignVCenter
+                Layout.alignment: Qt.AlignBottom
+                Layout.bottomMargin: 15
                 color: root.divider
                 radius: 0.5
             }
+
 
             component DockSlot: Item {
                 id: slot
@@ -483,7 +518,7 @@ PanelWindow {
                     }
                 }
 
-                Rectangle {
+                               Rectangle {
                     id: tooltip
                     visible: hoverHandler.hovered && root.dragSourceIndex === -1
                     anchors.horizontalCenter: parent.horizontalCenter
@@ -492,8 +527,9 @@ PanelWindow {
                     width: tipText.width + 16
                     height: 22
                     radius: 6
-                    color: Qt.rgba(20, 20, 25, 0.75)
-                    border.color: Qt.rgba(255, 255, 255, 0.3)
+                    // ── التعديل هنا ليكون أسود داكن ──
+                    color: Qt.rgba(0, 0, 0, 0.9) // أسود نقي مع شفافية بسيطة جداً
+                    border.color: Qt.rgba(255, 255, 255, 0.15) // تقليل سطوع خط الحدود المحيط بالاسم
                     border.width: 1
                     Behavior on opacity { NumberAnimation { duration: 120 } }
 
@@ -505,6 +541,7 @@ PanelWindow {
                         color: "#ffffff"
                     }
                 }
+
 
                 HoverHandler {
                     id: hoverHandler
@@ -643,19 +680,24 @@ PanelWindow {
                 visible: DockApps.runningApps.length > 0
             }
 
+                        // ── كود سلة المهملات المطوّر ──
             Item {
                 Layout.preferredWidth: root.slotWidth
-                Layout.preferredHeight: parent.height
+                Layout.preferredHeight: root.capsuleHeight
+                Layout.alignment: Qt.AlignBottom
+
                 Image {
-                    anchors.centerIn: parent
-                    width: 50
-                    height: 50
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 14 
+                    width: root.iconBase
+                    height: root.iconBase
                     source: DockApps.iconsDir + "Trash.png"
                     asynchronous: true
                     mipmap: true
                     smooth: true
                 }
-            }
-        }
-    }
-}
+            } // إغلاق حاوية الـ Item لسلة المهملات
+        } // إغلاق الـ RowLayout (dockRow)
+    } // إغلاق الـ Item الأساسي (capsule)
+} // إغلاق الحاوية الكلية للملف (PanelWindow)

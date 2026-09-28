@@ -44,6 +44,103 @@ Scope {
     property bool bluetoothOpened: false
     property bool wifiOpened: false
     property bool windowOpened: bluetoothOpened || wifiOpened
+    // ---- voice / call state (top pill) ----
+    property bool inVoice: false
+    property string voiceApp: ""
+    readonly property bool voiceShift: inVoice && !windowOpened
+    function voiceDisplayName() {
+        const n = root.voiceApp;
+        if (!n) return "";
+        if (/discord|vesktop/i.test(n)) return "Discord";
+        return n;
+    }
+    function refreshVoice() { voicePoll.running = true; }
+    function doLock() {
+        try {
+            if (typeof ShellController !== "undefined") { ShellController.lock(); return; }
+        } catch (e) {}
+        if (typeof Ipc !== "undefined") Ipc.runMixin("eqdesktop.lock", "lock");
+    }
+    function doPower() {
+        try {
+            if (typeof ShellController !== "undefined") { ShellController.toggle("session"); return; }
+        } catch (e) {}
+    }
+    // ---- airplane mode (rfkill wifi+bluetooth) ----
+    property bool airplaneOn: false
+    function toggleAirplane() {
+        root.airplaneOn = !root.airplaneOn;
+        _rfkill.command = ["bash", "-c", root.airplaneOn
+            ? "rfkill block wifi; rfkill block bluetooth"
+            : "rfkill unblock wifi; rfkill unblock bluetooth"];
+        _rfkill.running = true;
+    }
+    function pollAirplane() { _rfkillQuery.running = true; }
+    // ---- screen mirroring (state-only, like AirDrop) ----
+    property bool mirroring: false
+
+    Timer {
+        interval: 2500
+        running: root.opened
+        triggeredOnStart: true
+        repeat: true
+        onTriggered: root.refreshVoice()
+    }
+    Timer {
+        interval: 3000
+        running: root.opened
+        repeat: true
+        onTriggered: root.pollAirplane()
+    }
+    Process {
+        id: voicePoll
+        running: false
+        command: ["bash", "-c", "(pactl -f json list source-outputs 2>/dev/null || echo []); echo '###SPLIT###'; (pactl -f json list sink-inputs 2>/dev/null || echo [])"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    const parts = text.split("###SPLIT###");
+                    const firstName = (raw) => {
+                        const d = JSON.parse(raw);
+                        let name = "";
+                        const walk = (o) => {
+                            if (Array.isArray(o)) { o.forEach(walk); return; }
+                            if (o && typeof o === "object") {
+                                for (const k in o) {
+                                    if (k === "application.name" && typeof o[k] === "string") {
+                                        if (!name) name = o[k];
+                                    } else walk(o[k]);
+                                }
+                            }
+                        };
+                        walk(d);
+                        return name;
+                    };
+                    const rec = parts.length > 0 ? firstName(parts[0]) : "";
+                    const play = parts.length > 1 ? firstName(parts[1]) : "";
+                    root.voiceApp = rec || play;
+                    root.inVoice = (rec + play).length > 0;
+                } catch (e) { root.inVoice = false; }
+            }
+        }
+    }
+    Process {
+        id: _rfkill
+        running: false
+        stdout: StdioCollector {}
+        stderr: StdioCollector {}
+    }
+    Process {
+        id: _rfkillQuery
+        running: false
+        command: ["bash", "-c", "rfkill list 2>/dev/null | grep -A1 -E 'Wireless LAN|Bluetooth' | grep -c 'Soft blocked: yes' || echo 0"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const n = parseInt(text.trim());
+                if (!isNaN(n)) root.airplaneOn = n >= 2;
+            }
+        }
+    }
     function openCC() {
         root.open()
     }
@@ -67,7 +164,7 @@ Scope {
         property int box: 65
         property int boxMargin: 10
         property int gridW: 4
-        property int gridH: 6
+        property int gridH: 7
         property int gridImplicitWidth: ((box*gridW)+(boxMargin*gridW)+boxMargin)
         property int gridImplicitHeight: ((box*gridH)+(boxMargin*gridH)+boxMargin)
 
@@ -173,7 +270,8 @@ Scope {
                 anchors {
                     top: parent.top
                     right: parent.right
-                    topMargin: Config.bar.height+5
+                    topMargin: Config.bar.height + 5 + (root.voiceShift ? 46 : 0)
+                    Behavior on topMargin { NumberAnimation { duration: root.animationDur } }
                 }
                 //Repeater {
                 //    model: {
@@ -395,7 +493,7 @@ Scope {
                     overwriteXPos: 0
                     overwriteYPos: -60
                     hideCause: root.wifiOpened
-                    width: root.bluetoothOpened ? panelWindow.gridImplicitWidth : panelWindow.box
+                    width: root.bluetoothOpened ? panelWindow.gridImplicitWidth : panelWindow.box*2+panelWindow.boxMargin
                     height: root.bluetoothOpened ? 250 : panelWindow.box
                     Behavior on width { NumberAnimation { duration: root.animationDur; easing.type: Easing.OutBack; easing.overshoot: 0.5 } }
                     Behavior on height { NumberAnimation { duration: root.animationDur; easing.type: Easing.OutBack; easing.overshoot: 0.5 } }
@@ -410,20 +508,58 @@ Scope {
                             }
                         }
                     }
-                    VectorImage {
-                        id: rBBluetooth
-                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/bluetooth-clear.svg")
-                        width: panelWindow.box-10
-                        height: panelWindow.box-10
-                        preferredRendererType: VectorImage.CurveRenderer
-                        anchors.centerIn: parent
+                    ClippingRectangle {
+                        id: btClipping
+                        anchors {
+                            left: parent.left
+                            leftMargin: 15
+                            verticalCenter: parent.verticalCenter
+                        }
+                        radius: 40
+                        width: 40
+                        height: 40
+                        color: Bluetooth.defaultAdapter?.enabled ? "#fff" : "transparent"
                         opacity: root.bluetoothOpened ? 0 : 1
                         Behavior on opacity { NumberAnimation { duration: root.animationDur } }
-                        layer.enabled: true
-                        layer.effect: MultiEffect {
-                            colorization: 1
-                            colorizationColor: bluetoothWidget.enabled ? "#2495ff" : "#fff"
+                        VectorImage {
+                            id: rBBluetooth
+                            source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/bluetooth-clear.svg")
+                            width: 24
+                            height: 24
+                            preferredRendererType: VectorImage.CurveRenderer
+                            anchors.centerIn: parent
+                            layer.enabled: true
+                            layer.effect: MultiEffect {
+                                colorization: 1
+                                colorizationColor: Bluetooth.defaultAdapter?.enabled ? "#2495ff" : "#fff"
+                            }
                         }
+                    }
+                    UIText {
+                        text: Translation.tr("Bluetooth")
+                        font.weight: 700
+                        anchors {
+                            left: btClipping.right
+                            leftMargin: 5
+                            top: btClipping.top
+                        }
+                        opacity: root.bluetoothOpened ? 0 : 1
+                        Behavior on opacity { NumberAnimation { duration: root.animationDur } }
+                    }
+                    UIText {
+                        text: Bluetooth.defaultAdapter?.enabled ? Translation.tr("On") : Translation.tr("Off")
+                        elide: Text.ElideRight
+                        gray: false
+                        font.weight: 500
+                        height: 20
+                        width: panelWindow.box+10
+                        anchors {
+                            left: btClipping.right
+                            leftMargin: 5
+                            bottom: btClipping.bottom
+                        }
+                        opacity: root.bluetoothOpened ? 0 : 1
+                        Behavior on opacity { NumberAnimation { duration: root.animationDur } }
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -451,7 +587,7 @@ Scope {
                     }
                     scaleCause: root.bluetoothOpened
                     light: root.bluetoothOpened ? "transparent" : root.glassRimColor
-                    color: root.bluetoothOpened ? "transparent" : enabled ? "#fff" : root.glassColor
+                    color: root.bluetoothOpened ? "transparent" : root.glassColor
                     Behavior on color { ColorAnimation { duration: root.animationDur } }
                     ClippingRectangle {
                         id: clippingRectBluetooth
@@ -487,14 +623,78 @@ Scope {
                         }
                     }
                 }
+                BoxButton {
+                    id: airplaneWidget
+                    width: panelWindow.box*2+panelWindow.boxMargin
+                    height: panelWindow.box
+                    radius: 40
+                    xPos: 0
+                    yPos: 2
+                    enabled: false
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !root.windowOpened
+                        onClicked: root.toggleAirplane()
+                    }
+                    ClippingRectangle {
+                        id: airClipping
+                        anchors {
+                            left: parent.left
+                            leftMargin: 15
+                            verticalCenter: parent.verticalCenter
+                        }
+                        radius: 40
+                        width: 40
+                        height: 40
+                        color: root.airplaneOn ? "#fff" : "transparent"
+                        Image {
+                            anchors.centerIn: parent
+                            width: 24
+                            height: 24
+                            source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/airplane.svg")
+                            sourceSize: Qt.size(24, 24)
+                        }
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 40
+                            color: "transparent"
+                        }
+                    }
+                    UIText {
+                        text: Translation.tr("Airplane")
+                        font.weight: 700
+                        anchors {
+                            left: airClipping.right
+                            leftMargin: 5
+                            top: airClipping.top
+                        }
+                    }
+                    UIText {
+                        text: root.airplaneOn ? Translation.tr("On") : Translation.tr("Off")
+                        font.weight: 500
+                        height: 20
+                        anchors {
+                            left: airClipping.right
+                            leftMargin: 5
+                            bottom: airClipping.bottom
+                        }
+                    }
+                }
                 Button1x1 {
-                    id: airdropWidget
-                    xPos: 1
-                    yPos: 1
-                    enabled: true
+                    id: darkModeWidget
+                    xPos: 2
+                    yPos: 2
+                    enabled: Config.general.darkMode && !Config.general.autoDarkMode
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !root.windowOpened
+                        onClicked: {
+                            Config.general.darkMode = !Config.general.darkMode;
+                            Config.general.autoDarkMode = false;
+                        }
+                    }
                     VectorImage {
-                        id: rBAirdrop
-                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/airdrop.svg")
+                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dnd.svg")
                         width: panelWindow.box-30
                         height: panelWindow.box-30
                         preferredRendererType: VectorImage.CurveRenderer
@@ -502,17 +702,86 @@ Scope {
                         layer.enabled: true
                         layer.effect: MultiEffect {
                             colorization: 1
-                            colorizationColor: true ? "#2495ff" : "#fff"
+                            colorizationColor: darkModeWidget.enabled ? "#2495ff" : "#fff"
                         }
-                    } 
+                    }
+                }
+                Button1x1 {
+                    id: lockWidget
+                    xPos: 3
+                    yPos: 2
+                    enabled: false
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !root.windowOpened
+                        onClicked: root.doLock()
+                    }
+                    VectorImage {
+                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/lock.svg")
+                        width: panelWindow.box-34
+                        height: panelWindow.box-34
+                        preferredRendererType: VectorImage.CurveRenderer
+                        anchors.centerIn: parent
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            colorization: 1
+                            colorizationColor: "#fff"
+                        }
+                    }
+                }
+                Button1x1 {
+                    id: mirrorWidget
+                    xPos: 0
+                    yPos: 3
+                    enabled: root.mirroring
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !root.windowOpened
+                        onClicked: root.mirroring = !root.mirroring
+                    }
+                    VectorImage {
+                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/arrow-right.svg")
+                        width: panelWindow.box-30
+                        height: panelWindow.box-30
+                        preferredRendererType: VectorImage.CurveRenderer
+                        anchors.centerIn: parent
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            colorization: 1
+                            colorizationColor: mirrorWidget.enabled ? "#2495ff" : "#fff"
+                        }
+                    }
+                }
+                Button1x1 {
+                    id: powerWidget
+                    xPos: 1
+                    yPos: 3
+                    enabled: false
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !root.windowOpened
+                        onClicked: root.doPower()
+                    }
+                    VectorImage {
+                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/power.svg")
+                        width: panelWindow.box-30
+                        height: panelWindow.box-30
+                        preferredRendererType: VectorImage.CurveRenderer
+                        anchors.centerIn: parent
+                        layer.enabled: true
+                        layer.effect: MultiEffect {
+                            colorization: 1
+                            colorizationColor: "#fff"
+                        }
+                    }
                 }
                 BoxButton {
                     id: focusWidget
                     width: panelWindow.box*2+panelWindow.boxMargin
                     height: panelWindow.box
                     radius: 40
-                    xPos: 0
-                    yPos: 2
+                    xPos: 2
+                    yPos: 3
                     Loader {
                         anchors.fill: parent
                         active: !root.windowOpened
@@ -577,52 +846,13 @@ Scope {
                         textColor: root.textColor
                     }
                 }
-                Button1x1 {
-                    id: stageWidget
-                    xPos: 2
-                    yPos: 2
-                    enabled: false
-                    VectorImage {
-                        id: rBStage
-                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/stageman.svg")
-                        width: panelWindow.box-30
-                        height: panelWindow.box-30
-                        preferredRendererType: VectorImage.CurveRenderer
-                        anchors.centerIn: parent
-                        layer.enabled: true
-                        layer.effect: MultiEffect {
-                            colorization: 1
-                            colorizationColor: false ? "#2495ff" : "#fff"
-                        }
-                    }
-                }
-                Button1x1 {
-                    id: screenshareWidget
-                    xPos: 3
-                    yPos: 2
-                    enabled: false
-                    VectorImage {
-                        id: rBScreenshare
-                        source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/screenshare.svg")
-                        width: panelWindow.box-30
-                        height: panelWindow.box-30
-                        preferredRendererType: VectorImage.CurveRenderer
-                        anchors.centerIn: parent
-                        layer.enabled: true
-                        layer.effect: MultiEffect {
-                            colorization: 1
-                            colorizationColor: false ? "#2495ff" : "#fff"
-                        }    
-                    }
-                }
                 BoxButton {
                     id: displayWidget
                     width: panelWindow.box*4+panelWindow.boxMargin*3
                     height: panelWindow.box
                     radius: 25
                     xPos: 0
-                    yPos: 3
-                    rimStrength: root.glassRimStrengthWeak
+                    yPos: 4
                     UIText {
                         id: brightnessTitle
                         anchors {
@@ -735,8 +965,7 @@ Scope {
                     height: panelWindow.box
                     radius: 25
                     xPos: 0
-                    yPos: 4
-                    rimStrength: root.glassRimStrengthWeak
+                    yPos: 5
                     UIText {
                         id: volumeTitle
                         anchors {
@@ -746,7 +975,7 @@ Scope {
                             leftMargin: 15
                         }
                         font.weight: 600
-                        text: Translation.tr("Volume")
+                        text: Translation.tr("Sound")
                     }
                     VectorImage {
                         id: rBVolumeLeft
@@ -807,25 +1036,70 @@ Scope {
                         }
                     }
                 }
-                Button1x1 {
-                    id: darkModeWidget
-                    xPos: 0
-                    yPos: 5
-                }
-                Button1x1 {
-                    id: calculatorWidget
+                BoxButton {
+                    id: settingsWidget
+                    width: settingsLabel.implicitWidth + 40
+                    height: 46
+                    radius: 40
                     xPos: 1
-                    yPos: 5
+                    yPos: 6
+                    enabled: false
+                    anchors.leftMargin: panelWindow.gridX(1) + (panelWindow.box*2 + panelWindow.boxMargin - width) / 2
+                    anchors.topMargin: panelWindow.gridY(6) + (panelWindow.box - height) / 2
+                    MouseArea {
+                        anchors.fill: parent
+                        enabled: !root.windowOpened
+                        onClicked: {
+                            Runtime.settingsOpen = true;
+                            root.closeCC();
+                        }
+                    }
+                    UIText {
+                        id: settingsLabel
+                        text: Translation.tr("Edit Controls")
+                        font.weight: 600
+                        anchors.centerIn: parent
+                    }
                 }
-                Button1x1 {
-                    id: clockWidget
-                    xPos: 2
-                    yPos: 5
-                }
-                Button1x1 {
-                    id: screenshotWidget
-                    xPos: 3
-                    yPos: 5
+                BoxGlass {
+                    id: voicePill
+                    radius: 30
+                    height: 36
+                    width: voiceRow.implicitWidth + 30
+                    color: root.glassColor
+                    light: root.glassRimColor
+                    rimStrength: root.glassRimStrength
+                    anchors {
+                        bottom: parent.top
+                        bottomMargin: 8
+                        horizontalCenter: parent.horizontalCenter
+                    }
+                    opacity: (root.inVoice && !root.windowOpened) ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: root.animationDur } }
+                    Row {
+                        id: voiceRow
+                        anchors.centerIn: parent
+                        spacing: 8
+                        Rectangle {
+                            width: 24
+                            height: 24
+                            radius: 12
+                            color: "#ff9500"
+                            anchors.verticalCenter: parent.verticalCenter
+                            Image {
+                                anchors.centerIn: parent
+                                width: 15
+                                height: 15
+                                source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/audio-volume.svg")
+                                sourceSize: Qt.size(15, 15)
+                            }
+                        }
+                        UIText {
+                            text: root.voiceDisplayName()
+                            font.weight: 700
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                    }
                 }
             }
         }

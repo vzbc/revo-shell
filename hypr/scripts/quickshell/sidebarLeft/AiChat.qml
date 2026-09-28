@@ -9,9 +9,8 @@ Item {
 
     // ── tuneable ──────────────────────────────────────────────
     property string ollamaModel: "anthropic/claude-Sonnet-4-5"
-    property string ollamaUrl:   "https://api.anthropic.com/v1/messages"
-    // Set via env ANTHROPIC_API_KEY or edit locally — never commit secrets
-    property string apiKey:      ""
+property string ollamaUrl:   "https://api.anthropic.com/v1/messages"
+property string apiKey:      Quickshell.env("ANTHROPIC_API_KEY") ?? ""
     // ─────────────────────────────────────────────────────────
 
     property var messages: []        // { role, content, thinking }

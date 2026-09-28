@@ -22,9 +22,9 @@ hl.layer_rule({
 })
 
 hl.bind("SUPER + B", hl.dsp.exec_cmd("qs -c Synoptik ipc call wallpaper toggle"))
-hl.bind("SUPER + A", hl.dsp.exec_cmd("qs -c Synoptik ipc call launcher toggle"))
+hl.bind("SUPER + A", hl.dsp.exec_cmd("qs ipc -p /home/revo/.config/quickshell/macos call launchpad toggle"))
 hl.bind("SUPER + Space", hl.dsp.exec_cmd("qs -c Synoptik ipc call settings toggle"))
 hl.bind("SUPER + TAB", hl.dsp.exec_cmd("qs -c Synoptik ipc call workspaceoverview toggle"))
 hl.bind("SUPER + SHIFT + V", hl.dsp.exec_cmd("qs -c Synoptik ipc call clipboard toggle"))
-hl.bind("SUPER + L", hl.dsp.exec_cmd("qs -c Synoptik ipc call lockscreen toggle"))
+hl.bind("SUPER + L", hl.dsp.exec_cmd("qs ipc -p /home/revo/.config/quickshell/macos call lock lock"))
 hl.bind("CTRL + ALT + P", hl.dsp.exec_cmd("qs -c Synoptik ipc call shader toggle"))

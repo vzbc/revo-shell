@@ -15,7 +15,7 @@ Singleton {
         :Config.appearance.glass == 6 ? "#60000000" // Thick Dark
         :Config.appearance.glass == 7 ? Config.appearance.glass_Color // Custom
         : "#20ffffff"
-    property color glassRimColor: "#80ffffff"
+    property color glassRimColor: "#60ffffff"
     property real  glassRimStrengthWeak: 0.5
     property real  glassRimStrength: 1.0
     property real  glassRimStrengthStrong: 1.3
