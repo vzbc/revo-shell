@@ -27,13 +27,13 @@ PanelWindow {
         command: ["sh", "-c", "ls -A ~/.local/share/Trash/files"]
         running: false
         stdout: StdioCollector {
-            onStreamFinished: (text) => { root.isTrashFull = text.trim().length > 0; }
+            onStreamFinished: { root.isTrashFull = text.trim().length > 0; }
         }
     }
 
     Process {
         id: trashOpener
-        command: ["nautilus", "trash:///"]
+        command: ["/home/revo/.local/bin/nautilus", "trash:///"]
         running: false
     }
 
@@ -45,6 +45,180 @@ PanelWindow {
         triggeredOnStart: true
         onTriggered: { if (!trashChecker.running) trashChecker.running = true; }
     }
+
+    // ── Downloads stack + screenshot items ──
+    property bool downloadsOpen: false
+    property bool fanSuppressNextClick: false
+    property var dlItems: []
+    property var shotItems: []
+    property var seenShots: ({})
+    property bool shotsSeeded: false
+    property real shotSeedMax: 0
+    property bool shotDragging: false
+    property bool shotOverTrash: false
+
+    property real fanOx: 210
+    property real fanOy: 518
+    property real fanRc: 500
+    property real fanRowH: 58
+    property bool fanFlip: false
+
+    readonly property var fanModel: {
+        const arr = root.dlItems.slice(0, 10).map(p => ({ path: p }));
+        arr.push({ openFinder: true });
+        return arr;
+    }
+
+    function refreshDownloads() {
+        if (!dlScan.running) dlScan.running = true;
+    }
+
+    function isThumb(p) {
+        return /\.(png|jpe?g|webp|gif|bmp|svg|avif)$/i.test(p);
+    }
+
+    function dlIconFor(p) {
+        const e = (p.split(".").pop() || "").toLowerCase();
+        if (["mp4", "mkv", "webm", "mov", "avi"].includes(e)) return DockApps.iconsDir + "video-player.png";
+        if (["mp3", "flac", "wav", "ogg", "m4a"].includes(e)) return DockApps.iconsDir + "elisa.png";
+        if (["deb", "rpm", "appimage"].includes(e)) return DockApps.iconsDir + "app-store.png";
+        return DockApps.iconsDir + "file-doc.svg";
+    }
+
+    function fanPosAt(i) {
+        const n = Math.max(1, root.fanModel.length);
+        const last = Math.max(1, n - 1);
+        const f = i / last;
+        return {
+            x: 300 + 150 * f,
+            y: 12 + (n - 1 - i) * root.fanRowH
+        };
+    }
+
+    function openDownloads() {
+        ShellController.closeAll();
+        const pos = dlSlot.mapToItem(null, dlSlot.width / 2, 14);
+        const screenW = Quickshell.screens[0].width;
+        const n = Math.max(1, root.fanModel.length);
+        downloadsFan.width = 440;
+        root.fanOy = n * root.fanRowH + 24;
+        downloadsFan.height = root.fanOy;
+        root.fanOx = 300;
+        downloadsFan.relativeX = Math.max(6, Math.min(screenW - downloadsFan.width - 6, pos.x - root.fanOx));
+        downloadsFan.relativeY = pos.y - root.fanOy + 8;
+        root.downloadsOpen = true;
+        root.refreshDownloads();
+    }
+
+    onDownloadsOpenChanged: {
+        if (root.downloadsOpen) {
+            GlobalFocusGrab.addDismissable(downloadsFan);
+        } else {
+            GlobalFocusGrab.removeDismissable(downloadsFan);
+        }
+    }
+
+    onFanSuppressNextClickChanged: {
+        if (root.fanSuppressNextClick) suppressTimer.restart();
+    }
+
+    Timer {
+        id: suppressTimer
+        interval: 400
+        onTriggered: root.fanSuppressNextClick = false
+    }
+
+    Component.onCompleted: { dlScan.running = true; fanTestTimer.start(); }
+
+    Timer {
+        id: fanTestTimer
+        interval: 2500
+        running: false
+        onTriggered: root.openDownloads()
+    }
+
+    Process {
+        id: dlScan
+        running: false
+        command: ["sh", "-c", "find \"$HOME/Downloads\" -mindepth 1 -maxdepth 1 -printf '%T@|%p\\n' 2>/dev/null | sort -rn | head -10"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const out = [];
+                for (const line of text.trim().split("\n")) {
+                    const i = line.indexOf("|");
+                    if (i > 0) out.push(line.slice(i + 1));
+                }
+                root.dlItems = out;
+            }
+        }
+    }
+
+    Timer {
+        interval: 2500
+        running: root.downloadsOpen
+        repeat: true
+        onTriggered: root.refreshDownloads()
+    }
+
+    Process {
+        id: shotScan
+        running: false
+        command: ["sh", "-c", "find \"$HOME/Pictures\" -maxdepth 1 -type f \\( -iname '*hyprshot*' -o -iname 'screenshot*' \\) -printf '%T@|%p\\n' 2>/dev/null | sort -rn | head -15"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const entries = [];
+                for (const line of text.trim().split("\n")) {
+                    const i = line.indexOf("|");
+                    if (i > 0) entries.push({ t: parseFloat(line.slice(0, i)), p: line.slice(i + 1) });
+                }
+                if (!root.shotsSeeded) {
+                    const seen = {};
+                    for (const e of entries) seen[e.p] = true;
+                    root.seenShots = seen;
+                    root.shotSeedMax = entries.length > 0 ? entries[0].t : 0;
+                    root.shotsSeeded = true;
+                    return;
+                }
+                const fresh = [];
+                for (const e of entries) {
+                    if (!root.seenShots[e.p] && e.t > root.shotSeedMax) {
+                        fresh.push(e.p);
+                        root.seenShots[e.p] = true;
+                    }
+                }
+                if (fresh.length === 0) return;
+                let items = root.shotItems.slice();
+                for (const p of fresh) {
+                    items = items.filter(x => x.path !== p);
+                    items.unshift({ path: p, name: p.split("/").pop() });
+                }
+                root.shotItems = items.slice(0, 5);
+            }
+        }
+    }
+
+    Timer {
+        id: shotTimer
+        interval: 1500
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: { if (!shotScan.running) shotScan.running = true; }
+    }
+
+    Process {
+        id: dlOpener
+        running: false
+        stdout: StdioCollector {}
+    }
+
+    Process {
+        id: shotTrash
+        running: false
+        stdout: StdioCollector {}
+        onExited: { if (!trashChecker.running) trashChecker.running = true; }
+    }
+
 
     // ── الألوان وتصميم الزجاج ──
     readonly property color glassBorder: Qt.rgba(255, 255, 255, 0.25)
@@ -59,7 +233,7 @@ PanelWindow {
 
     readonly property int slotWidth: Appearance.dockIconSize + 12
     readonly property int capsuleHeight: 80
-    readonly property int totalSlots: DockApps.dockItems.length + 1
+    readonly property int totalSlots: DockApps.dockItems.length + root.shotItems.length + 2
     readonly property int sepCount: DockApps.runningApps.length > 0 ? 1 : 0
     readonly property int capsuleWidth: root.totalSlots * root.slotWidth + root.sepCount * 9 + 20
     
@@ -97,6 +271,7 @@ PanelWindow {
         slotMenu.relativeX = Math.max(6, Math.min(root.width - slotMenu.width - 6, pos.x - slotMenu.width / 2));
         slotMenu.relativeY = -(slotMenu.height + 12);
         ShellController.closeAll();
+        root.downloadsOpen = false;
         root.menuOpen = true;
     }
 
@@ -111,7 +286,13 @@ PanelWindow {
 
     Connections {
         target: GlobalFocusGrab
-        function onDismissed() { root.menuOpen = false; }
+        function onDismissed() {
+            root.menuOpen = false;
+            if (root.downloadsOpen) {
+                root.fanSuppressNextClick = true;
+                root.downloadsOpen = false;
+            }
+        }
     }
 
     // ── مكون الزجاج المعدل ليتناسب مع Quickshell ──
@@ -282,6 +463,112 @@ PanelWindow {
   Item {
     id: capsule
     anchors.fill: parent
+
+    PopupWindow {
+        id: downloadsFan
+        parentWindow: root
+        screen: Quickshell.screens[0]
+        width: 360
+        height: 500
+        visible: root.downloadsOpen
+        color: "transparent"
+
+        Repeater {
+            model: root.fanModel
+            delegate: Item {
+                id: fanItem
+                required property int index
+                required property var modelData
+                width: 200
+                height: root.fanRowH
+                readonly property real fx: root.fanPosAt(fanItem.index).x
+                readonly property real fy: root.fanPosAt(fanItem.index).y
+                property real t: root.downloadsOpen ? 1 : 0
+                z: 100 - fanItem.index
+
+                x: root.fanOx + (fanItem.fx - root.fanOx) * fanItem.t - (fanItem.width - 46)
+                y: root.fanOy + (fanItem.fy - root.fanOy) * fanItem.t
+                opacity: Math.min(1, fanItem.t * 1.5)
+                scale: 0.35 + 0.65 * fanItem.t
+                transformOrigin: Item.BottomRight
+
+                Behavior on t {
+                    SequentialAnimation {
+                        PauseAnimation { duration: fanItem.index * 45 }
+                        NumberAnimation { duration: 340; easing.type: Easing.OutBack }
+                    }
+                }
+
+                Rectangle {
+                    id: fanIcon
+                    readonly property bool thumbBg: !fanItem.modelData.openFinder && root.isThumb(fanItem.modelData.path)
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 46
+                    height: 46
+                    radius: 10
+                    color: fanIcon.thumbBg ? "#1c1c1e" : "transparent"
+                    border.color: Qt.rgba(255, 255, 255, 0.18)
+                    border.width: fanIcon.thumbBg ? 1 : 0
+                    clip: true
+
+                    Image {
+                        anchors.fill: parent
+                        anchors.margins: fanIcon.thumbBg ? 2 : 4
+                        source: fanItem.modelData.openFinder
+                            ? DockApps.iconsDir + "Finder.png"
+                            : (root.isThumb(fanItem.modelData.path)
+                                ? "file://" + encodeURI(fanItem.modelData.path)
+                                : root.dlIconFor(fanItem.modelData.path))
+                        fillMode: fanIcon.thumbBg ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+                        asynchronous: true
+                        mipmap: true
+                    }
+                }
+
+                Rectangle {
+                    id: fanPill
+                    anchors.right: fanIcon.left
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: 24
+                    width: Math.min(fanPillText.implicitWidth + 20, 150)
+                    radius: 12
+                    color: fanPillHover.hovered ? "#ffffff" : Qt.rgba(0.93, 0.93, 0.95, 0.95)
+                    border.color: Qt.rgba(0, 0, 0, 0.12)
+                    border.width: 1
+
+                    Text {
+                        id: fanPillText
+                        anchors.centerIn: parent
+                        width: parent.width - 16
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
+                        text: fanItem.modelData.openFinder
+                            ? "Open in Finder"
+                            : fanItem.modelData.path.split("/").pop()
+                        font { family: Appearance.fontFamily; pixelSize: 11; weight: Font.Medium }
+                        color: "#1a1a1a"
+                    }
+                }
+
+                HoverHandler { id: fanPillHover }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if (fanItem.modelData.openFinder) {
+                            dlOpener.command = ["/home/revo/.local/bin/nautilus", "--new-window", "file:///home/revo/Downloads"];
+                        } else {
+                            dlOpener.command = ["/usr/bin/xdg-open", fanItem.modelData.path];
+                        }
+                        dlOpener.running = true;
+                        root.downloadsOpen = false;
+                    }
+                }
+            }
+        }
+    }
 
     ShaderLiquidGlass {
         id: capsuleBg
@@ -671,6 +958,135 @@ PanelWindow {
                 }
             }
 
+            component ShotSlot: Item {
+                id: sslot
+                required property var modelData
+                Layout.preferredWidth: root.slotWidth
+                Layout.preferredHeight: root.capsuleHeight
+                Layout.alignment: Qt.AlignBottom
+
+                opacity: 0
+                scale: 0.3
+                transformOrigin: Item.Bottom
+
+                readonly property real homeX: (sslot.width - root.iconBase) / 2
+                readonly property real homeY: sslot.height - 14 - Math.round(root.iconBase * 0.72)
+
+                Component.onCompleted: popIn.start()
+
+                ParallelAnimation {
+                    id: popIn
+                    NumberAnimation { target: sslot; property: "opacity"; to: 1; duration: 200 }
+                    NumberAnimation { target: sslot; property: "scale"; to: 1; duration: 420; easing.type: Easing.OutBack }
+                }
+
+                Rectangle {
+                    id: sIcon
+                    width: root.iconBase
+                    height: Math.round(root.iconBase * 0.72)
+                    x: sslot.homeX
+                    y: sslot.homeY
+                    radius: 9
+                    color: "#18181c"
+                    border.color: Qt.rgba(255, 255, 255, 0.22)
+                    border.width: 1
+                    clip: true
+                    opacity: (root.shotOverTrash && sMouse.overTrash) ? 0.35 : 1
+
+                    Behavior on x { enabled: !sMouse.pressed; NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
+                    Behavior on y { enabled: !sMouse.pressed; NumberAnimation { duration: 220; easing.type: Easing.OutBack } }
+                    Behavior on scale { NumberAnimation { duration: 140 } }
+                    scale: sMouse.pressed ? 1.15 : 1
+
+                    Image {
+                        anchors.fill: parent
+                        anchors.margins: 1.5
+                        source: "file://" + encodeURI(sslot.modelData.path)
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        mipmap: true
+                        smooth: true
+                    }
+                }
+
+                Rectangle {
+                    visible: sHover.hovered && !sMouse.pressed && !root.shotDragging
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: sIcon.top
+                    anchors.bottomMargin: 8
+                    width: sTipText.width + 16
+                    height: 22
+                    radius: 6
+                    color: Qt.rgba(0, 0, 0, 0.9)
+                    border.color: Qt.rgba(255, 255, 255, 0.15)
+                    border.width: 1
+                    z: 60
+                    Text {
+                        id: sTipText
+                        anchors.centerIn: parent
+                        text: sslot.modelData.name
+                        font { family: "SF Pro Display"; pixelSize: 11; weight: Font.Medium }
+                        color: "#ffffff"
+                    }
+                }
+
+                HoverHandler { id: sHover }
+
+                MouseArea {
+                    id: sMouse
+                    anchors.fill: parent
+                    property bool dragged: false
+                    property bool overTrash: false
+                    property real startX: 0
+                    property real startY: 0
+                    drag.target: sIcon
+                    drag.axis: Drag.XAndYAxis
+                    drag.threshold: 8
+
+                    onPressed: (mouse) => {
+                        sMouse.dragged = false;
+                        sMouse.startX = mouse.x;
+                        sMouse.startY = mouse.y;
+                        root.shotDragging = true;
+                        sslot.z = 80;
+                    }
+
+                    onPositionChanged: (mouse) => {
+                        if (!pressed) return;
+                        if (Math.abs(mouse.x - sMouse.startX) > 8 || Math.abs(mouse.y - sMouse.startY) > 8)
+                            sMouse.dragged = true;
+                        if (!sMouse.dragged) return;
+                        const p = sIcon.mapToItem(capsule, sIcon.width / 2, sIcon.height / 2);
+                        const t = trashSlot.mapToItem(capsule, trashSlot.width / 2, trashSlot.height / 2);
+                        sMouse.overTrash = Math.abs(p.x - t.x) < 65 && Math.abs(p.y - t.y) < 75;
+                        root.shotOverTrash = sMouse.overTrash;
+                    }
+
+                    onReleased: {
+                        root.shotDragging = false;
+                        root.shotOverTrash = false;
+                        sslot.z = 0;
+                        if (sMouse.dragged && sMouse.overTrash) {
+                            const p = sslot.modelData.path;
+                            shotTrash.command = ["/usr/bin/gio", "trash", p];
+                            shotTrash.running = true;
+                            root.seenShots[p] = true;
+                            root.shotItems = root.shotItems.filter(x => x.path !== p);
+                            return;
+                        }
+                        sIcon.x = sslot.homeX;
+                        sIcon.y = sslot.homeY;
+                        sMouse.overTrash = false;
+                    }
+
+                    onClicked: {
+                        if (sMouse.dragged) return;
+                        dlOpener.command = ["/usr/bin/xdg-open", sslot.modelData.path];
+                        dlOpener.running = true;
+                    }
+                }
+            }
+
             Repeater {
                 model: DockApps.dockItems
                 delegate: DockSlot {}
@@ -680,22 +1096,132 @@ PanelWindow {
                 visible: DockApps.runningApps.length > 0
             }
 
-                        // ── كود سلة المهملات المطوّر ──
+                        // ── فولدر الداون لودس (ستاك ماك) ──
             Item {
+                id: dlSlot
                 Layout.preferredWidth: root.slotWidth
                 Layout.preferredHeight: root.capsuleHeight
                 Layout.alignment: Qt.AlignBottom
 
                 Image {
+                    id: dlIcon
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 14
+                    width: root.iconBase
+                    height: root.iconBase
+                    source: DockApps.iconsDir + "folder-downloads.svg"
+                    asynchronous: true
+                    mipmap: true
+                    smooth: true
+                }
+
+                Rectangle {
+                    visible: dlHover.hovered && root.dragSourceIndex === -1
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: dlIcon.top
+                    anchors.bottomMargin: 8
+                    width: dlTipText.width + 16
+                    height: 22
+                    radius: 6
+                    color: Qt.rgba(0, 0, 0, 0.9)
+                    border.color: Qt.rgba(255, 255, 255, 0.15)
+                    border.width: 1
+                    Text {
+                        id: dlTipText
+                        anchors.centerIn: parent
+                        text: "Downloads"
+                        font { family: "SF Pro Display"; pixelSize: 11; weight: Font.Medium }
+                        color: "#ffffff"
+                    }
+                }
+
+                HoverHandler { id: dlHover }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if (root.fanSuppressNextClick) {
+                            root.fanSuppressNextClick = false;
+                            return;
+                        }
+                        if (root.downloadsOpen) {
+                            root.downloadsOpen = false;
+                            return;
+                        }
+                        root.openDownloads();
+                    }
+                }
+            }
+
+            // ── عناصر السكرين شوت (أيقونة التطبيق + شارة) ──
+            Repeater {
+                model: root.shotItems
+                delegate: ShotSlot {}
+            }
+
+                        // ── كود سلة المهملات المطوّر ──
+            Item {
+                id: trashSlot
+                Layout.preferredWidth: root.slotWidth
+                Layout.preferredHeight: root.capsuleHeight
+                Layout.alignment: Qt.AlignBottom
+
+                Image {
+                    id: trashIcon
                     anchors.horizontalCenter: parent.horizontalCenter
                     anchors.bottom: parent.bottom
                     anchors.bottomMargin: 14 
                     width: root.iconBase
                     height: root.iconBase
-                    source: DockApps.iconsDir + "Trash.png"
+                    source: root.isTrashFull ? DockApps.iconsDir + "user-trash-full.png" : DockApps.iconsDir + "Trash.png"
                     asynchronous: true
                     mipmap: true
                     smooth: true
+                    scale: root.shotOverTrash ? 1.25 : 1
+                    Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutBack } }
+                }
+
+                Rectangle {
+                    visible: root.shotOverTrash
+                    anchors.centerIn: trashIcon
+                    width: root.iconBase + 16
+                    height: root.iconBase + 16
+                    radius: 14
+                    color: "transparent"
+                    border.color: Qt.rgba(0.12, 0.52, 1, 0.9)
+                    border.width: 2
+                    Behavior on opacity { NumberAnimation { duration: 120 } }
+                    opacity: root.shotOverTrash ? 1 : 0
+                }
+
+                Rectangle {
+                    visible: trashHover.hovered && root.dragSourceIndex === -1
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: trashIcon.top
+                    anchors.bottomMargin: 8
+                    width: trashTipText.width + 16
+                    height: 22
+                    radius: 6
+                    color: Qt.rgba(0, 0, 0, 0.9)
+                    border.color: Qt.rgba(255, 255, 255, 0.15)
+                    border.width: 1
+                    Text {
+                        id: trashTipText
+                        anchors.centerIn: parent
+                        text: root.isTrashFull ? "Trash (full)" : "Trash"
+                        font { family: "SF Pro Display"; pixelSize: 11; weight: Font.Medium }
+                        color: "#ffffff"
+                    }
+                }
+
+                HoverHandler { id: trashHover }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        if (!trashOpener.running) trashOpener.running = true;
+                    }
                 }
             } // إغلاق حاوية الـ Item لسلة المهملات
         } // إغلاق الـ RowLayout (dockRow)

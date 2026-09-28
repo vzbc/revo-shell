@@ -12,23 +12,56 @@ import Quickshell.Hyprland
 Scope {
     id: root
 
-    // ── Mac-Duo default tuning ──
-    readonly property double thresholdAngle: 90
-    readonly property double blurSpan: 60
-    readonly property double maxBlurRadius: 135
-    readonly property double maxDim: 1.0
-    readonly property double viewingDistance: 6.0
-    readonly property double recession: 1.0
-    readonly property double dimReach: 0.5
+    // ── preferences (settings.json, Mac-Duo defaults) ──
+    property var prefs: ({})
+    property bool settingsOpen: false
+    property bool macosPresent: false
+    readonly property bool gateOpen: macosPresent && pref("enabled", true)
+
+    property double thresholdAngle: pref("threshold", 90)
+    property double blurSpan: pref("blurSpan", 60)
+    property double maxBlurRadius: pref("maxBlur", 135)
+    property double maxDim: pref("maxDim", 1.0)
+    property double viewingDistance: pref("viewingDistance", 6.0)
+    property double recession: pref("recession", 1.0)
+    property double dimReach: pref("dimReach", 0.5)
+    property double blurEvenness: pref("blurEvenness", 0.0)
     readonly property double dimHingeFloor: 0.2
-    readonly property double blurEvenness: 0.0
     readonly property double blurCurve: 1.6
     readonly property double dimCurve: 0.7
     readonly property double springFreq: 16.0
 
-    readonly property var openAngle: 125
-    readonly property var shutAngle: 21
+    property var openAngle: pref("previewOpen", 125)
+    property var shutAngle: pref("previewShut", 21)
     readonly property var closeShutAngle: 5
+
+    function pref(k, d) {
+        return (prefs && typeof prefs[k] !== "undefined") ? prefs[k] : d;
+    }
+
+    function setPref(k, v) {
+        const next = Object.assign({}, prefs);
+        next[k] = v;
+        prefs = next;
+        cfgWriter.command = ["python3", Quickshell.shellDir + "/writecfg.py", JSON.stringify(next)];
+        cfgWriter.running = true;
+        syncGate();
+    }
+
+    FileView {
+        id: prefsFile
+        path: Qt.resolvedUrl("settings.json")
+        onLoaded: (file) => {
+            try { root.prefs = JSON.parse(file.text); }
+            catch (e) { root.prefs = {}; }
+            root.syncGate();
+        }
+    }
+
+    Process {
+        id: cfgWriter
+        running: false
+    }
 
     // ── run state ──
     property bool active: false
@@ -146,6 +179,7 @@ Scope {
     // ─────────────────────────── frame step ───────────────────────────
 
     function step() {
+        if (t === 0) console.log("MACDUO firstFrame t=", t, "spring=", springValue);
         const now = Date.now();
         let dt = (now - lastNow) / 1000;
         lastNow = now;
@@ -185,6 +219,7 @@ Scope {
     // ─────────────────────────── run control ───────────────────────────
 
     function startRun(m) {
+        console.log("MACDUO startRun", m, "gate=", gateOpen, "active=", active);
         if (active) return;
         pendingMode = m;
         shotSeq++;
@@ -195,6 +230,7 @@ Scope {
     }
 
     function afterShot(ok) {
+        console.log("MACDUO afterShot ok=", ok, "imgStatus=", pictureImg.status, "mode=", pendingMode);
         shotPending = false;
         shotWatchdog.stop();
         if (!ok) {
@@ -206,6 +242,7 @@ Scope {
     }
 
     function beginRun() {
+        console.log("MACDUO beginRun mode=", pendingMode);
         mode = pendingMode;
         active = true;
         dismissing = false;
@@ -226,9 +263,14 @@ Scope {
     }
 
     function finishRun() {
+        console.log("MACDUO finishRun mode=", mode, "spring=", springValue.toFixed(1));
         if (dismissing) return;
         dismissing = true;
-        if (mode === "close") suspendAfterFade = true;
+        if (mode === "close") {
+            suspendAfterFade = true;
+            // never sleep with the settings dialog holding keyboard focus
+            settingsOpen = false;
+        }
         fadeAnim.stop();
         fadeAnim.from = effect.opacity;
         fadeAnim.to = 0;
@@ -238,6 +280,7 @@ Scope {
     }
 
     function forceStop() {
+        console.log("MACDUO forceStop");
         fadeAnim.stop();
         active = false;
         dismissing = false;
@@ -251,11 +294,14 @@ Scope {
         target: effect
         property: "opacity"
         onFinished: {
+            // only the dismiss fade cleans up; the reveal fade just finished
+            if (!root.dismissing) return;
             root.active = false;
             root.dismissing = false;
-            root.overlay.visible = false;
+            overlay.visible = false;
             if (root.suspendAfterFade) {
                 root.suspendAfterFade = false;
+                root.settingsOpen = false;
                 suspendProc.running = true;
             }
         }
@@ -307,17 +353,60 @@ Scope {
         onTriggered: root.startRun("open")
     }
 
+    // ─────────────────────── lifecycle gate (macos shell) ───────────────────────
+    // Everything that touches the system (lid events, logind inhibit, tray
+    // icon) runs only while the macos shell is alive and the effect is
+    // enabled. macduo never modifies the macos shell itself.
+
+    function syncGate() {
+        const sniWant = macosPresent;
+        const animWant = gateOpen;
+        if (sniWant !== sniProc.running) sniProc.running = sniWant;
+        if (animWant !== lidProc.running) lidProc.running = animWant;
+        if (animWant !== inhibitProc.running) inhibitProc.running = animWant;
+        if (!animWant && active) forceStop();
+    }
+
+    Process {
+        id: gateProc
+        running: false
+        command: ["qs", "list", "--all"]
+        stdout: StdioCollector {
+            id: gateOut
+            onStreamFinished: {
+                root.macosPresent = gateOut.text.includes("/quickshell/macos/shell.qml");
+                root.syncGate();
+            }
+        }
+    }
+
+    Timer {
+        id: gateTimer
+        interval: 5000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: if (!gateProc.running) gateProc.running = true
+    }
+
+    Process {
+        id: sniProc
+        running: false
+        command: ["python3", Quickshell.shellDir + "/sni.py"]
+    }
+
     Process {
         id: suspendProc
         running: false
         command: ["systemctl", "suspend"]
     }
 
-    // Keeps the lid's logind handling blocked while this shell lives; if the
-    // shell dies the inhibitor dies with it and normal logind behavior returns.
+    // Keeps the lid's logind handling blocked while the effect is armed; if
+    // this shell dies or the gate closes, the inhibitor dies with it and
+    // normal logind lid behavior returns.
     Process {
         id: inhibitProc
-        running: true
+        running: false
         command: ["systemd-inhibit", "--what=handle-lid-switch",
                   "--who=macduo", "--why=macduo close animation",
                   "--mode=block", "sleep", "infinity"]
@@ -325,15 +414,8 @@ Scope {
 
     Process {
         id: lidProc
-        running: true
+        running: false
         command: ["python3", Quickshell.shellDir + "/lidwatch.py"]
-        onExited: lidRestart.start()
-    }
-
-    Timer {
-        id: lidRestart
-        interval: 1000
-        onTriggered: lidProc.running = true
     }
 
     IpcHandler {
@@ -343,7 +425,24 @@ Scope {
             root.startRun("preview");
         }
 
+        function toggleSettings(): void {
+            root.settingsOpen = !root.settingsOpen;
+        }
+
+        function openSettings(): void {
+            root.settingsOpen = true;
+        }
+
+        function closeSettings(): void {
+            root.settingsOpen = false;
+        }
+
+        function setPref(key: string, value: real): void {
+            root.setPref(key, value);
+        }
+
         function lid(state: string): void {
+            if (!root.gateOpen) return;
             if (state === "closed") {
                 root.lidClosedSeen = true;
                 openDelay.stop();
@@ -358,8 +457,11 @@ Scope {
 
         function stop(): void {
             root.forceStop();
+            root.settingsOpen = false;
         }
     }
+
+    SettingsWindow {}
 
     GlobalShortcut {
         name: "macduoPreview"
@@ -403,3 +505,4 @@ Scope {
         }
     }
 }
+

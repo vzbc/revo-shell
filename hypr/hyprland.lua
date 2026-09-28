@@ -9,9 +9,10 @@ require("configs.hyprcolors")
 require("configs.windowrule")
 require("configs.keybinds")
 require("configs.autostart")
--- Load HyprGlass (liquid glass) plugin before its config; guarded so a missing or ABI-mismatched .so degrades to off
-pcall(hl.plugin.load, "/var/cache/hyprpm/revo/HyprGlass/hyprglass.so")
-require("configs.hyprglass")
+-- Load liquid-glass plugin before its config; guarded so a missing or ABI-mismatched .so degrades to off
+-- hyprliquid (switch back to HyprGlass: "/var/cache/hyprpm/revo/HyprGlass/hyprglass.so" + require("configs.hyprglass"))
+pcall(hl.plugin.load, "/home/revo/.local/lib/hyprliquid.so")
+require("configs.hyprliquid")
 require("configs.hypr3d")
 
 -- Brain_ShellKeybinds
