@@ -1,0 +1,410 @@
+diff --git a/src/nautilus-enums.h b/src/nautilus-enums.h
+index 13e4319..68e9a55 100644
+--- a/src/nautilus-enums.h
++++ b/src/nautilus-enums.h
+@@ -117,5 +117,6 @@ typedef enum {
+   NAUTILUS_SIDEBAR_SECTION_BOOKMARKS,
+   NAUTILUS_SIDEBAR_SECTION_CLOUD,
+   NAUTILUS_SIDEBAR_SECTION_MOUNTS,
++  NAUTILUS_SIDEBAR_SECTION_TAGS,
+   NAUTILUS_SIDEBAR_N_SECTION_TYPES
+ } NautilusSidebarSectionType;
+diff --git a/src/nautilus-sidebar.c b/src/nautilus-sidebar.c
+index c9bd4a6..01b4275 100644
+--- a/src/nautilus-sidebar.c
++++ b/src/nautilus-sidebar.c
+@@ -324,6 +324,30 @@ emit_drag_perform_drop (NautilusSidebar *sidebar,
+     g_signal_emit (sidebar, places_sidebar_signals[DRAG_PERFORM_DROP], 0,
+                    dest_file, source_file_list, action);
+ }
++/* Finder-style section headings instead of plain separators. Titles are
++ * intentionally untranslated literals so the sidebar stays English. */
++static const char *
++section_header_title (NautilusSidebarSectionType type)
++{
++    switch (type)
++    {
++    case NAUTILUS_SIDEBAR_SECTION_BOOKMARKS:
++        return "Favorites";
++
++    case NAUTILUS_SIDEBAR_SECTION_CLOUD:
++        return "iCloud";
++
++    case NAUTILUS_SIDEBAR_SECTION_MOUNTS:
++        return "Locations";
++
++    case NAUTILUS_SIDEBAR_SECTION_TAGS:
++        return "Tags";
++
++    default:
++        return NULL;
++    }
++}
++
+ static void
+ list_box_header_func (GtkListBoxRow *row,
+                       GtkListBoxRow *before,
+@@ -331,7 +355,8 @@ list_box_header_func (GtkListBoxRow *row,
+ {
+     NautilusSidebarSectionType row_section_type;
+     NautilusSidebarSectionType before_section_type;
+-    GtkWidget *separator;
++    const char *title;
++    GtkWidget *label;
+ 
+     gtk_list_box_row_set_header (row, NULL);
+ 
+@@ -345,10 +370,13 @@ list_box_header_func (GtkListBoxRow *row,
+         before_section_type = NAUTILUS_SIDEBAR_SECTION_INVALID;
+     }
+ 
+-    if (before && before_section_type != row_section_type)
++    title = section_header_title (row_section_type);
++    if (before && title != NULL && before_section_type != row_section_type)
+     {
+-        separator = gtk_separator_new (GTK_ORIENTATION_HORIZONTAL);
+-        gtk_list_box_row_set_header (row, separator);
++        label = gtk_label_new (title);
++        gtk_label_set_xalign (GTK_LABEL (label), 0.0);
++        gtk_widget_add_css_class (label, "naut-section-header");
++        gtk_list_box_row_set_header (row, label);
+     }
+ }
+ 
+@@ -640,6 +668,200 @@ on_account_updated (GObject    *object,
+ 
+ #endif
+ 
++/* ---------------- Finder-style sidebar ----------------
++ * Adds the rows Finder shows that stock nautilus lacks (Shared, Applications,
++ * iCloud Drive, AirDrop, Tags), swaps in authentic SF Symbols / macOS folder
++ * art, and hides the rows Finder keeps out of its sidebar. */
++
++#define FINDER_ICON_DIR "/home/revo/.local/share/nautui/icons/side/"
++
++static GtkWidget *
++finder_row_image (GtkWidget *row)
++{
++    GtkWidget *found = NULL;
++    GQueue queue = G_QUEUE_INIT;
++
++    g_queue_push_tail (&queue, row);
++    while (queue.length > 0)
++    {
++        GtkWidget *w = g_queue_pop_head (&queue);
++
++        if (GTK_IS_IMAGE (w))
++        {
++            found = w;
++            break;
++        }
++
++        for (GtkWidget *c = gtk_widget_get_first_child (w);
++             c != NULL;
++             c = gtk_widget_get_next_sibling (c))
++        {
++            g_queue_push_tail (&queue, c);
++        }
++    }
++
++    return found;
++}
++
++static void
++finder_set_icon_full (GtkWidget *row, const char *file_name, int pixel_size)
++{
++    g_autofree char *path = g_strdup_printf ("%s%s", FINDER_ICON_DIR, file_name);
++    GtkWidget *image;
++
++    if (!g_file_test (path, G_FILE_TEST_EXISTS))
++    {
++        return;
++    }
++
++    image = finder_row_image (row);
++    if (image != NULL)
++    {
++        gtk_image_set_from_file (GTK_IMAGE (image), path);
++
++        if (pixel_size > 0)
++        {
++            gtk_image_set_pixel_size (GTK_IMAGE (image), pixel_size);
++        }
++    }
++}
++
++static void
++finder_set_icon (GtkWidget *row, const char *file_name)
++{
++    finder_set_icon_full (row, file_name, 16);
++}
++
++static const char *
++finder_icon_for_label (const char *label)
++{
++    if (g_strcmp0 (label, "Shared") == 0)
++        return "sf-person.2.fill.svg";
++
++    if (g_strcmp0 (label, "Recents") == 0)
++        return "sf-clock.svg";
++
++    if (g_strcmp0 (label, "Favorites") == 0)
++        return "stock_bookmark.svg";
++
++    if (g_strcmp0 (label, "Applications") == 0)
++        return "applications.svg";
++
++    if (g_strcmp0 (label, "Home Folder") == 0)
++        return "home.svg";
++
++    if (g_strcmp0 (label, "Documents") == 0)
++        return "documents.svg";
++
++    if (g_strcmp0 (label, "Music") == 0)
++        return "music.svg";
++
++    if (g_strcmp0 (label, "Pictures") == 0)
++        return "pictures.svg";
++
++    if (g_strcmp0 (label, "Videos") == 0)
++        return "videos.svg";
++
++    if (g_strcmp0 (label, "Downloads") == 0)
++        return "downloads.svg";
++
++    if (g_strcmp0 (label, "iCloud Drive") == 0)
++        return "icloud.svg";
++
++    if (g_strcmp0 (label, "AirDrop") == 0)
++        return "sf-airdrop.svg";
++
++    return NULL;
++}
++
++static void
++finder_finalize_sidebar (NautilusSidebar *sidebar)
++{
++    static const struct
++    {
++        const char *label;
++        const char *icon;
++    } tags[] =
++    {
++        { "Red", "tag-red.svg" },
++        { "Orange", "tag-orange.svg" },
++        { "Yellow", "tag-yellow.svg" },
++        { "Green", "tag-green.svg" },
++        { "Blue", "tag-blue.svg" },
++        { "Purple", "tag-purple.svg" },
++        { "Gray", "tag-gray.svg" },
++    };
++    g_autofree char *icloud_path = NULL;
++    GtkWidget *row;
++
++    /* Hide rows Finder doesn't show, swap in Finder icons for the rest */
++    for (GtkWidget *child = gtk_widget_get_first_child (GTK_WIDGET (sidebar->list_box));
++         child != NULL;
++         child = gtk_widget_get_next_sibling (child))
++    {
++        g_autofree char *label = NULL;
++        const char *icon;
++
++        if (!GTK_IS_LIST_BOX_ROW (child))
++        {
++            continue;
++        }
++
++        g_object_get (child, "label", &label, NULL);
++        if (label == NULL)
++        {
++            continue;
++        }
++
++        if (g_strcmp0 (label, "Desktop") == 0 ||
++            g_strcmp0 (label, "Network") == 0 ||
++            g_strcmp0 (label, "Trash") == 0)
++        {
++            gtk_widget_set_visible (child, FALSE);
++            continue;
++        }
++
++        icon = finder_icon_for_label (label);
++        if (icon != NULL)
++        {
++            finder_set_icon (child, icon);
++        }
++    }
++
++    /* iCloud Drive: local stand-in folder so the row is actually usable */
++    icloud_path = g_build_filename (g_get_home_dir (), "iCloud Drive", NULL);
++    if (g_file_test (icloud_path, G_FILE_TEST_IS_DIR) ||
++        g_mkdir_with_parents (icloud_path, 0755) == 0)
++    {
++        g_autofree char *uri = g_filename_to_uri (icloud_path, NULL, NULL);
++
++        row = add_place (sidebar, NAUTILUS_SIDEBAR_ROW_BUILT_IN,
++                         NAUTILUS_SIDEBAR_SECTION_MOUNTS,
++                         "iCloud Drive", NULL, NULL, uri,
++                         NULL, NULL, NULL, NULL, 0,
++                         "iCloud Drive");
++        finder_set_icon (row, "icloud.svg");
++    }
++
++    /* AirDrop: shown like Finder; click is a no-op (no protocol on Linux) */
++    row = add_place (sidebar, NAUTILUS_SIDEBAR_ROW_BUILT_IN,
++                     NAUTILUS_SIDEBAR_SECTION_MOUNTS,
++                     "AirDrop", NULL, NULL, NULL,
++                     NULL, NULL, NULL, NULL, 2,
++                     "AirDrop");
++    finder_set_icon (row, "sf-airdrop.svg");
++
++    for (gsize i = 0; i < G_N_ELEMENTS (tags); i++)
++    {
++        row = add_place (sidebar, NAUTILUS_SIDEBAR_ROW_BUILT_IN,
++                         NAUTILUS_SIDEBAR_SECTION_TAGS,
++                         tags[i].label, NULL, NULL, NULL,
++                         NULL, NULL, NULL, NULL, (int) i,
++                         tags[i].label);
++        finder_set_icon (row, tags[i].icon);
++    }
++}
++
+ static void
+ update_places (NautilusSidebar *sidebar)
+ {
+@@ -690,13 +912,29 @@ update_places (NautilusSidebar *sidebar)
+ 
+     /* add built-in places */
+ 
+-    /* home folder */
++    /* Finder-style sidebar: Shared pinned at the very top */
++    {
++        g_autofree char *shared_path = g_build_filename (g_get_home_dir (), "Public", NULL);
++
++        if (g_file_test (shared_path, G_FILE_TEST_IS_DIR))
++        {
++            g_autofree char *shared_uri = g_filename_to_uri (shared_path, NULL, NULL);
++
++            add_place (sidebar, NAUTILUS_SIDEBAR_ROW_BUILT_IN,
++                       NAUTILUS_SIDEBAR_SECTION_DEFAULT_LOCATIONS,
++                       "Shared", NULL, NULL, shared_uri,
++                       NULL, NULL, NULL, NULL, 0,
++                       "Shared folder");
++        }
++    }
++
++    /* home folder — Finder lists it under Locations as "Home Folder" */
+     home_uri = get_home_directory_uri ();
+     start_icon = g_themed_icon_new_with_default_fallbacks (ICON_NAME_HOME);
+     add_place (sidebar, NAUTILUS_SIDEBAR_ROW_BUILT_IN,
+-               NAUTILUS_SIDEBAR_SECTION_DEFAULT_LOCATIONS,
+-               _("Home"), start_icon, NULL, home_uri,
+-               NULL, NULL, NULL, NULL, 0,
++               NAUTILUS_SIDEBAR_SECTION_MOUNTS,
++               "Home Folder", start_icon, NULL, home_uri,
++               NULL, NULL, NULL, NULL, 1,
+                _("Open Personal Folder"));
+     g_object_unref (start_icon);
+     g_free (home_uri);
+@@ -706,8 +944,8 @@ update_places (NautilusSidebar *sidebar)
+         start_icon = g_themed_icon_new_with_default_fallbacks ("document-open-recent-symbolic");
+         add_place (sidebar, NAUTILUS_SIDEBAR_ROW_BUILT_IN,
+                    NAUTILUS_SIDEBAR_SECTION_DEFAULT_LOCATIONS,
+-                   _("Recent"), start_icon, NULL, SCHEME_RECENT ":///",
+-                   NULL, NULL, NULL, NULL, 0,
++                   "Recents", start_icon, NULL, SCHEME_RECENT ":///",
++                   NULL, NULL, NULL, NULL, 1,
+                    _("Recent Files"));
+         g_object_unref (start_icon);
+     }
+@@ -715,8 +953,8 @@ update_places (NautilusSidebar *sidebar)
+     start_icon = g_themed_icon_new_with_default_fallbacks ("starred-symbolic");
+     add_place (sidebar, NAUTILUS_SIDEBAR_ROW_BUILT_IN,
+                NAUTILUS_SIDEBAR_SECTION_DEFAULT_LOCATIONS,
+-               _("Starred"), start_icon, NULL, SCHEME_STARRED ":///",
+-               NULL, NULL, NULL, NULL, 0,
++               "Favorites", start_icon, NULL, SCHEME_STARRED ":///",
++               NULL, NULL, NULL, NULL, 2,
+                _("Starred Files"));
+     g_object_unref (start_icon);
+ 
+@@ -1012,6 +1250,13 @@ update_places (NautilusSidebar *sidebar)
+     }
+     g_list_free (mounts);
+ 
++    /* Finder-style: Applications pinned at the top of Favorites */
++    add_place (sidebar, NAUTILUS_SIDEBAR_ROW_BUILT_IN,
++               NAUTILUS_SIDEBAR_SECTION_BOOKMARKS,
++               "Applications", NULL, NULL, "file:///usr/share/applications",
++               NULL, NULL, NULL, NULL, 0,
++               "/usr/share/applications");
++
+     /* add bookmarks */
+     bookmarks = nautilus_bookmark_list_get_all (sidebar->bookmark_list);
+     /* Needs to start from 1 so that bookmark drag placeholder can come first. */
+@@ -1105,6 +1350,8 @@ update_places (NautilusSidebar *sidebar)
+     /* We want this hidden by default, but need to do it after the show_all call */
+     nautilus_sidebar_row_hide (NAUTILUS_SIDEBAR_ROW (sidebar->new_bookmark_row), TRUE);
+ 
++    finder_finalize_sidebar (sidebar);
++
+     /* restore original selection */
+     if (original_uri)
+     {
+@@ -1191,7 +1438,7 @@ check_valid_drop_target (NautilusSidebar    *sidebar,
+ 
+     g_object_get (row,
+                   "place-type", &place_type,
+-                  "section_type", &section_type,
++                  "section-type", &section_type,
+                   "uri", &uri,
+                   "file", &dest_file,
+                   NULL);
+@@ -1215,8 +1462,11 @@ check_valid_drop_target (NautilusSidebar    *sidebar,
+     /* Dragging a bookmark? */
+     if (G_VALUE_HOLDS (value, NAUTILUS_TYPE_SIDEBAR_ROW))
+     {
+-        /* Don't allow reordering bookmarks into non-bookmark areas */
+-        valid = section_type == NAUTILUS_SIDEBAR_SECTION_BOOKMARKS;
++        /* Don't allow reordering bookmarks into non-bookmark areas, and not
++         * onto Finder-style rows (Applications etc.) that live in the same
++         * section but aren't real bookmarks. */
++        valid = section_type == NAUTILUS_SIDEBAR_SECTION_BOOKMARKS &&
++                place_type == NAUTILUS_SIDEBAR_ROW_BOOKMARK;
+     }
+     else if (G_VALUE_HOLDS (value, GDK_TYPE_FILE_LIST))
+     {
+@@ -3198,7 +3448,7 @@ on_row_pressed (GtkGestureClick    *gesture,
+ 
+     g_object_get (row,
+                   "sidebar", &sidebar,
+-                  "section_type", &section_type,
++                  "section-type", &section_type,
+                   NULL);
+ 
+     if (section_type == NAUTILUS_SIDEBAR_SECTION_BOOKMARKS)
+@@ -3224,7 +3474,7 @@ on_row_released (GtkGestureClick    *gesture,
+ 
+     g_object_get (row,
+                   "sidebar", &sidebar,
+-                  "section_type", &section_type,
++                  "section-type", &section_type,
+                   NULL);
+ 
+     button = gtk_gesture_single_get_current_button (GTK_GESTURE_SINGLE (gesture));
+@@ -3424,6 +3674,15 @@ list_box_sort_func (GtkListBoxRow *row1,
+ 
+     if (section_type_1 == NAUTILUS_SIDEBAR_SECTION_MOUNTS)
+     {
++        /* Finder-style explicit ordering inside Locations (iCloud Drive,
++         * Home, AirDrop come with non-zero order-index set by
++         * finder_finalize_sidebar()); plain mounts keep index 0 and fall
++         * back to the volume/label comparison below. */
++        if (index_1 != index_2)
++        {
++            return index_1 - index_2;
++        }
++
+         g_autoptr (GVolume) volume_1 = NULL, volume_2 = NULL;
+ 
+         g_object_get (row1, "volume", &volume_1, NULL);

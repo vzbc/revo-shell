@@ -19,6 +19,7 @@ cmake-build-*/
 *.o
 *.a
 *.so
+!ui-patches/**/*.so
 .cache/
 node_modules/
 .qmlcache/
