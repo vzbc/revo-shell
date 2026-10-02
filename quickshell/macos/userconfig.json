@@ -1,21 +1,59 @@
 {
-  "dockIconSize": 62,
-  "dockMagnification": true,
-  "dockAutohide": false,
-  "menubar": {
-    "wifi": true,
-    "bluetooth": true,
-    "battery": true,
-    "sound": true,
-    "controlcenter": true,
-    "spotlight": true,
-    "clock": true,
-    "tray": true
-  },
-  "accentColor": "#315bdc",
-  "darkMode": false,
-  "menubarWifi": true,
-  "menubarBluetooth": true,
-  "menubarSpotlight": true,
-  "menubarTray": true
+    "accentColor": "#0A6CFF",
+    "appearance": {
+        "accentName": "blue",
+        "highlightName": "#0A6CFF",
+        "scrollBars": "When scrolling",
+        "sidebarIconSize": "Medium"
+    },
+    "avatarPath": "/home/revo/.local/share/systemsettings/avatar-1790780655549.png",
+    "bar": {
+        "showBackground": false
+    },
+    "battery": {
+        "displayOff": "Never"
+    },
+    "darkMode": true,
+    "dock": {
+        "titleBarAction": "Zoom"
+    },
+    "dockAnimateHide": true,
+    "dockAutohide": false,
+    "dockIconSize": 52,
+    "dockIndicators": true,
+    "dockMagnification": true,
+    "dockPosition": "bottom",
+    "dockShowAnimation": true,
+    "dockZoom": 69,
+    "folderColor": "",
+    "highlightColor": "#0A6CFF",
+    "iconStyle": "Default",
+    "iconStyleMode": "Always",
+    "iconTint": "#62BA46",
+    "liquidGlass": "Clear",
+    "liquidGlassIntensity": 0,
+    "menubar": {
+        "battery": true,
+        "bluetooth": true,
+        "clock": true,
+        "controlcenter": true,
+        "display": true,
+        "mirror": false,
+        "siri": false,
+        "sound": true,
+        "spotlight": true,
+        "timeMachine": false,
+        "tray": true,
+        "weather": false,
+        "wifi": true
+    },
+    "menubarBattery": true,
+    "menubarBluetooth": true,
+    "menubarClock": true,
+    "menubarDisplay": true,
+    "menubarSpotlight": true,
+    "menubarTray": true,
+    "menubarWifi": true,
+    "reduceMotion": true,
+    "spotlightEnable": true
 }

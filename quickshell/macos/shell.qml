@@ -6,6 +6,7 @@ import "./services"
 import "./modules/topbar"
 import "./modules/spotlight"
 import "./modules/dock"
+import "./modules/genie"
 import "./modules/about"
 import "./modules/notification"
 import "./modules/session"
@@ -18,9 +19,10 @@ ShellRoot {
     id: root
 
     TopBar { id: topBar }
-    Spotlight {}
-    Launcher {}
-    Dock {}
+    Loader { active: Config.spotlight.enable; sourceComponent: Spotlight {} }
+    Loader { active: Config.launchpad.enable; sourceComponent: Launcher {} }
+    Loader { active: Config.dock.enable; sourceComponent: Dock {} }
+    Genie {}
     AboutWindow { parentWindow: topBar }
     NotificationPopup {}
     Session {}

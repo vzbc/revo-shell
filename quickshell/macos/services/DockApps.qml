@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Wayland
 import Quickshell.Io
+import "../modules/common"
 
 Singleton {
     id: root
@@ -33,21 +34,65 @@ Singleton {
         { name: "VS Code", icon: "code.png", desktop: "code-oss", exec: "code", appIds: ["code-oss", "code", "com.visualstudio.code"] },
         { name: "Terminal", icon: "Terminal.png", desktop: "kitty", exec: "kitty", appIds: ["kitty"] },
         { name: "App Store", icon: "App Store.png", desktop: "pearos-appstore", exec: "pearos-appstore", appIds: ["pearos-appstore"] },
-        { name: "System Settings", icon: "System Settings.png", desktop: "pearos-settings", exec: "/usr/local/bin/pearos-settings", appIds: ["pearos-settings", "pearos-settings-app"] },
+        { name: "System Settings", icon: "System Settings.png", desktop: "systemsettings", exec: "systemsettings", appIds: ["systemsettings", "macos-settings", "pearos-settings", "pearos-settings-app"] },
     ]
 
     property bool trashEmpty: true
+
+    // ── Downloads stack (IPC + diagnostics) ──
+    property bool downloadsOpen: false
+    property string stackState: ""
+    property var stackOpen: null
+    // set by Dock.qml: maps a window class to the icon's local centre "x,y"
+    property var iconLocalPos: null
 
     property var runningApps: []
     readonly property var dockItems: root.pinned.concat(root.runningApps)
     property var _running: []
     property var _iconCache: ({})
+    property var darkSet: ({})
+    property var tintSet: ({})
+    property bool _tintBusy: false
+    property string _tintFor: ""
     property bool _iconBusy: false
     property bool _iconDone: false
     property var _iconProc: null
     property string _signature: ""
     property var badgeCounts: ({})
     readonly property string badgeScript: Qt.resolvedUrl("../scripts/badge_reader.sh").toString().replace(/^file:\/\//, "")
+    readonly property string minScript: "/home/revo/.config/hypr/scripts/minimize_window.py"
+    property var _focusIds: []
+
+    // dock click: probe whether the app has genie-minimized windows, then
+    // either restore them (the script focuses the restored window) or activate
+    Process {
+        id: _restoreProbe
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: root._onHasMin(text)
+        }
+    }
+    Process {
+        id: _restoreProc
+        running: false
+        stdout: StdioCollector {}
+    }
+
+    function _onHasMin(text) {
+        const ids = root._focusIds || [];
+        if ((text || "").trim() === "1") {
+            _restoreProc.running = false;
+            _restoreProc.command = ["python3", root.minScript, "clickrestore"].concat(ids);
+            _restoreProc.running = true;
+            return; // restore brings it back and focuses it
+        }
+        for (const t of ToplevelManager.toplevels.values) {
+            if (ids.includes(t.appId)) {
+                if (typeof t.activate === "function") t.activate();
+                return;
+            }
+        }
+    }
 
     function incrementBadge(appId) {
         if (appId in root.badgeCounts) {
@@ -172,8 +217,24 @@ Singleton {
 
     function iconSource(icon) {
         if (!icon) return "";
-        if (icon.startsWith("file://")) return icon;
+        const isUrl = icon.startsWith("file://") || icon.startsWith("http") || icon.startsWith("image://");
+        const base = icon.split("/").pop();
+        if (Appearance.iconTintActive && root.tintSet[base] && root._tintFor === root.tintSlug)
+            return root.tintDirUrl + base;
+        if (Appearance.effectiveIconStyle === "Dark") {
+            if (root.darkSet[base])
+                return root.iconsDir + "dark/" + base;
+        }
+        if (isUrl) return icon;
         return root.iconsDir + icon;
+    }
+
+    // downloads folder: tinted when a tint colour is active, otherwise the SVG
+    function folderSource() {
+        const base = "folder-downloads.png";
+        if (root.tintDirUrl.length > 0 && root.tintSet[base] && root._tintFor === root.tintSlug)
+            return root.tintDirUrl + base;
+        return root.iconsDir + "folder-downloads.svg";
     }
 
     function iconFor(appId) {
@@ -221,12 +282,10 @@ Singleton {
             ShellController.toggle("launcher");
             return;
         }
-        for (const t of ToplevelManager.toplevels.values) {
-            if (appIds.includes(t.appId)) {
-                if (typeof t.activate === "function") t.activate();
-                return;
-            }
-        }
+        root._focusIds = appIds.slice();
+        _restoreProbe.running = false;
+        _restoreProbe.command = ["python3", root.minScript, "hasmin"].concat(appIds);
+        _restoreProbe.running = true;
     }
 
     function quitApp(appIds) {
@@ -376,8 +435,107 @@ Singleton {
         stdout: StdioCollector {}
     }
 
+    // index of assets/icons/dark so the "Dark" icon style can swap in
+    // the themed variant of every icon that has one.
+    Process {
+        id: _darkScan
+        running: true
+        command: ["bash", "-c", "ls -1 " + root.iconsDir.replace(/^file:\/\//, "") + "dark 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const m = {};
+                text.split("\n").forEach(function (l) {
+                    const n = l.trim();
+                    if (n) m[n] = true;
+                });
+                root.darkSet = m;
+                console.log("ICON_DARK_SET " + Object.keys(m).length);
+            }
+        }
+    }
+
     function checkTrash() {
         _trashCheckProc.running = true;
+    }
+
+    // Bake tinted artwork into assets/icons/tinted/<colour>/ with Python
+    // (~2s, only the first time a colour is used) so tinted icons keep their
+    // detail instead of being flattened by a runtime effect.
+    readonly property string tintScript: Qt.resolvedUrl("../scripts/tint_icons.py").toString().replace(/^file:\/\//, "")
+    readonly property string tintRoot: Qt.resolvedUrl("../assets/icons/tinted/").toString().replace(/^file:\/\//, "")
+    readonly property url tintRootUrl: Qt.resolvedUrl("../assets/icons/tinted/")
+    property string _tintBusyHex: ""
+
+    // colour in use: the icon colour while Tinted, otherwise the folder colour
+    readonly property string tintHex: {
+        if (Appearance.iconTintActive)
+            return String(Appearance.iconTint)
+        const f = String(Appearance.folderColor || "")
+        return f.length > 0 ? f : ""
+    }
+    readonly property string tintSlug: tintHex.replace("#", "").toLowerCase()
+    readonly property string tintDirUrl: tintHex.length > 0 ? tintRootUrl.toString() + tintSlug + "/" : ""
+    readonly property string tintDir: tintHex.length > 0 ? tintRoot + tintSlug + "/" : ""
+
+    function _scheduleTint() {
+        _tintTimer.restart();
+    }
+
+    function _runTint() {
+        if (root.tintHex.length === 0) {
+            root.tintSet = {};
+            root._tintFor = "";
+            return;
+        }
+        if (root._tintBusy) return;
+        const hex = root.tintHex;
+        if (root.tintSlug.length > 0 && root.tintSlug === root._tintFor && Object.keys(root.tintSet).length > 0)
+            return;
+        const plain = root.iconsDir.replace(/^file:\/\//, "");
+        const dirs = plain + ":" + plain + "dark:" + plain + "light";
+        // one folder per colour: bake only when that colour was never baked,
+        // so switching to an already prepared colour is instant.
+        root._tintBusy = true;
+        root._tintBusyHex = hex;
+        _tintProc.command = ["bash", "-c",
+            "D='" + root.tintDir + "'; " +
+            "if [ ! -f \"$D/.tint\" ]; then " +
+            "nice -n 5 python3 '" + root.tintScript + "' '" + hex + "' '" + dirs + "' \"$D\"; " +
+            "fi; ls -1 \"$D\" 2>/dev/null"];
+        _tintProc.running = true;
+    }
+
+    Timer {
+        id: _tintTimer
+        interval: 350
+        onTriggered: root._runTint()
+    }
+
+    Process {
+        id: _tintProc
+        running: false
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const m = {};
+                text.split("\n").forEach(function (l) {
+                    const n = l.trim();
+                    if (n) m[n] = true;
+                });
+                root.tintSet = m;
+                root._tintFor = root._tintBusyHex.replace("#", "").toLowerCase();
+                root._tintBusy = false;
+                console.log("ICON_TINT_SET " + Object.keys(m).length + " " + root._tintFor);
+                if (root.tintSlug !== root._tintFor)
+                    root._scheduleTint();
+            }
+        }
+    }
+
+    Connections {
+        target: Appearance
+        function onIconTintChanged() { root._scheduleTint(); }
+        function onFolderColorChanged() { root._scheduleTint(); }
+        function onEffectiveIconStyleChanged() { root._scheduleTint(); }
     }
 
     Process {
@@ -434,5 +592,6 @@ Singleton {
     Component.onCompleted: {
         root.refresh();
         root._scanBadges();
+        root._scheduleTint();
     }
 }

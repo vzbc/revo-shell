@@ -8,6 +8,7 @@ import Quickshell.Io
 import qs.services
 import qs
 import qs.ui.controls.auxiliary
+import "modules/common"
 
 import "root:/config/mixins.js" as Mixins
 
@@ -171,6 +172,38 @@ Singleton {
         target: "settings"
         function toggle() {
             runMixin("eqdesktop.settings", "toggle")
+        }
+    }
+    IpcHandler { ////////////// Dock (diagnostics)
+        target: "dock"
+        function iconSourceFor(appId: string): string {
+            return DockApps.iconSource(DockApps.iconFor(appId))
+        }
+        function styleInfo(): string {
+            return "style=" + Appearance.effectiveIconStyle
+                 + " tint=" + Appearance.iconTint
+                 + " tintActive=" + Appearance.iconTintActive
+                 + " tintHex=" + DockApps.tintHex
+                 + " tintFor=" + DockApps._tintFor
+                 + " tintSet=" + Object.keys(DockApps.tintSet).length
+                 + " tintDir=" + DockApps.tintDirUrl
+                 + " pinnedFinder=" + DockApps.iconFor("org.gnome.Nautilus")
+                 + " extras=" + JSON.stringify(DockApps.runningApps.map(e => e.appIds[0] + "=>" + e.icon))
+        }
+        function openStack(): string {
+            if (DockApps.stackOpen) DockApps.stackOpen();
+            return DockApps.stackState;
+        }
+        function stackInfo(): string {
+            return "open=" + DockApps.downloadsOpen + " " + DockApps.stackState;
+        }
+        function iconRect(cls: string): string {
+            if (typeof DockApps.iconLocalPos !== "function") return "";
+            return DockApps.iconLocalPos(cls);
+        }
+        function focus(cls: string): string {
+            DockApps.focusApp([cls]);
+            return "focus:" + cls;
         }
     }
 	IpcHandler { ////////////// Notification Center

@@ -12,8 +12,18 @@ Singleton {
     property var userCfg: ({})
     FileView {
         id: cfgFile
-        path: Qt.resolvedUrl("../../userconfig.json")
-        onLoaded: (file) => { try { userCfg = JSON.parse(file.text) } catch (e) { userCfg = {} } }
+        path: "file:///home/revo/.config/quickshell/macos/userconfig.json"
+        watchChanges: true
+        onLoaded: {
+            try {
+                var raw = cfgFile.text()
+                userCfg = JSON.parse(raw)
+            } catch (e) {
+                console.warn("Appearance: userconfig parse failed:", e, "len=", cfgFile.text().length)
+                userCfg = {}
+            }
+        }
+        onFileChanged: reload()
     }
     function cfgGet(k, d) {
         if (!userCfg || typeof userCfg[k] === "undefined") return d
@@ -67,7 +77,12 @@ Singleton {
     // user-controllable shell prefs (consumed by Dock / TopBar / elsewhere)
     property int dockIconSize: cfgGet("dockIconSize", 52)
     property bool dockMagnification: cfgGet("dockMagnification", true)
+    property int dockZoom: cfgGet("dockZoom", 55)
     property bool dockAutohide: cfgGet("dockAutohide", false)
+    property bool dockIndicators: cfgGet("dockIndicators", true)
+    property bool dockShowAnimation: cfgGet("dockShowAnimation", true)
+    property bool dockAnimateHide: cfgGet("dockAnimateHide", true)
+    property string dockPosition: cfgGet("dockPosition", "bottom")
     property bool menubarWifi: cfgGet("menubarWifi", true)
     property bool menubarBluetooth: cfgGet("menubarBluetooth", true)
     property bool menubarBattery: cfgGet("menubarBattery", true)
@@ -77,6 +92,40 @@ Singleton {
     property bool menubarClock: cfgGet("menubarClock", true)
     property bool menubarTray: cfgGet("menubarTray", true)
     property bool darkMode: cfgGet("darkMode", false)
+
+    // ---- macOS Tahoe Appearance: Liquid Glass + Icon & widget style ----
+    property string liquidGlass: cfgGet("liquidGlass", "Clear")
+    property real liquidGlassIntensity: {
+        var v = Number(cfgGet("liquidGlassIntensity", 0.30))
+        if (isNaN(v)) v = 0.30
+        return Math.max(0, Math.min(1, v))
+    }
+    property string iconStyle: cfgGet("iconStyle", "Default")
+    property string iconStyleMode: cfgGet("iconStyleMode", "Always")
+    property string iconTint: String(cfgGet("iconTint", "#8E8E93"))
+    property string folderColor: String(cfgGet("folderColor", ""))
+
+    readonly property string effectiveIconStyle: {
+        if (iconStyleMode === "Auto") {
+            if (iconStyle === "Dark") return darkMode ? "Dark" : "Default"
+            if (iconStyle === "Clear") return darkMode ? "Clear" : "Clear"
+        }
+        return iconStyle
+    }
+
+    readonly property bool iconTintActive: effectiveIconStyle === "Tinted"
+    readonly property bool iconClearActive: effectiveIconStyle === "Clear"
+
+    // baked (Python-generated) monochrome icon tint, read by DockApps
+    readonly property bool iconTintReady: iconTintActive
+    readonly property url iconTintedDir: Qt.resolvedUrl("../../assets/icons/tinted/")
+
+    // ---- Liquid Glass material: Clear = neutral glass, Tinted = accent glass ----
+    readonly property bool liquidGlassTinted: liquidGlass === "Tinted"
+    readonly property color liquidGlassTint: liquidGlassTinted ? accent : "#121217"
+    readonly property real liquidGlassAlpha: liquidGlassTinted
+        ? Math.min(0.9, 0.34 + liquidGlassIntensity * 0.50)
+        : Math.min(0.85, 0.06 + liquidGlassIntensity * 0.70)
 
     readonly property url iconsDir: Qt.resolvedUrl("../../assets/icons/")
 }

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Thin wrapper so the CLI can be invoked as `./update`.
+exec "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/update.sh" "$@"

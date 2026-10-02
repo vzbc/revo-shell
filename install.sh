@@ -410,6 +410,54 @@ build_native() {
     run "cmake --build '$qs/imported-1789667132/build' -j$(nproc) || true"
     run "$SUDO cmake --install '$qs/imported-1789667132/build' || true"
   fi
+  build_systemsettings
+}
+
+# SystemSettings app (Qt6) → ~/.local/bin/systemsettings
+build_systemsettings() {
+  local src="$ROOT/SystemSettings" bin="$HOME/.local/bin/systemsettings"
+  [[ -f "$src/CMakeLists.txt" ]] || return 0
+  log "building SystemSettings…"
+  run "cmake -S '$src' -B '$src/build' -G Ninja -DCMAKE_BUILD_TYPE=Release || true"
+  run "cmake --build '$src/build' -j$(nproc) || true"
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log "DRY: install -m755 '$src/build/systemsettings' '$bin'"
+    return 0
+  fi
+  if [[ -x "$src/build/systemsettings" ]]; then
+    mkdir -p "$HOME/.local/bin"
+    if install -m755 "$src/build/systemsettings" "$bin" 2>/dev/null; then
+      printf '  [fixed] systemsettings → %s\n' "$bin"
+    else
+      printf '  [MISS] systemsettings (install failed)\n'
+      return 1
+    fi
+    install_desktop_entry "$bin"
+  else
+    printf '  [MISS] systemsettings (build produced no binary)\n'
+    return 1
+  fi
+}
+
+# Minimal .desktop launcher so dock/menu entries resolve systemsettings
+install_desktop_entry() {
+  local bin="$1" apps="$HOME/.local/share/applications"
+  local icon="$ROOT/SystemSettings/icons/dt_about.png"
+  [[ -f "$apps/systemsettings.desktop" ]] && return 0
+  mkdir -p "$apps"
+  {
+    printf '[Desktop Entry]\n'
+    printf 'Type=Application\n'
+    printf 'Name=System Settings\n'
+    printf 'Comment=Configure your system\n'
+    printf 'Exec=%s\n' "$bin"
+    printf 'Terminal=false\n'
+    printf 'Categories=Settings;System;\n'
+    printf 'StartupWMClass=systemsettings\n'
+    [[ -f "$icon" ]] && printf 'Icon=%s\n' "$icon"
+  } >"$apps/systemsettings.desktop"
+  command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database "$apps" >/dev/null 2>&1 || true
+  printf '  [fixed] systemsettings.desktop\n'
 }
 
 # ── 5) Fix /home/revo paths + guide symlink ──────────────────
@@ -483,6 +531,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
   find "$HOME/.config/hypr" -type f -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
   find "$HOME/.config/quickshell" -type f \( -name '*.sh' -o -name '*.fish' -o -name 'instalar' -o -name 'install.sh' \) -exec chmod +x {} + 2>/dev/null || true
   chmod +x "$ROOT/install.sh" 2>/dev/null || true
+  chmod +x "$ROOT/update.sh" "$ROOT/update" 2>/dev/null || true
 fi
 
 fix_paths
@@ -490,6 +539,11 @@ fix_paths
 # Default shell = first selected (same marker as GUI _set_default_shell)
 if [[ "$SELECTED_SHELLS_ALL" != "1" ]] && [[ ${#SELECTED_SHELLS[@]} -gt 0 ]]; then
   set_default_shell "${SELECTED_SHELLS[0]}"
+else
+  # full deploy overwrote autostart.conf — re-apply the persisted default shell
+  if [[ -f "$HOME/.config/hypr/.revo_default_shell" ]]; then
+    set_default_shell "$(tr -d ' \n' < "$HOME/.config/hypr/.revo_default_shell")"
+  fi
 fi
 
 # ── Packages (non-fatal: one failed package must not abort) ──
@@ -633,6 +687,154 @@ install_missing_pkgs() {
   esac
 }
 
+# ── hyprpm plugins (HyprGlass, hyprliquid, Hypr3D) ───────────
+HYPRGLASS_URL="https://github.com/hyprnux/hyprglass"
+HYPRLIQUID_URL="https://github.com/zaregototsukai/hyprliquid"
+HYPR3D_URL="https://github.com/samine825/Hypr3D"
+
+hyprpm_list_clean() { hyprpm list 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g'; }
+hyprpm_has() { hyprpm_list_clean | grep -qi "$1"; }
+hyprpm_enabled() { hyprpm_list_clean | grep -A2 -i "$1" | grep -q 'enabled.*true'; }
+
+hyprpm_add_repo() {
+  local url="$1" name="$2"
+  if hyprpm_has "$name"; then
+    printf '  [ok]   hyprpm repo %s\n' "$name"
+    return 0
+  fi
+  printf '  [MISS] hyprpm repo %s — adding\n' "$name"
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log "DRY: hyprpm add $url"
+    return 0
+  fi
+  local errf
+  errf="$(mktemp)"
+  if hyprpm add "$url" >"$errf" 2>&1; then
+    printf '  [fixed] hyprpm repo %s\n' "$name"
+  else
+    printf '  [MISS] hyprpm repo %s (add failed)\n' "$name"
+    sed 's/^/         /' "$errf" | tail -5
+  fi
+  rm -f "$errf"
+}
+
+ensure_hyprpm_plugins() {
+  log "── hyprpm plugins ──────────────────────────────"
+  # 1) hyprpm itself (ships with hyprland)
+  if have hyprpm; then
+    printf '  [ok]   hyprpm\n'
+  else
+    printf '  [MISS] hyprpm — installing hyprland\n'
+    install_missing_pkgs "hyprland"
+    if have hyprpm; then
+      printf '  [fixed] hyprpm\n'
+    else
+      printf '  [MISS] hyprpm (not available)\n'
+      return 1
+    fi
+  fi
+
+  # 2) my plugin repos
+  hyprpm_add_repo "$HYPRGLASS_URL"  "HyprGlass"
+  hyprpm_add_repo "$HYPRLIQUID_URL" "hyprliquid"
+  hyprpm_add_repo "$HYPR3D_URL"     "Hypr3D"
+
+  # 3) liquid glass: prefer hyprliquid, fall back to hyprglass
+  local liquid=""
+  if hyprpm_has "hyprliquid"; then
+    liquid="hyprliquid"
+  elif hyprpm_has "HyprGlass"; then
+    liquid="hyprglass"
+  fi
+  if [[ -n "$liquid" ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
+      log "DRY: hyprpm enable $liquid"
+    elif hyprpm_enabled "$liquid"; then
+      printf '  [ok]   liquid plugin %s (enabled)\n' "$liquid"
+    else
+      printf '  [MISS] liquid plugin %s — enabling\n' "$liquid"
+      if hyprpm enable "$liquid" >/dev/null 2>&1 && hyprpm_enabled "$liquid"; then
+        printf '  [fixed] liquid plugin %s\n' "$liquid"
+      else
+        printf '  [MISS] liquid plugin %s (enable failed)\n' "$liquid"
+      fi
+    fi
+    # keep only one glass engine active
+    local other=""
+    if [[ "$liquid" == "hyprliquid" ]]; then other="hyprglass"; else other="hyprliquid"; fi
+    if hyprpm_has "$other" && hyprpm_enabled "$other"; then
+      hyprpm disable "$other" >/dev/null 2>&1 || true
+      printf '  [fixed] disabled %s (conflicts with %s)\n' "$other" "$liquid"
+    fi
+  else
+    printf '  [MISS] no liquid plugin repo available\n'
+  fi
+
+  # 4) Hypr3D
+  if hyprpm_has "Hypr3D"; then
+    if [[ "$DRY_RUN" == "1" ]]; then
+      log "DRY: hyprpm enable hypr3d"
+    elif hyprpm_enabled "hypr3d"; then
+      printf '  [ok]   hypr3d (enabled)\n'
+    else
+      printf '  [MISS] hypr3d — enabling\n'
+      if hyprpm enable hypr3d >/dev/null 2>&1 && hyprpm_enabled "hypr3d"; then
+        printf '  [fixed] hypr3d\n'
+      else
+        printf '  [MISS] hypr3d (enable failed)\n'
+      fi
+    fi
+  else
+    printf '  [MISS] hypr3d repo not added\n'
+  fi
+
+  # 5) load into the running session
+  if have hyprpm && [[ "${HYPRLAND_INSTANCE_SIGNATURE:-}" != "" ]] && [[ "$DRY_RUN" != "1" ]]; then
+    hyprpm reload >/dev/null 2>&1 || true
+  fi
+  return 0
+}
+
+# Point config plugin loads at the hyprpm-built .so files (per-user cache)
+fix_plugin_paths() {
+  local user cache conf lua liquid="" hy3d=""
+  user="$(id -un)"
+  cache="/var/cache/hyprpm/$user"
+  conf="$HOME/.config/hypr/hyprland.conf"
+  lua="$HOME/.config/hypr/hyprland.lua"
+
+  if [[ -f "$cache/hyprliquid/hyprliquid.so" ]]; then
+    liquid="$cache/hyprliquid/hyprliquid.so"
+  elif [[ -f "$cache/HyprGlass/hyprglass.so" ]]; then
+    liquid="$cache/HyprGlass/hyprglass.so"
+  elif [[ -f "$HOME/.local/lib/hyprliquid.so" ]]; then
+    liquid="$HOME/.local/lib/hyprliquid.so"
+  fi
+  if [[ -f "$cache/Hypr3D/hypr3d.so" ]]; then
+    hy3d="$cache/Hypr3D/hypr3d.so"
+  elif [[ -f "$HOME/Hypr3D/build/hypr3d.so" ]]; then
+    hy3d="$HOME/Hypr3D/build/hypr3d.so"
+  fi
+
+  if [[ "$DRY_RUN" == "1" ]]; then
+    log "DRY: plugin paths → liquid=${liquid:-<none>} hypr3d=${hy3d:-<none>}"
+    return 0
+  fi
+  if [[ -f "$conf" ]]; then
+    if [[ -n "$liquid" ]]; then
+      sed -i -E "s|^plugin = .+|plugin = $liquid|" "$conf"
+    else
+      sed -i -E "s|^plugin = (.+)|# plugin = (missing: \1)|" "$conf"
+    fi
+  fi
+  if [[ -n "$liquid" && -f "$lua" ]]; then
+    sed -i -E "s#pcall\(hl\.plugin\.load, \"[^\"]*(hyprliquid|hyprglass)\.so\"\)#pcall(hl.plugin.load, \"$liquid\")#" "$lua"
+  fi
+  if [[ -n "$hy3d" && -f "$lua" ]]; then
+    sed -i -E "s|pcall\(hl\.plugin\.load, \"[^\"]*hypr3d\.so\"\)|pcall(hl.plugin.load, \"$hy3d\")|" "$lua"
+  fi
+}
+
 verify() {
   local pass=0 fail=0
   local -a missing_cmds=() missing_pkgs=()
@@ -703,69 +905,35 @@ verify() {
     printf '  [MISS] no quickshell shells deployed\n'
     fail=$((fail + 1))
   fi
-  # hyprpm + HyprGlass plugin
-  HYPRGLASS_URL="https://github.com/hyprnux/hyprglass"
-  if have hyprpm; then
-    printf '  [ok]   hyprpm\n'
+  # hyprpm plugins (managed by ensure_hyprpm_plugins)
+  if [[ "$DRY_RUN" == "1" ]]; then
+    printf '  [ok]   hyprpm plugins (dry-run)\n'
     pass=$((pass + 1))
-    # check if hyprglass is installed + enabled
-    if hyprpm list 2>/dev/null | grep -qi 'HyprGlass'; then
-      if hyprpm list 2>/dev/null | grep -A2 -i 'HyprGlass' | grep -q 'enabled.*true'; then
-        printf '  [ok]   hyprglass (enabled)\n'
-        pass=$((pass + 1))
-      else
-        printf '  [MISS] hyprglass installed but disabled — enabling\n'
-        run "hyprpm enable hyprglass" || true
-        if hyprpm list 2>/dev/null | grep -A2 -i 'HyprGlass' | grep -q 'enabled.*true'; then
-          printf '  [fixed] hyprglass\n'
-          pass=$((pass + 1))
-        else
-          fail=$((fail + 1))
-        fi
-      fi
-    else
-      printf '  [MISS] hyprglass — installing via hyprpm\n'
-      if [[ "$DRY_RUN" == "1" ]]; then
-        log "DRY: hyprpm add $HYPRGLASS_URL && hyprpm enable hyprglass"
-      else
-        hyprpm add "$HYPRGLASS_URL" || true
-        hyprpm enable hyprglass || true
-      fi
-      if hyprpm list 2>/dev/null | grep -qi 'HyprGlass'; then
-        printf '  [fixed] hyprglass\n'
-        pass=$((pass + 1))
-      else
-        printf '  [MISS] hyprglass (install failed)\n'
-        fail=$((fail + 1))
-      fi
-    fi
-  else
-    printf '  [MISS] hyprpm\n'
+  elif ! have hyprpm; then
+    printf '  [MISS] hyprpm — run ./update.sh\n'
     fail=$((fail + 1))
-    # hyprpm ships with hyprland — try install
-    install_missing_pkgs "hyprland"
-    if have hyprpm; then
-      printf '  [fixed] hyprpm\n'
+  elif hyprpm_has "hyprliquid" || hyprpm_has "HyprGlass"; then
+    if hyprpm_enabled "hyprliquid" || hyprpm_enabled "hyprglass"; then
+      printf '  [ok]   liquid glass plugin (enabled)\n'
       pass=$((pass + 1))
-      # now try hyprglass
-      if ! hyprpm list 2>/dev/null | grep -qi 'HyprGlass'; then
-        if [[ "$DRY_RUN" == "1" ]]; then
-          log "DRY: hyprpm add $HYPRGLASS_URL && hyprpm enable hyprglass"
-        else
-          hyprpm add "$HYPRGLASS_URL" || true
-          hyprpm enable hyprglass || true
-        fi
-      fi
-      if hyprpm list 2>/dev/null | grep -qi 'HyprGlass'; then
-        printf '  [fixed] hyprglass\n'
-        pass=$((pass + 1))
-      else
-        printf '  [MISS] hyprglass\n'
-        fail=$((fail + 1))
-      fi
     else
+      printf '  [MISS] liquid glass plugin disabled — run ./update.sh\n'
       fail=$((fail + 1))
     fi
+  else
+    printf '  [MISS] hyprpm repos not added — run ./update.sh\n'
+    fail=$((fail + 1))
+  fi
+  # SystemSettings app
+  if [[ -x "$HOME/.local/bin/systemsettings" ]]; then
+    printf '  [ok]   systemsettings\n'
+    pass=$((pass + 1))
+  elif [[ "$DRY_RUN" == "1" && -f "$ROOT/SystemSettings/CMakeLists.txt" ]]; then
+    printf '  [ok]   systemsettings (dry-run)\n'
+    pass=$((pass + 1))
+  else
+    printf '  [MISS] systemsettings — run ./update.sh\n'
+    fail=$((fail + 1))
   fi
   log "verify: $pass ok, $fail missing"
   if [[ $fail -gt 0 ]]; then
@@ -788,4 +956,9 @@ if [[ -d "$BACKUP_ROOT" ]]; then
   log "previous configs: $BACKUP_ROOT"
 fi
 log "launch a shell: qs -p ~/.config/quickshell/<name>"
+
+# hyprpm plugins + point configs at the hyprpm-built .so files (runs after deploy/fix_paths)
+ensure_hyprpm_plugins || log "hyprpm plugin setup had errors — continuing"
+fix_plugin_paths || true
+
 verify || true

@@ -19,6 +19,15 @@ hl.window_rule({
 })
 
 hl.window_rule({
+    match = { class = "^(systemsettings)$" },
+    float = true,
+    center = true,
+    size = "715 700",
+    no_shadow = true,
+    opacity = "1 1",
+})
+
+hl.window_rule({
     match = { class = ".*" },
     opacity = tostring(inFocusOpacity) .. " " .. tostring(notInFocusOpacity),
 })
@@ -89,10 +98,12 @@ hl.window_rule({
     -- إعدادات إضافية لجعلها ثابتة تماماً بالخلفية بدون تأثيرات شفافة تزعجك
     suppress_event = "maximize",
 })
+-- إجبار نافذة بث الآيفون على أخذ خصائص ثيم الآيفون المدمج في eqSh
 hl.window_rule({
-    match = { class = "^(?i)(uxplay)$" },
+    match = { class = "^(uxplay)$" },
     float = true,
-    size = "393 852",       -- مقاس آيفون 14 برو الدقيق
-    pin = true,
-    opacity = "1 1",
+    center = true,
+    size = "378 812", -- الأبعاد الدقيقة لشاشة الآيفون بداخل ثيم eqSh
+    opacity = "1 1",             
+    tag = "+hyprglass_preset_liquid_true", 
 })

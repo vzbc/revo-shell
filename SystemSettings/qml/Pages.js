@@ -1,0 +1,140 @@
+.pragma library
+
+// Root pages (sidebar destinations)
+var roots = ["appleId", "wifi", "bluetooth", "network", "battery", "energy",
+    "general", "accessibility", "appearance", "menuBar", "siri", "desktopDock",
+    "displays", "spotlight", "wallpaper", "notifications", "sound", "focus",
+    "screenTime", "lockScreen", "privacySecurity", "touchIDPassword",
+    "usersGroups", "internetAccounts", "gameCenter", "icloud", "walletApplePay",
+    "keyboard", "trackpad", "printersScanners"]
+
+var info = {
+    appleId: { title: "Sign in", icon: "sb_signin", root: true },
+    wifi: { title: "Wi-Fi", icon: "sb_wifi", root: true },
+    bluetooth: { title: "Bluetooth", icon: "sb_bluetooth", root: true },
+    network: { title: "Network", icon: "sb_local-network", root: true },
+    battery: { title: "Battery", icon: "sb_battery", root: true },
+    energy: { title: "Energy", icon: "sb_energy", root: true },
+    general: { title: "General", icon: "sb_gear", root: true },
+    accessibility: { title: "Accessibility", icon: "sb_accessibility", root: true },
+    appearance: { title: "Appearance", icon: "sb_dark-mode", root: true },
+    menuBar: { title: "Menu Bar", icon: "sb_controlcenter.settings", root: true },
+    siri: { title: "Apple Intelligence & Siri", icon: "sb_apple-intelligence", root: true },
+    desktopDock: { title: "Desktop & Dock", icon: "sb_desktop", root: true },
+    displays: { title: "Displays", icon: "sb_display", root: true },
+    spotlight: { title: "Spotlight", icon: "sb_spotlight", root: true },
+    wallpaper: { title: "Wallpaper", icon: "sb_wallpaper", root: true },
+    notifications: { title: "Notifications", icon: "sb_notifications", root: true },
+    sound: { title: "Sound", icon: "sb_sound", root: true },
+    focus: { title: "Focus", icon: "sb_focus", root: true },
+    screenTime: { title: "Screen Time", icon: "sb_screen-time", root: true },
+    lockScreen: { title: "Lock Screen", icon: "sb_lockscreen", root: true },
+    privacySecurity: { title: "Privacy & Security", icon: "sb_privacy", root: true },
+    touchIDPassword: { title: "Touch ID & Password", icon: "sb_touch-id", root: true },
+    usersGroups: { title: "Users & Groups", icon: "sb_group", root: true },
+    internetAccounts: { title: "Internet Accounts", icon: "sb_accounts", root: true },
+    gameCenter: { title: "Game Center", icon: "sb_gamecenter", root: true },
+    icloud: { title: "iCloud", icon: "sb_icloud", root: true },
+    walletApplePay: { title: "Wallet & Apple Pay", icon: "sb_wallet", root: true },
+    keyboard: { title: "Keyboard", icon: "sb_keyboard", root: true },
+    trackpad: { title: "Trackpad", icon: "sb_trackpad", root: true },
+    printersScanners: { title: "Printers & Scanners", icon: "sb_printer", root: true },
+
+    // Apple Account sub-pages
+    "acct.personalInfo": { title: "Personal Information" },
+    "acct.security": { title: "Sign-In & Security" },
+    "acct.payment": { title: "Payment & Shipping" },
+    "acct.media": { title: "Media & Purchases" },
+    "acct.family": { title: "Family" },
+    "acct.findMy": { title: "Find My" },
+    "acct.signinWithApple": { title: "Sign in with Apple" },
+    "acct.deviceDetails": { title: "Mac Pro" },
+
+    // General sub-pages
+    "gen.about": { title: "About" },
+    "gen.softwareUpdate": { title: "Software Update" },
+    "gen.storage": { title: "Storage" },
+    "gen.appleCare": { title: "AppleCare & Warranty" },
+    "gen.airDrop": { title: "AirDrop & Handoff" },
+    "gen.autoFill": { title: "AutoFill & Passwords" },
+    "gen.dateAndTime": { title: "Date & Time" },
+    "gen.language": { title: "Language & Region" },
+    "gen.loginItems": { title: "Login Items & Extensions" },
+    "gen.sharing": { title: "Sharing" },
+    "gen.startupDisk": { title: "Startup Disk" },
+    "gen.timeMachine": { title: "Time Machine" },
+    "gen.deviceManagement": { title: "Device Management" },
+    "gen.transfer": { title: "Transfer or Reset" },
+
+    // Accessibility sub-pages
+    "acc.voiceOver": { title: "VoiceOver" },
+    "acc.zoom": { title: "Zoom" },
+    "acc.hoverText": { title: "Hover Text" },
+    "acc.display": { title: "Display" },
+    "acc.motion": { title: "Motion" },
+    "acc.readSpeak": { title: "Read & Speak" },
+    "acc.audioDescriptions": { title: "Audio Descriptions" },
+    "acc.hearingDevices": { title: "Hearing Devices" },
+    "acc.hearingAudio": { title: "Audio" },
+    "acc.rtt": { title: "RTT" },
+    "acc.voiceControl": { title: "Voice Control" },
+    "acc.pointerControl": { title: "Pointer Control" },
+    "acc.switchControl": { title: "Switch Control" },
+
+    // Wi-Fi sub-pages
+    "wifi.details": { title: "Details" },
+
+    // Privacy sub-pages
+    "privacy.locationServices": { title: "Location Services" },
+    "privacy.contacts": { title: "Contacts" },
+    "privacy.calendars": { title: "Calendars" },
+    "privacy.reminders": { title: "Reminders" },
+    "privacy.photos": { title: "Photos" },
+    "privacy.bluetooth": { title: "Bluetooth" },
+    "privacy.microphone": { title: "Microphone" },
+    "privacy.camera": { title: "Camera" },
+    "privacy.screenRecording": { title: "Screen & System Audio Recording" },
+    "privacy.focus": { title: "Focus" },
+    "privacy.audioInput": { title: "Audio Input" },
+    "privacy.fullDiskAccess": { title: "Full Disk Access" },
+    "privacy.filesFolders": { title: "Files and Folders" },
+    "privacy.devTools": { title: "Developer Tools" },
+    "privacy.analytics": { title: "Analytics & Improvements" },
+    "privacy.advertising": { title: "Apple Advertising" },
+
+    // Users sub-pages
+    "users.edit": { title: "User Details" },
+
+    // Sound sub-pages
+    "sound.effects": { title: "Sound Effects" },
+    "sound.output": { title: "Output" },
+    "sound.input": { title: "Input" }
+}
+
+// Pages with a dedicated QML file (relative to qml/ directory)
+var files = {
+    appleId: "pages/SignInPage.qml",
+    desktopDock: "pages/DesktopDockPage.qml",
+    wallpaper: "pages/WallpaperPage.qml",
+    sound: "pages/SoundPage.qml",
+    spotlight: "pages/SpotlightPage.qml",
+    displays: "pages/DisplaysPage.qml",
+    lockScreen: "pages/LockScreenPage.qml",
+    menuBar: "pages/MenuBarPage.qml",
+    general: "pages/GeneralPage.qml",
+    appearance: "pages/AppearancePage.qml",
+    "gen.storage": "pages/StoragePage.qml",
+    "gen.storage.applications": "pages/StorageDetail.qml",
+    "gen.storage.documents": "pages/StorageDetail.qml",
+    "gen.storage.macos": "pages/StorageDetail.qml",
+    "gen.storage.systemData": "pages/StorageDetail.qml",
+    "gen.storage.bins": "pages/StorageDetail.qml",
+    "acc.hoverText": "pages/HoverTextPage.qml",
+    "acc.motion": "pages/MotionPage.qml",
+    "acct.deviceDetails": "pages/DeviceDetailsPage.qml",
+    wifi: "pages/WifiPage.qml",
+    bluetooth: "pages/BluetoothPage.qml",
+    network: "pages/NetworkPage.qml",
+    battery: "pages/BatteryPage.qml",
+    icloud: "pages/IcloudPage.qml"
+}

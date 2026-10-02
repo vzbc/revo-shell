@@ -17,7 +17,10 @@ https://github.com/user-attachments/assets/42df3de9-9fab-4843-9afc-35f82d5852f7
 | `wallpapers/` | `~/Pictures/Wallpapers` |
 | `rofi/` | `~/.config/rofi` |
 | `kitty/` | `~/.config/kitty` |
-| `qs-gui-installer/` | **run this (GUI)** |
+| `SystemSettings/` | built → `~/.local/bin/systemsettings` |
+| `install.sh` | **run this (CLI)** |
+| `update` / `update.sh` | **run this to pull new additions** |
+| `qs-gui-installer/` | run this (GUI) |
 
 ## Install (CLI — recommended)
 
@@ -51,11 +54,12 @@ What `install.sh` does:
 4. Installs AUR packages via yay/paru when available (`quickshell-git`, fonts, …)
 5. Installs Python deps (`pip --user`)
 6. Deploys `hypr/`, selected `quickshell/` shells (+ shared root assets), `rofi/`, `kitty/` → `~/.config/`, `wallpapers/` → `~/Pictures/Wallpapers`
-7. Sets the **first selected shell** as the Hyprland default (`# REVO_DEFAULT_SHELL` in autostart)
+7. Sets the **first selected shell** as the Hyprland default (`# REVO_DEFAULT_SHELL` in autostart) — a previously saved default is re-applied on updates
 8. Rewrites hardcoded `/home/revo` → `$HOME`
-9. Builds CMake shells (caelestia + Clavis)
+9. Builds CMake shells (caelestia + Clavis) and the **SystemSettings** app → `~/.local/bin/systemsettings`
 10. Enables pipewire / NetworkManager / bluetooth
-11. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR), and **installs the HyprGlass plugin via hyprpm** if missing/disabled
+11. Installs **hyprpm plugins** — adds `HyprGlass`, `hyprliquid`, `Hypr3D` repos, enables the liquid-glass engine (hyprliquid, falls back to HyprGlass), and points `hyprland.conf` / `hyprland.lua` at the per-user plugin `.so` files in `/var/cache/hyprpm/$USER/`
+12. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR)
 
 Flags:
 
@@ -74,6 +78,23 @@ After install, verify again anytime:
 ```bash
 ./install.sh   # re-runs verify at the end (non-interactive → all shells already deployed)
 ```
+
+## Update (existing installs)
+
+Already have revo-shell installed? Use the **update** CLI to pull the newest
+additions (new shells, hyprpm plugins, SystemSettings, config fixes):
+
+```bash
+./update                     # git pull --ff-only + re-apply install.sh
+./update --no-pull           # only re-apply local files
+./update --shells macos,ii   # re-apply specific shells only
+DRY_RUN=1 ./update           # show what would run, change nothing
+```
+
+`update` is a thin wrapper around `update.sh`, which runs `git pull` (skipped
+automatically if the tree is dirty or you are offline) and then
+`NO_SHELL_PROMPT=1 ./install.sh`, so your previously chosen default shell and
+plugin setup are preserved.
 
 Launch a shell:
 

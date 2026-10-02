@@ -20,7 +20,9 @@ hl.bind(mainMod .. " + W", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/quickshe
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/quickshell/toggle_dots_browser.sh"))
 
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
-hl.bind(mainMod .. " + M", hl.dsp.exit())
+hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.exit())
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("/usr/bin/python3 /home/revo/.config/hypr/scripts/minimize_window.py min"))
+hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("/usr/bin/python3 /home/revo/.config/hypr/scripts/minimize_window.py restore"))
 hl.bind(mainMod .. " + F", hl.dsp.window.float({ action = "toggle" }))
 
 hl.bind(mainMod .. " + left", hl.dsp.focus({ direction = "left" }))
@@ -94,3 +96,6 @@ hl.bind(mainMod .. " + V", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/quickshe
 hl.bind("XF86PowerOff", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/macos_lock.sh"), { locked = true })
 -- زر للتبديل السريع بين الـ 2D التقليدي وعالم الـ 3D الحر
 hl.bind(mainMod .. " + BackSpace", hl.dsp.exec_cmd("hyprctl hypr3d"))
+if hl.plugin and hl.plugin.hypr3d and hl.plugin.hypr3d.toggle then
+    
+end

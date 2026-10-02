@@ -18,7 +18,7 @@ PanelWindow {
         right: true
     }
     
-    height: root.capsuleHeight + root.iconZoomFactor
+    height: root.capsuleHeight + root.iconZoomFactor + root.revealStrip
     property bool isTrashFull: false
 
     // ── 2. العناصر المستقلة (تأتي بعد الخصائص مباشرة) ──
@@ -57,17 +57,11 @@ PanelWindow {
     property bool shotDragging: false
     property bool shotOverTrash: false
 
-    property real fanOx: 210
-    property real fanOy: 518
-    property real fanRc: 500
-    property real fanRowH: 58
-    property bool fanFlip: false
+    property real fanRowH: 66
+    property real fanListH: 220
+    property real fanPadX: 14
 
-    readonly property var fanModel: {
-        const arr = root.dlItems.slice(0, 10).map(p => ({ path: p }));
-        arr.push({ openFinder: true });
-        return arr;
-    }
+    readonly property var fanModel: root.dlItems.slice(0, 60).map(p => ({ path: p }))
 
     function refreshDownloads() {
         if (!dlScan.running) dlScan.running = true;
@@ -79,38 +73,63 @@ PanelWindow {
 
     function dlIconFor(p) {
         const e = (p.split(".").pop() || "").toLowerCase();
-        if (["mp4", "mkv", "webm", "mov", "avi"].includes(e)) return DockApps.iconsDir + "video-player.png";
-        if (["mp3", "flac", "wav", "ogg", "m4a"].includes(e)) return DockApps.iconsDir + "elisa.png";
-        if (["deb", "rpm", "appimage"].includes(e)) return DockApps.iconsDir + "app-store.png";
-        return DockApps.iconsDir + "file-doc.svg";
+        if (["mp4", "mkv", "webm", "mov", "avi"].includes(e)) return "video-player.png";
+        if (["mp3", "flac", "wav", "ogg", "m4a"].includes(e)) return "elisa.png";
+        if (["deb", "rpm", "appimage"].includes(e)) return "app-store.png";
+        return "file-doc.svg";
     }
 
-    function fanPosAt(i) {
+    // ── هندسة قائمة الـDownloads: عمود مستقيم فوق أيقونة الدوك مع تمرير ──
+    // ملاحظة: pos بإحداثيات نافذة الدوك (النافذة نفسها أسفل الشاشة)،
+    // و anchor.rect يُRelativeTo نفس النافذة، فالقائمة تمتد للأساسب (y سالب).
+    function layoutDownloads() {
+        const screen = Quickshell.screens[0];
+        const pos = dlSlot.mapToItem(null, dlSlot.width / 2, 14);
         const n = Math.max(1, root.fanModel.length);
-        const last = Math.max(1, n - 1);
-        const f = i / last;
-        return {
-            x: 300 + 150 * f,
-            y: 12 + (n - 1 - i) * root.fanRowH
-        };
+        const w = 400;
+        const headH = 72;   // زر Open in Finder (12 + 46 + 14)
+        const padB = 14;
+        const listNeed = n * root.fanRowH;
+        const visibleRows = 7;   // سبعة ملفات فقط ظاهرة (والباقي بالتمرير)
+        const maxH = Math.min(screen.height - 12, headH + visibleRows * root.fanRowH + padB);
+        const h = Math.min(headH + listNeed + padB, maxH);
+        const winTop = screen.height - root.height - 12;   // أعلى النافذة على الشاشة
+        const x = Math.max(6, Math.min(screen.width - w - 6, Math.round(pos.x - w / 2)));
+        const y = Math.max(6 - winTop, Math.round(pos.y + 6 - h));
+        downloadsFan.implicitWidth = w;
+        downloadsFan.implicitHeight = h;
+        downloadsFan.anchor.rect.x = x;
+        downloadsFan.anchor.rect.y = y;
+        root.fanListH = Math.max(72, h - headH - padB);
+        return { n: n, w: w, h: h, x: x, y: y };
+    }
+
+    // ميلان القائمة: أعلى العرض لليمين وأسفله لليسار (زي فن الستاك بالماك)
+    function fanRowX(yInView) {
+        return -yInView * 0.25;
     }
 
     function openDownloads() {
         ShellController.closeAll();
-        const pos = dlSlot.mapToItem(null, dlSlot.width / 2, 14);
-        const screenW = Quickshell.screens[0].width;
-        const n = Math.max(1, root.fanModel.length);
-        downloadsFan.width = 440;
-        root.fanOy = n * root.fanRowH + 24;
-        downloadsFan.height = root.fanOy;
-        root.fanOx = 300;
-        downloadsFan.relativeX = Math.max(6, Math.min(screenW - downloadsFan.width - 6, pos.x - root.fanOx));
-        downloadsFan.relativeY = pos.y - root.fanOy + 8;
+        const g = root.layoutDownloads();
         root.downloadsOpen = true;
         root.refreshDownloads();
+        DockApps.stackState = "n=" + g.n
+            + " panel=" + g.w + "x" + Math.round(g.h)
+            + " listH=" + Math.round(root.fanListH)
+            + " contentH=" + (g.n * root.fanRowH)
+            + " scroll=" + (g.n * root.fanRowH > root.fanListH)
+            + " slant=" + Math.round(0.25 * root.fanListH) + "px"
+            + " pos=" + g.x + "," + g.y;
+        console.log("[DownloadsStack]", DockApps.stackState);
+    }
+
+    onDlItemsChanged: {
+        if (root.downloadsOpen) root.layoutDownloads();
     }
 
     onDownloadsOpenChanged: {
+        DockApps.downloadsOpen = root.downloadsOpen;
         if (root.downloadsOpen) {
             GlobalFocusGrab.addDismissable(downloadsFan);
         } else {
@@ -128,19 +147,44 @@ PanelWindow {
         onTriggered: root.fanSuppressNextClick = false
     }
 
-    Component.onCompleted: { dlScan.running = true; fanTestTimer.start(); }
+    Component.onCompleted: {
+        dlScan.running = true;
+        DockApps.stackOpen = function() {
+            if (root.downloadsOpen) root.downloadsOpen = false;
+            else root.openDownloads();
+        };
+        DockApps.iconLocalPos = root.iconLocalPos;
+    }
 
-    Timer {
-        id: fanTestTimer
-        interval: 2500
-        running: false
-        onTriggered: root.openDownloads()
+    // local centre "x,y" of the Dock icon for a window class (genie target)
+    function iconLocalPos(cls) {
+        var q = (cls || "").toLowerCase().trim();
+        if (!q || !dockRow) return "";
+        var kids = dockRow.children;
+        for (var i = 0; i < kids.length; i++) {
+            var c = kids[i];
+            var app = c.app;
+            if (!app) continue;
+            var pos = (c.x + c.width / 2) + "," + (c.y + c.height - 14 - root.iconBase / 2);
+            var ids = app.appIds || [];
+            for (var j = 0; j < ids.length; j++) {
+                var id = (ids[j] || "").toLowerCase();
+                if (id && (id === q || id.indexOf(q) !== -1 || q.indexOf(id) !== -1))
+                    return pos;
+            }
+            var nm = (app.name || "").toLowerCase();
+            var ex = (app.exec || "").toLowerCase();
+            if ((nm && (q.indexOf(nm) !== -1 || nm.indexOf(q) !== -1)) ||
+                (ex && q.indexOf(ex) !== -1))
+                return pos;
+        }
+        return "";
     }
 
     Process {
         id: dlScan
         running: false
-        command: ["sh", "-c", "find \"$HOME/Downloads\" -mindepth 1 -maxdepth 1 -printf '%T@|%p\\n' 2>/dev/null | sort -rn | head -10"]
+        command: ["sh", "-c", "find \"$HOME/Downloads\" -mindepth 1 -maxdepth 1 -printf '%T@|%p\\n' 2>/dev/null | sort -rn | head -60"]
         stdout: StdioCollector {
             onStreamFinished: {
                 const out = [];
@@ -148,6 +192,15 @@ PanelWindow {
                     const i = line.indexOf("|");
                     if (i > 0) out.push(line.slice(i + 1));
                 }
+                // ما نعيد الإنشاء إذا المحتوى ما تغيّر (حتى ما ينحفظ الانميشن)
+                const cur = root.dlItems;
+                let same = cur.length === out.length;
+                if (same) {
+                    for (let i = 0; i < out.length; i++) {
+                        if (cur[i] !== out[i]) { same = false; break; }
+                    }
+                }
+                if (same) return;
                 root.dlItems = out;
             }
         }
@@ -238,14 +291,22 @@ PanelWindow {
     readonly property int capsuleWidth: root.totalSlots * root.slotWidth + root.sepCount * 9 + 20
     
     margins {
-        bottom: 8
+        bottom: Math.round(8 + root.hideOffset)
         left: Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
         right: Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
     }
    color: "transparent"
     WlrLayershell.namespace: "macos:dock"
 
-    readonly property int iconZoomFactor: Appearance.dockMagnification ? 55 : 0
+    readonly property int iconZoomFactor: Appearance.dockMagnification ? Math.round(Appearance.dockZoom) : 0
+    readonly property int revealStrip: 6
+    property real hideOffset: Appearance.dockAutohide && !rootReveal.hovered
+        ? -(root.height - root.revealStrip) - 8 : 0
+    Behavior on hideOffset {
+        enabled: Appearance.dockAnimateHide
+        NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
+    }
+    HoverHandler { id: rootReveal }
     readonly property int iconBase: Appearance.dockIconSize
     property int instantHoveredIndex: -1
     property real instantHoveredFraction: 0.5
@@ -304,6 +365,14 @@ PanelWindow {
         property color tint: "#1e1e24" // لون داكن شفاف افتراضي متناسق
         property real tintAlpha: 0.65
         property bool solidMode: false
+        // true => follow the Appearance "Liquid Glass" setting (Clear / Tinted + intensity)
+        property bool followSetting: true
+        property real alphaBoost: 0
+
+        readonly property color effTint: followSetting ? Appearance.liquidGlassTint : tint
+        readonly property real effAlpha: followSetting
+            ? Math.min(0.95, Appearance.liquidGlassAlpha + alphaBoost)
+            : tintAlpha
 
         property real _mouseU: -1
         property real _mouseV: -1
@@ -319,8 +388,8 @@ PanelWindow {
       Rectangle {
             id: capsuleBg
             anchors.fill: parent
-            radius: 26
-            color: Qt.rgba(15, 15, 22, 0.03) // زيادة الشفافية مع الحفاظ على بقاء القطر مقروءاً لـ hyprglass
+            radius: glass.radius
+            color: Qt.rgba(glass.effTint.r, glass.effTint.g, glass.effTint.b, glass.effAlpha)
             border.color: root.glassBorder
             border.width: 1
         }
@@ -339,7 +408,7 @@ PanelWindow {
             id: popupGlass
             anchors.fill: parent
             radius: 14
-            tintAlpha: 0.85
+            alphaBoost: 0.45
 
             MouseArea {
                 anchors.fill: parent
@@ -466,106 +535,234 @@ PanelWindow {
 
     PopupWindow {
         id: downloadsFan
-        parentWindow: root
-        screen: Quickshell.screens[0]
-        width: 360
-        height: 500
-        visible: root.downloadsOpen
+        anchor.window: root
+        implicitWidth: 360
+        implicitHeight: 300
+        visible: root.downloadsOpen || fanStage.t > 0.01
         color: "transparent"
 
-        Repeater {
-            model: root.fanModel
-            delegate: Item {
-                id: fanItem
-                required property int index
-                required property var modelData
-                width: 200
-                height: root.fanRowH
-                readonly property real fx: root.fanPosAt(fanItem.index).x
-                readonly property real fy: root.fanPosAt(fanItem.index).y
-                property real t: root.downloadsOpen ? 1 : 0
-                z: 100 - fanItem.index
+        Item {
+            id: fanStage
+            anchors.fill: parent
+            property real t: root.downloadsOpen ? 1 : 0
+            opacity: t
+            scale: 0.9 + 0.1 * t
+            transformOrigin: Item.Bottom
+            Behavior on t {
+                NumberAnimation { duration: root.downloadsOpen ? 260 : 420; easing.type: Easing.OutCubic }
+            }
 
-                x: root.fanOx + (fanItem.fx - root.fanOx) * fanItem.t - (fanItem.width - 46)
-                y: root.fanOy + (fanItem.fy - root.fanOy) * fanItem.t
-                opacity: Math.min(1, fanItem.t * 1.5)
-                scale: 0.35 + 0.65 * fanItem.t
-                transformOrigin: Item.BottomRight
+            // ── زر Open in Finder الدائري (سهم داخل مربع) ──
+            Rectangle {
+                id: fanFinderBtn
+                anchors.top: parent.top
+                anchors.topMargin: 12
+                anchors.right: parent.right
+                anchors.rightMargin: 14
+                width: 46
+                height: 46
+                radius: 23
+                color: fanFinderHover.hovered ? "#ffffff" : Qt.rgba(0.93, 0.93, 0.95, 0.95)
+                border.color: Qt.rgba(0, 0, 0, 0.14)
+                border.width: 1
 
-                Behavior on t {
-                    SequentialAnimation {
-                        PauseAnimation { duration: fanItem.index * 45 }
-                        NumberAnimation { duration: 340; easing.type: Easing.OutBack }
+                HoverHandler { id: fanFinderHover }
+
+                Canvas {
+                    anchors.centerIn: parent
+                    width: 19
+                    height: 19
+                    onPaint: {
+                        const c = getContext("2d");
+                        c.reset();
+                        c.strokeStyle = "#1a1a1a";
+                        c.lineWidth = 2.2;
+                        c.lineCap = "round";
+                        c.lineJoin = "round";
+                        c.beginPath();
+                        c.moveTo(12.5, 3);
+                        c.lineTo(5.5, 3);
+                        c.quadraticCurveTo(3, 3, 3, 5.5);
+                        c.lineTo(3, 13.5);
+                        c.quadraticCurveTo(3, 16, 5.5, 16);
+                        c.lineTo(13.5, 16);
+                        c.quadraticCurveTo(16, 16, 16, 13.5);
+                        c.lineTo(16, 7);
+                        c.moveTo(6, 13);
+                        c.lineTo(13.5, 5.5);
+                        c.moveTo(8.5, 5.5);
+                        c.lineTo(13.5, 5.5);
+                        c.lineTo(13.5, 10.5);
+                        c.stroke();
                     }
                 }
-
-                Rectangle {
-                    id: fanIcon
-                    readonly property bool thumbBg: !fanItem.modelData.openFinder && root.isThumb(fanItem.modelData.path)
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 46
-                    height: 46
-                    radius: 10
-                    color: fanIcon.thumbBg ? "#1c1c1e" : "transparent"
-                    border.color: Qt.rgba(255, 255, 255, 0.18)
-                    border.width: fanIcon.thumbBg ? 1 : 0
-                    clip: true
-
-                    Image {
-                        anchors.fill: parent
-                        anchors.margins: fanIcon.thumbBg ? 2 : 4
-                        source: fanItem.modelData.openFinder
-                            ? DockApps.iconsDir + "Finder.png"
-                            : (root.isThumb(fanItem.modelData.path)
-                                ? "file://" + encodeURI(fanItem.modelData.path)
-                                : root.dlIconFor(fanItem.modelData.path))
-                        fillMode: fanIcon.thumbBg ? Image.PreserveAspectCrop : Image.PreserveAspectFit
-                        asynchronous: true
-                        mipmap: true
-                    }
-                }
-
-                Rectangle {
-                    id: fanPill
-                    anchors.right: fanIcon.left
-                    anchors.rightMargin: 8
-                    anchors.verticalCenter: parent.verticalCenter
-                    height: 24
-                    width: Math.min(fanPillText.implicitWidth + 20, 150)
-                    radius: 12
-                    color: fanPillHover.hovered ? "#ffffff" : Qt.rgba(0.93, 0.93, 0.95, 0.95)
-                    border.color: Qt.rgba(0, 0, 0, 0.12)
-                    border.width: 1
-
-                    Text {
-                        id: fanPillText
-                        anchors.centerIn: parent
-                        width: parent.width - 16
-                        horizontalAlignment: Text.AlignHCenter
-                        elide: Text.ElideRight
-                        text: fanItem.modelData.openFinder
-                            ? "Open in Finder"
-                            : fanItem.modelData.path.split("/").pop()
-                        font { family: Appearance.fontFamily; pixelSize: 11; weight: Font.Medium }
-                        color: "#1a1a1a"
-                    }
-                }
-
-                HoverHandler { id: fanPillHover }
 
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        if (fanItem.modelData.openFinder) {
-                            dlOpener.command = ["/home/revo/.local/bin/nautilus", "--new-window", "file:///home/revo/Downloads"];
-                        } else {
-                            dlOpener.command = ["/usr/bin/xdg-open", fanItem.modelData.path];
-                        }
+                        dlOpener.command = ["/home/revo/.local/bin/nautilus", "--new-window", "file:///home/revo/Downloads"];
                         dlOpener.running = true;
                         root.downloadsOpen = false;
                     }
                 }
+            }
+
+            Rectangle {
+                id: fanFinderTip
+                anchors.right: fanFinderBtn.left
+                anchors.rightMargin: 8
+                anchors.verticalCenter: fanFinderBtn.verticalCenter
+                visible: fanFinderHover.hovered
+                width: fanFinderTipText.implicitWidth + 20
+                height: 24
+                radius: 12
+                color: Qt.rgba(0, 0, 0, 0.9)
+                border.color: Qt.rgba(255, 255, 255, 0.15)
+                border.width: 1
+
+                Text {
+                    id: fanFinderTipText
+                    anchors.centerIn: parent
+                    text: "Open in Finder"
+                    font { family: Appearance.fontFamily; pixelSize: 11; weight: Font.Medium }
+                    color: "#ffffff"
+                }
+            }
+
+            Flickable {
+                id: fanFlick
+                anchors.top: fanFinderBtn.bottom
+                anchors.topMargin: 14
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 14
+                anchors.left: parent.left
+                anchors.leftMargin: root.fanPadX
+                anchors.right: parent.right
+                anchors.rightMargin: root.fanPadX
+                contentWidth: width
+                contentHeight: fanCol.implicitHeight
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                flickableDirection: Flickable.VerticalFlick
+
+                HoverHandler { id: fanFlickHover }
+
+                Column {
+                    id: fanCol
+                    width: fanFlick.width
+
+                    Repeater {
+                        model: root.fanModel
+                        delegate: Item {
+                            id: fanItem
+                            required property int index
+                            required property var modelData
+                            width: fanCol.width
+                            height: root.fanRowH
+                            x: root.fanRowX(fanItem.y - fanFlick.contentY)
+
+                            // ── انميشن الظهور: يطلع من الدوك بالتتابع (الأسفل أولاً) ──
+                            property real appearT: root.downloadsOpen ? 1 : 0
+                            opacity: Math.min(1, fanItem.appearT * 2.5)
+                            transform: [
+                                Translate {
+                                    x: (1 - fanItem.appearT) * 30
+                                    y: (1 - fanItem.appearT) * 80
+                                },
+                                Scale {
+                                    origin.x: fanItem.width / 2
+                                    origin.y: fanItem.height
+                                    xScale: 0.6 + 0.4 * fanItem.appearT
+                                    yScale: 0.6 + 0.4 * fanItem.appearT
+                                }
+                            ]
+                            Behavior on appearT {
+                                SequentialAnimation {
+                                    PauseAnimation {
+                                        duration: root.downloadsOpen
+                                            ? 40 + Math.max(0, 6 - Math.min(fanItem.index, 6)) * 48
+                                            : 0
+                                    }
+                                    NumberAnimation { duration: 420; easing.type: Easing.OutQuint }
+                                }
+                            }
+
+                            HoverHandler { id: rowHover }
+
+                            Rectangle {
+                                id: fanIcon
+                                readonly property bool thumbBg: root.isThumb(fanItem.modelData.path)
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 46
+                                height: 46
+                                radius: 10
+                                color: fanIcon.thumbBg ? "#1c1c1e" : "transparent"
+                                border.color: Qt.rgba(0, 0, 0, 0.18)
+                                border.width: fanIcon.thumbBg ? 1 : 0
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    anchors.margins: fanIcon.thumbBg ? 2 : 4
+                                    source: fanIcon.thumbBg
+                                        ? "file://" + encodeURI(fanItem.modelData.path)
+                                        : DockApps.iconSource(root.dlIconFor(fanItem.modelData.path))
+                                    fillMode: fanIcon.thumbBg ? Image.PreserveAspectCrop : Image.PreserveAspectFit
+                                    asynchronous: true
+                                    mipmap: true
+                                }
+                            }
+
+                            Rectangle {
+                                id: fanPill
+                                anchors.right: fanIcon.left
+                                anchors.rightMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                height: 26
+                                width: Math.min(fanPillText.implicitWidth + 20, fanCol.width - 160)
+                                radius: 13
+                                color: rowHover.hovered ? "#ffffff" : Qt.rgba(0.93, 0.93, 0.95, 0.95)
+                                border.color: Qt.rgba(0, 0, 0, 0.12)
+                                border.width: 1
+
+                                Text {
+                                    id: fanPillText
+                                    anchors.centerIn: parent
+                                    width: parent.width - 16
+                                    horizontalAlignment: Text.AlignHCenter
+                                    elide: Text.ElideRight
+                                    text: fanItem.modelData.path.split("/").pop()
+                                    font { family: Appearance.fontFamily; pixelSize: 11; weight: Font.Medium }
+                                    color: "#1a1a1a"
+                                }
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                onClicked: {
+                                    dlOpener.command = ["/usr/bin/xdg-open", fanItem.modelData.path];
+                                    dlOpener.running = true;
+                                    root.downloadsOpen = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                id: fanScrollBar
+                visible: fanCol.implicitHeight > fanFlick.height + 4
+                x: fanFlick.x + fanFlick.width + 6
+                y: fanFlick.y + (fanFlick.height - height)
+                   * (fanFlick.contentY / Math.max(1, fanCol.implicitHeight - fanFlick.height))
+                width: 3
+                height: Math.max(28, fanFlick.height * fanFlick.height / fanCol.implicitHeight)
+                radius: 1.5
+                color: Qt.rgba(0, 0, 0, 0.4)
+                opacity: (fanFlick.moving || fanFlickHover.hovered) ? 1 : 0
+                Behavior on opacity { NumberAnimation { duration: 150 } }
             }
         }
     }
@@ -769,6 +966,11 @@ PanelWindow {
                     mipmap: true
                     smooth: true
 
+                    // Icon & widget style (macOS Tahoe):
+                    //   Clear  -> translucent liquid-glass icons
+                    //   Tinted -> single-colour icons (baked into icons/tinted/)
+                    opacity: Appearance.iconClearActive ? 0.55 : 1
+
                     Rectangle {
                         id: runningDot
                         anchors.horizontalCenter: parent.horizontalCenter
@@ -778,7 +980,7 @@ PanelWindow {
                         height: 5
                         radius: 2.5
                         color: root.accent
-                        visible: DockApps.isRunning(slot.app.appIds)
+                        visible: Appearance.dockIndicators && DockApps.isRunning(slot.app.appIds)
                     }
                 }
 
@@ -1110,10 +1312,12 @@ PanelWindow {
                     anchors.bottomMargin: 14
                     width: root.iconBase
                     height: root.iconBase
-                    source: DockApps.iconsDir + "folder-downloads.svg"
+                    source: DockApps.folderSource()
                     asynchronous: true
                     mipmap: true
                     smooth: true
+
+                    opacity: Appearance.iconClearActive ? 0.55 : 1
                 }
 
                 Rectangle {
@@ -1174,7 +1378,7 @@ PanelWindow {
                     anchors.bottomMargin: 14 
                     width: root.iconBase
                     height: root.iconBase
-                    source: root.isTrashFull ? DockApps.iconsDir + "user-trash-full.png" : DockApps.iconsDir + "Trash.png"
+                    source: DockApps.iconSource(root.isTrashFull ? "user-trash-full.png" : "Trash.png")
                     asynchronous: true
                     mipmap: true
                     smooth: true

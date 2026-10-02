@@ -67,7 +67,11 @@ Scope {
         Ipc.mixin("eqdesktop.spotlight", "set", (visible) => {
             Runtime.spotlightOpen = visible;
         });
-        Ipc.mixin("eqdesktop.spotlight", "state", () => `actions=${root.actionsShown} rail=${root.railProgress.toFixed(3)} sel=${root.selectedAction} open=${Runtime.spotlightOpen} panel=${panel.width.toFixed(0)}`);
+        Ipc.mixin("eqdesktop.spotlight", "state", () => {
+            if (!root || !panel)
+                return "";
+            return `actions=${root.actionsShown} rail=${root.railProgress.toFixed(3)} sel=${root.selectedAction} open=${Runtime.spotlightOpen} panel=${panel.width.toFixed(0)}`;
+        });
     }
 
     FollowingPanelWindow {
