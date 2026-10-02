@@ -21,7 +21,7 @@ if hl.plugin.hypr3d then
             flying = true,             -- on alse: gravity, Space jumps off the ground, Shift does nothing
         },
         map = {
-            path = "/home/revo/Downloads/anime_stylized_room_free/scene.gltf",   -- glTF 2.0 map (.glb/.gltf)
+            path = "/home/revo/Downloads/anime_class_room/scene.gltf",   -- glTF 2.0 map (.glb/.gltf)
             transform = {
                 position = { x = 0, y = 0, z = 0 },
                 rotation = { x = 0, y = 0, z = 0 },

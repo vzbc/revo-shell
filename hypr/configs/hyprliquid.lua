@@ -23,7 +23,7 @@ if hl.plugin.hyprliquid then
         ["hyprliquid:corner_radius"] = 26,
         ["hyprliquid:z_radius"] = 26,
         ["hyprliquid:highlight_style"] = 4,
-        ["hyprliquid:glass_dispersion"] = true,
+        ["hyprliquid:glass_dispersion"] = false,
         ["hyprliquid:vdf_map_mode"] = 1,
         ["hyprliquid:vdf_map_update_policy"] = "onchange",
     });
@@ -38,7 +38,7 @@ if hl.plugin.hyprliquid then
         ["hyprliquid:effect"] = "liquid_glass",
         ["hyprliquid:corner_radius"] = 24,
         ["hyprliquid:highlight_style"] = 4,
-        ["hyprliquid:glass_dispersion"] = true,
+        ["hyprliquid:glass_dispersion"] = false,
         ["hyprliquid:vdf_map_mode"] = 1,
         ["hyprliquid:vdf_map_update_policy"] = "onchange",
     });
