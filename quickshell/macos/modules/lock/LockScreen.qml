@@ -66,7 +66,7 @@ PanelWindow {
     // Wallpaper
     Image {
         anchors.fill: parent
-        source: "/home/revo/.config/quickshell/macos/assets/wall.jpg"
+        source: Quickshell.env("HOME") + "/.config/quickshell/macos/assets/wall.jpg"
         fillMode: Image.PreserveAspectCrop
     }
 
@@ -129,7 +129,7 @@ PanelWindow {
 
             Image {
                 anchors.fill: parent
-                source: "/home/revo/.config/quickshell/macos/assets/user.jpg"
+                source: Quickshell.env("HOME") + "/.config/quickshell/macos/assets/user.jpg"
                 fillMode: Image.PreserveAspectCrop
             }
         }

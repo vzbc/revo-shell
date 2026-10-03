@@ -5,7 +5,7 @@ import os
 import sys
 import tempfile
 
-PATH = "/home/revo/.config/quickshell/macduo/settings.json"
+PATH = os.path.expanduser("~") + "/.config/quickshell/macduo/settings.json"
 
 
 def main():

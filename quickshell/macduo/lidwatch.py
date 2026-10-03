@@ -4,6 +4,7 @@
 Primary path: evdev events on the Lid Switch device (we are in the input
 group). Fallback/desync guard: poll /proc/acpi/button/lid every loop.
 """
+import os
 import select
 import subprocess
 import sys
@@ -19,7 +20,7 @@ def log(*a):
     except OSError:
         pass
 
-SHELL = "/home/revo/.config/quickshell/macduo"
+SHELL = os.path.expanduser("~") + "/.config/quickshell/macduo"
 PROC_STATE = "/proc/acpi/button/lid/LID0/state"
 
 try:

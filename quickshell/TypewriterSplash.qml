@@ -258,19 +258,19 @@ ShellRoot {
                     visible: root.promptHeader.length > 0
 
                     Item { x: 0; y: parent.height * 0.00; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.blue } }
                     Item { x: 0; y: parent.height * 0.20; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.teal } }
                     Item { x: 0; y: parent.height * 0.40; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.green } }
                     Item { x: 0; y: parent.height * 0.60; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.peach } }
                     Item { x: 0; y: parent.height * 0.80; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(160, 170); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.mauve } }
                 }
 
@@ -359,19 +359,19 @@ ShellRoot {
                     visible: root.contentChars > 0
 
                     Item { x: 0; y: parent.height * 0.00; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.blue } }
                     Item { x: 0; y: parent.height * 0.20; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.teal } }
                     Item { x: 0; y: parent.height * 0.40; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.green } }
                     Item { x: 0; y: parent.height * 0.60; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.peach } }
                     Item { x: 0; y: parent.height * 0.80; width: parent.width; height: parent.height * 0.2; clip: true
-                        Image { source: "file:///home/revo/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
+                        Image { source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/flame_mask.png"; sourceSize: Qt.size(120, 128); width: parent.parent.width; height: parent.parent.height; y: -parent.y }
                         layer.enabled: true; layer.effect: ColorOverlay { color: root.mauve } }
                 }
 

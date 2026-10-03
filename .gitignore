@@ -52,3 +52,7 @@ quickshell_repo/
 site/.next/
 site/out/
 site/
+
+# Claude local settings (per-machine)
+.claude/
+**/.claude/

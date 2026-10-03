@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import json, os, sys
 
-CFG = "/home/revo/.config/quickshell/macos/userconfig.json"
+CFG = os.path.expanduser("~") + "/.config/quickshell/macos/userconfig.json"
 
 def main():
     if len(sys.argv) < 3:

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import os, re, struct, zlib, subprocess
 CAR = "/mnt/sysv/root/System/Applications/System Settings.app/Contents/Resources/Assets.car"
-BLK = "/home/revo/.config/quickshell/settings/assets/car_blocks"
-OUT = "/home/revo/.config/quickshell/settings/assets/icons"
+BLK = os.path.expanduser("~") + "/.config/quickshell/settings/assets/car_blocks"
+OUT = os.path.expanduser("~") + "/.config/quickshell/settings/assets/icons"
 os.makedirs(BLK, exist_ok=True)
 os.makedirs(OUT, exist_ok=True)
 

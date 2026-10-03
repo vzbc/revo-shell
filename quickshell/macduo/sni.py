@@ -14,7 +14,7 @@ import dbus.service
 import dbus.mainloop.glib
 from gi.repository import GLib
 
-SHELL = "/home/revo/.config/quickshell/macduo"
+SHELL = os.path.expanduser("~") + "/.config/quickshell/macduo"
 ICON_DIR = os.path.join(SHELL, "icons")
 
 IFACE = "org.kde.StatusNotifierItem"
@@ -68,7 +68,7 @@ class StatusNotifierItem(dbus.service.Object):
             "Id": dbus.String("macduo"),
             "Title": dbus.String("Mac-Duo"),
             "Status": dbus.String("Active"),
-            "IconName": dbus.String("/home/revo/.config/quickshell/macduo/icons/macduo-22.png"),
+            "IconName": dbus.String(os.path.expanduser("~") + "/.config/quickshell/macduo/icons/macduo-22.png"),
             
             "IconPixmap": pixmap22,
             "OverlayIconName": dbus.String(""),

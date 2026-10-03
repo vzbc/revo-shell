@@ -14,8 +14,8 @@ Window {
     title: "System Settings"
     color: bg
 
-    FontLoader { id: sf; source: "file:///home/revo/.config/quickshell/settings/assets/fonts/SFNS.ttf" }
-    FontLoader { id: sfr; source: "file:///home/revo/.config/quickshell/settings/assets/fonts/SFNSRounded.ttf" }
+    FontLoader { id: sf; source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/settings/assets/fonts/SFNS.ttf" }
+    FontLoader { id: sfr; source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/settings/assets/fonts/SFNSRounded.ttf" }
     readonly property string fnt: sf.name
     readonly property string fntR: sfr.name
 
@@ -23,12 +23,12 @@ Window {
     property var cfg: ({})
     FileView {
         id: cfgFile
-        path: "file:///home/revo/.config/quickshell/macos/userconfig.json"
+        path: "file://" + Quickshell.env("HOME") + "/.config/quickshell/macos/userconfig.json"
         onLoaded: (file) => { try { cfg = JSON.parse(file.text) } catch (e) { cfg = {} } }
     }
     Process { id: writer; running: false }
     function set(k, v) {
-        writer.command = ["python3", "/home/revo/.config/quickshell/macos/scripts/setcfg.py", k, JSON.stringify(v)]
+        writer.command = ["python3", Quickshell.env("HOME") + "/.config/quickshell/macos/scripts/setcfg.py", k, JSON.stringify(v)]
         writer.running = true
     }
     function val(key) {
@@ -50,7 +50,7 @@ Window {
     readonly property color hover: isDark ? "#3a3a3e" : "#e8e8ed"
     readonly property color toggleOn: "#34c759"
     readonly property color accentCol: (cfg && cfg.accentColor) ? cfg.accentColor : (isDark ? "#0a84ff" : "#007aff")
-    readonly property string icondir: "file:///home/revo/.config/quickshell/settings/assets/icons/"
+    readonly property string icondir: "file://" + Quickshell.env("HOME") + "/.config/quickshell/settings/assets/icons/"
 
     property var iconPool: [
         "icon__0109_0_512.png","icon_2x.png_0109_4_32.png","icon_2x.png_0109_5_256.png",

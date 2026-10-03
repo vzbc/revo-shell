@@ -29,7 +29,7 @@ import traceback
 STATE_PATH = os.path.expanduser("~/.cache/hypr_minimized.json")
 LOG_PATH = os.path.expanduser("~/.cache/hypr_minimize.log")
 SPECIAL = "special:minimized"
-QSCFG = "/home/revo/.config/quickshell/macos"
+QSCFG = os.path.expanduser("~/.config/quickshell/macos")
 DOCK_NS = "macos:dock"
 
 # Genie timing measured from the real macOS effect

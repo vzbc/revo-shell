@@ -17,7 +17,7 @@ Singleton {
 
     property var pinned: [
         { name: "Finder", icon: "Finder.png", desktop: "org.gnome.Nautilus", exec: "nautilus", appIds: ["org.gnome.Nautilus", "nautilus"] },
-        { name: "Launchpad", icon: "Apps.png", desktop: "macos-launcher", exec: "qs ipc -p /home/revo/.config/quickshell/macos call launchpad toggle", appIds: ["macos-launcher", "Launcher"] },
+        { name: "Launchpad", icon: "Apps.png", desktop: "macos-launcher", exec: "qs ipc -p " + Quickshell.env("HOME") + "/.config/quickshell/macos call launchpad toggle", appIds: ["macos-launcher", "Launcher"] },
                 { name: "Safari", icon: "Safari.png", desktop: "org.gnome.Pafari", exec: "pafari", appIds: ["org.gnome.Pafari", "pafari"] },
         { name: "Telegram", icon: "Telegram.png", desktop: "org.telegram.desktop", exec: "telegram-desktop", appIds: ["org.telegram.desktop", "telegram-desktop"] },
         { name: "Steam", icon: "Steam.png", desktop: "steam", exec: "steam", appIds: ["steam", "com.valvesoftware.Steam"] },
@@ -25,9 +25,9 @@ Singleton {
         { name: "iMessage", icon: "im-message.png", desktop: "com.github.eneshecan.Whatsie", exec: "whatsie", appIds: ["com.github.eneshecan.Whatsie", "whatsie"] },
         { name: "Calendar", icon: "Calendar.png", desktop: "org.gnome.Calendar", exec: "gnome-calendar", appIds: ["org.gnome.Calendar"] },
         { name: "Prism Launcher", icon: "Prism Launcher.png", desktop: "org.prismlauncher.PrismLauncher", exec: "prismlauncher", appIds: ["org.prismlauncher.PrismLauncher", "prismlauncher"] },
-        { name: "Paragon", icon: "Pargon.png", desktop: "paragon-launcher", exec: "bash /home/revo/.local/share/applications/paragon-launch.sh", appIds: ["paragon-launcher", "paragon_launcher"] },
-        { name: "Adobe Premiere Pro 2026", icon: "paragon.png", desktop: "adobe-premiere-pro", exec: "env __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia WINEDEBUG=-all WINE_LARGE_ADDRESS_AWARE=1 prime-run wine \"/home/revo/PortProton/prefixes/DEFAULT/drive_c/Program Files/Adobe/Adobe Premiere Pro 2026/Adobe Premiere Pro.exe\"", appIds: ["adobe-premiere-pro"] },
-        { name: "After Effects", icon: "After Effects.png", desktop: "After Effects", exec: "env \"/home/revo/PortProton/data/scripts/start.sh\" \"/home/revo/Adobe After Effects 2022/Support Files/AfterFX.exe\"", appIds: ["afterfx.exe", "wine", "portproton"] },
+        { name: "Paragon", icon: "Pargon.png", desktop: "paragon-launcher", exec: "bash " + Quickshell.env("HOME") + "/.local/share/applications/paragon-launch.sh", appIds: ["paragon-launcher", "paragon_launcher"] },
+        { name: "Adobe Premiere Pro 2026", icon: "paragon.png", desktop: "adobe-premiere-pro", exec: "env __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia WINEDEBUG=-all WINE_LARGE_ADDRESS_AWARE=1 prime-run wine \"" + Quickshell.env("HOME") + "/PortProton/prefixes/DEFAULT/drive_c/Program Files/Adobe/Adobe Premiere Pro 2026/Adobe Premiere Pro.exe\"", appIds: ["adobe-premiere-pro"] },
+        { name: "After Effects", icon: "After Effects.png", desktop: "After Effects", exec: "env \"" + Quickshell.env("HOME") + "/PortProton/data/scripts/start.sh\" \"" + Quickshell.env("HOME") + "/Adobe After Effects 2022/Support Files/AfterFX.exe\"", appIds: ["afterfx.exe", "wine", "portproton"] },
         { name: "Zen Browser", icon: "zen-browser.png", desktop: "io.github.zen_browser.zen", exec: "zen-browser", appIds: ["io.github.zen_browser.zen", "zen", "zen-alpha"] },
 { name: "Vesktop", icon: "discord.png", desktop: "dev.vencord.Vesktop", exec: "vesktop --enable-features=UseOzonePlatform,WebRTCPipeWireCapturer --ozone-platform=wayland --disable-features=WebRtcAllowUnifiedPlanSeamlessUpgrade,GpuRasterization --disable-gpu-memory-buffer-video-frames --disable-gpu-compositing", appIds: ["dev.vencord.Vesktop", "vesktop"] },
         { name: "Sung", icon: "spotify-client.png", desktop: "sung", exec: "~/.local/bin/sung", appIds: ["sung"] },
@@ -60,7 +60,7 @@ Singleton {
     property string _signature: ""
     property var badgeCounts: ({})
     readonly property string badgeScript: Qt.resolvedUrl("../scripts/badge_reader.sh").toString().replace(/^file:\/\//, "")
-    readonly property string minScript: "/home/revo/.config/hypr/scripts/minimize_window.py"
+    readonly property string minScript: Quickshell.env("HOME") + "/.config/hypr/scripts/minimize_window.py"
     property var _focusIds: []
 
     // dock click: probe whether the app has genie-minimized windows, then

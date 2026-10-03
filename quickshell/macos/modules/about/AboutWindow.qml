@@ -73,7 +73,7 @@ PopupWindow {
 
     function refresh() {
         aboutWindow._ready = false;
-        infoSource.command = ["bash", "-c", "python3 /home/revo/.config/quickshell/macos/scripts/mac-tahoe-about-info"];
+        infoSource.command = ["bash", "-c", "python3 " + Quickshell.env("HOME") + "/.config/quickshell/macos/scripts/mac-tahoe-about-info"];
         infoSource.running = true;
     }
 

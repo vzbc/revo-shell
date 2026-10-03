@@ -2,7 +2,7 @@
   "uiScale": 1,
   "openGuideAtStartup": true,
   "topbarHelpIcon": true,
-  "wallpaperDir": "/home/revo/Pictures/Wallpapers",
+  "wallpaperDir": "~/Pictures/Wallpapers",
   "language": "",
   "kbOptions": "grp:alt_shift_toggle"
 }

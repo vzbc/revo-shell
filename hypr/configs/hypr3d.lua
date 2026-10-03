@@ -5,7 +5,7 @@ if hl.plugin.hypr3d then
     hl.plugin.hypr3d.config({
         -- every key is optional
         world = {
-            panorama = "/home/revo/Pictures/apple_park_360.png", -- 360° room background (equirectangular)
+            panorama = (os.getenv("HOME") or "") .. "/Pictures/apple_park_360.png", -- 360° room background (equirectangular)
             grid = true,                      -- base 40x40 grid platform
         },
         windows = {
@@ -21,7 +21,7 @@ if hl.plugin.hypr3d then
             flying = true,             -- on alse: gravity, Space jumps off the ground, Shift does nothing
         },
         map = {
-            path = "/home/revo/Downloads/anime_class_room/scene.gltf",   -- glTF 2.0 map (.glb/.gltf)
+            path = (os.getenv("HOME") or "") .. "/Downloads/anime_class_room/scene.gltf",   -- glTF 2.0 map (.glb/.gltf)
             transform = {
                 position = { x = 0, y = 0, z = 0 },
                 rotation = { x = 0, y = 0, z = 0 },

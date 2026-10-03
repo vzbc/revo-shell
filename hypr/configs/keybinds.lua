@@ -21,8 +21,8 @@ hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("bash ~/.config/hypr/scripts/quickshe
 
 hl.bind(mainMod .. " + Q", hl.dsp.window.close())
 hl.bind(mainMod .. " + SHIFT + Q", hl.dsp.exit())
-hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("/usr/bin/python3 /home/revo/.config/hypr/scripts/minimize_window.py min"))
-hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("/usr/bin/python3 /home/revo/.config/hypr/scripts/minimize_window.py restore"))
+hl.bind(mainMod .. " + M", hl.dsp.exec_cmd("/usr/bin/python3 " .. (os.getenv("HOME") or "") .. "/.config/hypr/scripts/minimize_window.py min"))
+hl.bind(mainMod .. " + SHIFT + M", hl.dsp.exec_cmd("/usr/bin/python3 " .. (os.getenv("HOME") or "") .. "/.config/hypr/scripts/minimize_window.py restore"))
 hl.bind(mainMod .. " + F", hl.dsp.window.float({ action = "toggle" }))
 
 hl.bind(mainMod .. " + left", hl.dsp.focus({ direction = "left" }))

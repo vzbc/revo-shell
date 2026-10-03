@@ -477,10 +477,10 @@ PanelWindow {
 
                 Repeater {
                     model: [
-                        { m: "apps",      tip: "Applications", icon: "/home/revo/Downloads/iiii/extracted/oooo/assets/swiftassets/sf_symbold/spotlight/func.png" },
-                        { m: "files",     tip: "Files",        icon: "/home/revo/Downloads/iiii/extracted/oooo/assets/swiftassets/sf_symbold/spotlight/conf.png" },
-                        { m: "actions",   tip: "Actions",      icon: "/home/revo/Downloads/iiii/glass_effect/spotlight.png" },
-                        { m: "clipboard", tip: "Clipboard",    icon: "/home/revo/Downloads/iiii/extracted/oooo/assets/swiftassets/sf_symbold/spotlight/fr.png" }
+                        { m: "apps",      tip: "Applications", icon: Quickshell.env("HOME") + "/Downloads/iiii/extracted/oooo/assets/swiftassets/sf_symbold/spotlight/func.png" },
+                        { m: "files",     tip: "Files",        icon: Quickshell.env("HOME") + "/Downloads/iiii/extracted/oooo/assets/swiftassets/sf_symbold/spotlight/conf.png" },
+                        { m: "actions",   tip: "Actions",      icon: Quickshell.env("HOME") + "/Downloads/iiii/glass_effect/spotlight.png" },
+                        { m: "clipboard", tip: "Clipboard",    icon: Quickshell.env("HOME") + "/Downloads/iiii/extracted/oooo/assets/swiftassets/sf_symbold/spotlight/fr.png" }
                     ]
 
                     delegate: Item {

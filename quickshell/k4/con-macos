@@ -1,9 +1,13 @@
 #!/bin/bash
 # k4 يشتغل فقط إذا شل الماك شغّال، ويطفي إذا طفى
-export HOME=/home/revo USER=revo
-export WAYLAND_DISPLAY=wayland-1 XDG_RUNTIME_DIR=/run/user/1000 XDG_SESSION_TYPE=wayland
-export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-export HYPRLAND_INSTANCE_SIGNATURE=$(ls /run/user/1000/hypr 2>/dev/null | head -1)
+RID="$(id -u)"
+export HOME="${HOME:-$(getent passwd "$(id -un)" | cut -d: -f6)}"
+export USER="${USER:-$(id -un)}"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$RID}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-1}"
+export XDG_SESSION_TYPE=wayland
+export DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=$XDG_RUNTIME_DIR/bus}"
+export HYPRLAND_INSTANCE_SIGNATURE=$(ls "$XDG_RUNTIME_DIR/hypr" 2>/dev/null | head -1)
 unset DISPLAY
 
 MACOS_SHELL="$HOME/.config/quickshell/macos/shell.qml"

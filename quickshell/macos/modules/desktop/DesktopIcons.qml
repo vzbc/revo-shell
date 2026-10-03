@@ -35,7 +35,7 @@ Scope {
             model: FolderListModel {
                 id: folderModel
                 // مسار صريح ومباشر لمجلد سطح المكتب الخاص بك لتجنب مشاكل القراءة
-                folder: "file:///home/revo/Desktop"
+                folder: "file://" + Quickshell.env("HOME") + "/Desktop"
                 showDotAndDotDot: false
             }
 

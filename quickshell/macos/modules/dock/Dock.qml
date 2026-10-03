@@ -33,7 +33,7 @@ PanelWindow {
 
     Process {
         id: trashOpener
-        command: ["/home/revo/.local/bin/nautilus", "trash:///"]
+        command: [Quickshell.env("HOME") + "/.local/bin/nautilus", "trash:///"]
         running: false
     }
 
@@ -600,7 +600,7 @@ PanelWindow {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        dlOpener.command = ["/home/revo/.local/bin/nautilus", "--new-window", "file:///home/revo/Downloads"];
+                        dlOpener.command = [Quickshell.env("HOME") + "/.local/bin/nautilus", "--new-window", "file://" + Quickshell.env("HOME") + "/Downloads"];
                         dlOpener.running = true;
                         root.downloadsOpen = false;
                     }

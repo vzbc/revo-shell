@@ -129,7 +129,7 @@ Item {
         property vector4d button3Shape: root.buttonShapes[3]
         property vector4d blends: Qt.vector4d(root.buttonBlend(0), root.buttonBlend(1), root.buttonBlend(2), root.buttonBlend(3))
 
-        fragmentShader: "file:///home/revo/.config/quickshell/imported-1789667132/assets/shaders/launcher/qsb/spotlight_mode_field.frag.qsb"
+        fragmentShader: Qt.resolvedUrl("../../../imported-1789667132/assets/shaders/launcher/qsb/spotlight_mode_field.frag.qsb")
     }
 
     MultiEffect {
