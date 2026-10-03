@@ -46,11 +46,11 @@ Column {
     ]
 
     readonly property var exclusions: [
-        { p: "/home/revo/Downloads", t: "Downloads" },
-        { p: "/home/revo/.cache", t: "Cache" },
-        { p: "/home/revo/.local/share/Trash", t: "Bin" },
-        { p: "/home/revo/Documents", t: "Documents" },
-        { p: "/home/revo/.config", t: "Configuration" }
+        { p: HOME_DIR + "/Downloads", t: "Downloads" },
+        { p: HOME_DIR + "/.cache", t: "Cache" },
+        { p: HOME_DIR + "/.local/share/Trash", t: "Bin" },
+        { p: HOME_DIR + "/Documents", t: "Documents" },
+        { p: HOME_DIR + "/.config", t: "Configuration" }
     ]
 
     function keyFor(p) { return p.replace(/[^A-Za-z0-9]+/g, "_") }

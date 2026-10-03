@@ -21,8 +21,8 @@ Column {
     width: parent ? parent.width : 640
     spacing: 12
 
-    readonly property string idlePath: "/home/revo/.config/hypr/hypridle.conf"
-    readonly property string lockPath: "/home/revo/.config/hypr/hyprlock.conf"
+    readonly property string idlePath: HOME_DIR + "/.config/hypr/hypridle.conf"
+    readonly property string lockPath: HOME_DIR + "/.config/hypr/hyprlock.conf"
 
     function secs(v) {
         var m = { "Never": 0, "Immediately": 0, "5 seconds": 5, "1 minute": 60,

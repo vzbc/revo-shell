@@ -32,10 +32,10 @@ Column {
 
     readonly property var folders: {
         var out = []
-        var roots = ["/home/revo/Pictures/Wallpapers",
-                     "/home/revo/Pictures",
+        var roots = [HOME_DIR + "/Pictures/Wallpapers",
+                     HOME_DIR + "/Pictures",
                      Shell.eget("wallpaper.folder", "").toString().replace(/^file:\/\//, "").replace(/\/$/, ""),
-                     "/home/revo/.local/share/equora/wallpapers"]
+                     HOME_DIR + "/.local/share/equora/wallpapers"]
         var seen = {}
         for (var i = 0; i < roots.length; i++) {
             var r = roots[i]
@@ -50,9 +50,9 @@ Column {
     }
 
     function build() {
-        var roots = ["/home/revo/Pictures/Wallpapers",
+        var roots = [HOME_DIR + "/Pictures/Wallpapers",
                      Shell.eget("wallpaper.folder", "").toString().replace(/^file:\/\//, "").replace(/\/$/, ""),
-                     "/home/revo/.local/share/equora/wallpapers"]
+                     HOME_DIR + "/.local/share/equora/wallpapers"]
         var seen = {}
         var all = []
         for (var i = 0; i < roots.length; i++) {

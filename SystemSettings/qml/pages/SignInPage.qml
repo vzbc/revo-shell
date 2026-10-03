@@ -24,7 +24,7 @@ Column {
 
     property int rev: 0
     readonly property string avatarPath: { rev; return String(Shell.uget("avatarPath", "")) }
-    readonly property string avatarDir: "/home/revo/.local/share/systemsettings/"
+    readonly property string avatarDir: HOME_DIR + "/.local/share/systemsettings/"
 
     function pathFromFileUrl(u) {
         var s = String(u)

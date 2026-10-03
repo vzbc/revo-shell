@@ -5,6 +5,7 @@
 #include <QQmlError>
 #include <QQmlContext>
 #include <QQmlComponent>
+#include <QDir>
 #include "sysinfo.h"
 #include "shellctl.h"
 
@@ -17,6 +18,9 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     QQmlApplicationEngine engine;
+
+    // absolute home for QML — never hardcode a dev user's path
+    engine.rootContext()->setContextProperty(QStringLiteral("HOME_DIR"), QDir::homePath());
 
     SysInfo sysInfo;
     engine.rootContext()->setContextProperty("SysInfo", &sysInfo);

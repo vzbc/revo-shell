@@ -65,15 +65,19 @@ copy_tree() {
   [[ -d "$src" ]] || { log "skip (missing): $src"; return 0; }
   if [[ -d "$dest" ]] && [[ -n "$(ls -A "$dest" 2>/dev/null || true)" ]]; then
     log "backup → $BACKUP_ROOT/$(basename "$dest")"
-    run "mkdir -p '$BACKUP_ROOT'"
-    run "cp -a '$dest' '$BACKUP_ROOT/$(basename "$dest")'"
+    run "mkdir -p '$BACKUP_ROOT'" || true
+    run "cp -a '$dest' '$BACKUP_ROOT/$(basename "$dest")'" \
+      || log "backup failed (continuing): $dest"
   fi
-  run "mkdir -p '$dest'"
+  run "mkdir -p '$dest'" || { log "cannot create $dest"; return 1; }
   log "copy $src → $dest"
+  # a copy error must not abort the install before fix_paths()/verify() run
   if have rsync; then
-    run "rsync -a --exclude '.git' '$src/' '$dest/'"
+    run "rsync -a --exclude '.git' '$src/' '$dest/'" \
+      || log "rsync failed (continuing): $src → $dest"
   else
-    run "cp -a '$src/.' '$dest/'"
+    run "cp -a '$src/.' '$dest/'" \
+      || log "copy failed (continuing): $src → $dest"
   fi
 }
 
@@ -461,18 +465,56 @@ install_desktop_entry() {
 }
 
 # ── 5) Fix /home/revo paths + guide symlink ──────────────────
-fix_paths() {
-  local home_esc
-  home_esc="$(printf '%s' "$HOME" | sed 's/[\/&]/\\&/g')"
-  for dir in "$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/rofi" "$HOME/.config/kitty"; do
+# Everything we deploy is written for the dev user (/home/revo). Rewrite it to
+# the installing user. Text files are found by content (grep -I), never by a
+# fixed extension list, so a new file type can never slip through unnoticed.
+FIX_PATHS_DIRS=("$HOME/.config/hypr" "$HOME/.config/quickshell" "$HOME/.config/rofi" "$HOME/.config/kitty")
+GREP_SKIP=(--exclude-dir=node_modules --exclude-dir=build --exclude-dir=.git
+           --exclude-dir=__pycache__ --exclude-dir=.next --exclude-dir=.cache
+           --exclude-dir=dist --exclude-dir=.git)
+
+# list deployed text files that still contain the dev home
+list_dev_path_files() {
+  # on the dev machine itself /home/revo IS $HOME — nothing to rewrite
+  if [[ "$HOME" == "/home/revo" ]]; then
+    return 0
+  fi
+  local dir
+  for dir in "${FIX_PATHS_DIRS[@]}"; do
     [[ -d "$dir" ]] || continue
-    find "$dir" -type f \( -name '*.conf' -o -name '*.lua' -o -name '*.json' -o -name '*.sh' -o -name '*.qml' -o -name '*.py' -o -name '*.rasi' \) -print0 2>/dev/null \
-      | while IFS= read -r -d '' f; do
-          if grep -q '/home/revo/' "$f" 2>/dev/null; then
-            sed -i "s|/home/revo/|${home_esc}/|g" "$f" 2>/dev/null || true
-          fi
-        done
+    grep -rIlZ '/home/revo/' "$dir" "${GREP_SKIP[@]}" 2>/dev/null || true
   done
+}
+
+count_dev_paths() {
+  [[ "$HOME" == "/home/revo" ]] && { printf '0'; return 0; }
+  # list is NUL-separated (-Z) — count NULs
+  list_dev_path_files | tr -cd '\0' | wc -c | tr -d ' ' || printf '0'
+}
+
+fix_paths() {
+  local home_esc f n=0
+  home_esc="$(printf '%s' "$HOME" | sed 's/[\/&]/\\&/g')"
+  while IFS= read -r -d '' f; do
+    [[ -L "$f" ]] && continue
+    if [[ "$DRY_RUN" == "1" ]]; then
+      n=$((n + 1))
+      continue
+    fi
+    if sed -i "s|/home/revo/|${home_esc}/|g" "$f" 2>/dev/null; then
+      n=$((n + 1))
+    else
+      log "rewrite failed: $f"
+    fi
+  done < <(list_dev_path_files)
+  if [[ "$n" -gt 0 ]]; then
+    if [[ "$DRY_RUN" == "1" ]]; then
+      log "DRY: rewrite /home/revo → $HOME in $n file(s)"
+    else
+      log "rewrote /home/revo → $HOME in $n file(s)"
+    fi
+  fi
+
   # guide symlink
   local guide="$HOME/.config/quickshell/guide"
   local target="$HOME/.config/hypr/scripts/quickshell/guide"
@@ -935,6 +977,24 @@ verify() {
     printf '  [MISS] systemsettings — run ./update.sh\n'
     fail=$((fail + 1))
   fi
+  # no deployed config may still point at the dev machine
+  local dev_left
+  dev_left="$(count_dev_paths)"
+  if [[ "$dev_left" -gt 0 && "$DRY_RUN" != "1" ]]; then
+    printf '  [MISS] %s file(s) still contain /home/revo — rewriting\n' "$dev_left"
+    fix_paths >/dev/null 2>&1 || true
+    dev_left="$(count_dev_paths)"
+  fi
+  if [[ "$dev_left" -eq 0 ]]; then
+    printf '  [ok]   no /home/revo paths in deployed configs\n'
+    pass=$((pass + 1))
+  elif [[ "$DRY_RUN" == "1" ]]; then
+    printf '  [ok]   %s file(s) would be rewritten from /home/revo (dry-run)\n' "$dev_left"
+    pass=$((pass + 1))
+  else
+    printf '  [MISS] %s file(s) still contain /home/revo\n' "$dev_left"
+    fail=$((fail + 1))
+  fi
   log "verify: $pass ok, $fail missing"
   if [[ $fail -gt 0 ]]; then
     [[ ${#missing_cmds[@]} -gt 0 ]] && log "still missing: ${missing_cmds[*]}"
@@ -956,6 +1016,10 @@ if [[ -d "$BACKUP_ROOT" ]]; then
   log "previous configs: $BACKUP_ROOT"
 fi
 log "launch a shell: qs -p ~/.config/quickshell/<name>"
+
+# safety net: nothing may keep the dev user's paths — rewrite one last time
+# after every step that wrote configs (deploy, default-shell marker, builds)
+fix_paths || true
 
 # hyprpm plugins + point configs at the hyprpm-built .so files (runs after deploy/fix_paths)
 ensure_hyprpm_plugins || log "hyprpm plugin setup had errors — continuing"

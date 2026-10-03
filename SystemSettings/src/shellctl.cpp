@@ -15,12 +15,12 @@
 #include <QSet>
 #include <QDateTime>
 
-const QString ShellCtl::userPath = QStringLiteral("/home/revo/.config/quickshell/macos/userconfig.json");
-const QString ShellCtl::eqPath = QStringLiteral("/home/revo/.config/aureli/config.json");
+const QString ShellCtl::userPath = QDir::homePath() + QStringLiteral("/.config/quickshell/macos/userconfig.json");
+const QString ShellCtl::eqPath = QDir::homePath() + QStringLiteral("/.config/aureli/config.json");
 
 QString ShellCtl::shellDir() const
 {
-    return QStringLiteral("/home/revo/.config/quickshell/macos");
+    return QDir::homePath() + QStringLiteral("/.config/quickshell/macos");
 }
 
 ShellCtl::ShellCtl(QObject *parent)
@@ -144,7 +144,7 @@ void ShellCtl::eset(const QString &dotted, const QVariant &value)
 void ShellCtl::ipc(const QString &target, const QString &fn, const QStringList &args)
 {
     auto *p = new QProcess(this);
-    QStringList a{QStringLiteral("--path"), QStringLiteral("/home/revo/.config/quickshell/macos"),
+    QStringList a{QStringLiteral("--path"), shellDir(),
                   QStringLiteral("ipc"), QStringLiteral("call"), target, fn};
     a << args;
     connect(p, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this,
