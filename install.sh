@@ -341,7 +341,7 @@ install_packages() {
   case "$PM" in
     arch)
       PKGS=(
-        hyprland xdg-desktop-portal-hyprland hypridle hyprlock hyprpolkitagent hyprsunset polkit
+        hyprland hyprpm xdg-desktop-portal-hyprland hypridle hyprlock hyprpolkitagent hyprsunset polkit
         qt6-base qt6-declarative qt6-5compat qt6-multimedia qt6-multimedia-ffmpeg qt6ct
         qt6-shadertools qt6-wayland qt6-svg qt6-tools qt6-imageformats qt6-location qt6-positioning qt6-lottie
         git curl wget jq python python-pip which libnotify xdg-utils xdg-user-dirs desktop-file-utils
@@ -350,6 +350,7 @@ install_packages() {
         networkmanager bluez bluez-utils brightnessctl upower power-profiles-daemon lm_sensors rfkill ddcutil
         grim slurp wf-recorder hyprshot hyprpicker ffmpeg imagemagick wl-clipboard cliphist wtype swappy
         matugen swww hyprpaper swaybg mpvpaper python-pywal swaync swayosd easyeffects
+        quickshell
         kitty nautilus thunar rofi-wayland wofi fastfetch starship fish gnome-calculator
         papirus-icon-theme adwaita-cursors xdg-desktop-portal-gtk
         ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols-common ttf-material-symbols-variable
@@ -357,15 +358,17 @@ install_packages() {
         base-devel cmake ninja pkgconf clang gcc
       )
       # shellcheck disable=SC2086
-      run "$SUDO pacman -S --noconfirm --needed ${PKGS[*]}"
+      run "$SUDO pacman -S --noconfirm --needed ${PKGS[*]}" || log "pacman reported errors — continuing"
       AUR_HELPER=""
       have yay && AUR_HELPER=yay
       have paru && AUR_HELPER=paru
       if [[ -n "$AUR_HELPER" ]]; then
-        AUR_PKGS=(quickshell-git awww ttf-material-symbols-variable-git ttf-comicshannsmono-nerd ttf-meslo-nerd kde-material-you-colors)
+        AUR_PKGS=(awww ttf-material-symbols-variable-git ttf-comicshannsmono-nerd ttf-meslo-nerd kde-material-you-colors)
+        # official `quickshell` covers qs/quickshell; only fall back to the AUR build
+        have qs || have quickshell || AUR_PKGS+=(quickshell-git)
         run "$AUR_HELPER -S --noconfirm --needed ${AUR_PKGS[*]}" || log "AUR partial — some optional packages skipped"
       else
-        log "no yay/paru — skipping AUR (install yay for quickshell-git)"
+        log "no yay/paru — skipping AUR extras (official quickshell/hyprpm come from the repos)"
       fi
       ;;
     debian)
@@ -384,16 +387,26 @@ install_packages() {
 
 # ── 3) Python packages ───────────────────────────────────────
 install_python() {
+  # PEP 668 (Arch, Debian 12+, …) marks the system python "externally managed"
+  # and rejects pip installs — even with --user. Bypass it: we only touch the
+  # user site-packages, never the distro's files.
+  local -a pip_flags=(--user --upgrade)
+  if python -m pip install --help 2>/dev/null | grep -q -- '--break-system-packages' &&
+     { compgen -G '/usr/lib/python3*/EXTERNALLY-MANAGED' >/dev/null 2>&1 ||
+       compgen -G '/usr/lib/python3.*/EXTERNALLY-MANAGED' >/dev/null 2>&1; }; then
+    pip_flags+=(--break-system-packages)
+    log "python is externally managed (PEP 668) — using --break-system-packages (user site only)"
+  fi
   log "pip install (user)…"
-  run "python -m pip install --user --upgrade materialyoucolor pillow numpy click loguru tqdm icalendar recurring-ical-events evdev pywal requests distro psutil PySide6 || true"
+  run "python -m pip install ${pip_flags[*]} materialyoucolor pillow numpy click loguru tqdm icalendar recurring-ical-events evdev pywal requests distro psutil PySide6 || true"
   if [[ -f "$ROOT/qs-gui-installer/requirements.txt" ]]; then
-    run "python -m pip install --user -r '$ROOT/qs-gui-installer/requirements.txt' || true"
+    run "python -m pip install ${pip_flags[*]} -r '$ROOT/qs-gui-installer/requirements.txt' || true"
   fi
   if [[ -f "$ROOT/quickshell/Q1/scripts/aikira/requirements.txt" ]]; then
-    run "python -m pip install --user -r '$ROOT/quickshell/Q1/scripts/aikira/requirements.txt' || true"
+    run "python -m pip install ${pip_flags[*]} -r '$ROOT/quickshell/Q1/scripts/aikira/requirements.txt' || true"
   fi
   if [[ -f "$ROOT/quickshell/nibrasshell/scripts/python/requirements-3.13.txt" ]]; then
-    run "python -m pip install --user -r '$ROOT/quickshell/nibrasshell/scripts/python/requirements-3.13.txt' || true"
+    run "python -m pip install ${pip_flags[*]} -r '$ROOT/quickshell/nibrasshell/scripts/python/requirements-3.13.txt' || true"
   fi
 }
 
@@ -631,7 +644,7 @@ enable_services || true
 
 # ── 7) Verify + auto-install missing requirements ───────────
 REQUIRED_CMDS=(
-  hyprland Hyprland hyprctl
+  hyprland Hyprland hyprctl hyprpm
   qs quickshell
   kitty rofi
   python python3 pip pip3
@@ -641,12 +654,12 @@ REQUIRED_CMDS=(
   pipewire wireplumber
   systemctl
 )
-# Map each binary → package name per PM (cmd:arch:debian:fedora)
 CMD_PKGS=(
   "hyprland:hyprland:hyprland:hyprland"
   "hyprctl:hyprland:hyprland:hyprland"
-  "qs:quickshell-git:quickshell:quickshell"
-  "quickshell:quickshell-git:quickshell:quickshell"
+  "hyprpm:hyprpm:hyprland:hyprland"
+  "qs:quickshell:quickshell:quickshell"
+  "quickshell:quickshell:quickshell:quickshell"
   "kitty:kitty:kitty:kitty"
   "rofi:rofi-wayland:rofi:rofi"
   "python:python:python3:python3"
@@ -711,6 +724,12 @@ install_missing_pkgs() {
       for p in "${pkgs[@]}"; do
         [[ "$p" == *-git || "$p" == "awww" || "$p" == "kde-material-you-colors" ]] && aur+=("$p")
       done
+      # official `quickshell` missing (old mirror / no repo) → AUR git build
+      if ! have qs && ! have quickshell; then
+        for p in "${pkgs[@]}"; do
+          [[ "$p" == "quickshell" ]] && aur+=(quickshell-git) && break
+        done
+      fi
       if [[ ${#aur[@]} -gt 0 ]]; then
         local helper=""
         have yay && helper=yay
@@ -749,29 +768,34 @@ hyprpm_add_repo() {
     log "DRY: hyprpm add $url"
     return 0
   fi
+  log "hyprpm add $name: clones Hyprland headers and builds the plugin — this first run can take a few minutes"
   local errf
   errf="$(mktemp)"
-  if hyprpm add "$url" >"$errf" 2>&1; then
+  # stream the build log (redirecting to a file made this look frozen)
+  if timeout 1800 hyprpm add "$url" 2>&1 | tee "$errf"; then
     printf '  [fixed] hyprpm repo %s\n' "$name"
   else
     printf '  [MISS] hyprpm repo %s (add failed)\n' "$name"
-    sed 's/^/         /' "$errf" | tail -5
+    sed 's/^/         /' "$errf" | tail -15
+    printf '         → check network/git, then run: hyprpm add %s\n' "$url"
   fi
   rm -f "$errf"
 }
 
 ensure_hyprpm_plugins() {
   log "── hyprpm plugins ──────────────────────────────"
-  # 1) hyprpm itself (ships with hyprland)
+  # 1) hyprpm itself (a separate package on Arch/CachyOS, bundled elsewhere)
   if have hyprpm; then
     printf '  [ok]   hyprpm\n'
   else
-    printf '  [MISS] hyprpm — installing hyprland\n'
-    install_missing_pkgs "hyprland"
+    printf '  [MISS] hyprpm — installing\n'
+    install_missing_pkgs "hyprpm"
+    have hyprpm || install_missing_pkgs "hyprland"
     if have hyprpm; then
       printf '  [fixed] hyprpm\n'
     else
       printf '  [MISS] hyprpm (not available)\n'
+      printf '         → pacman -S hyprpm   (Arch/CachyOS) / see https://wiki.hypr.land\n'
       return 1
     fi
   fi
