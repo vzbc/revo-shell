@@ -59,13 +59,15 @@ What `install.sh` does:
 9. Builds CMake shells (caelestia + Clavis) and the **SystemSettings** app → `~/.local/bin/systemsettings`
 10. Enables pipewire / NetworkManager / bluetooth
 11. Installs **hyprpm plugins** — adds `HyprGlass`, `hyprliquid`, `Hypr3D` repos, enables the liquid-glass engine (hyprliquid, falls back to HyprGlass), and points `hyprland.conf` / `hyprland.lua` at the per-user plugin `.so` files in `/var/cache/hyprpm/$USER/`
-12. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR)
+ 12. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR)
+ 13. **Health check** — proves the result actually works: `hyprpm` + its repos, the default-shell marker, the deployed `autostart.lua` (the old `h.` build killed the config at login), the shell process, QML errors in its log, leftover `/home/revo` paths — each failure prints the exact fix command
 
 Flags:
 
 ```bash
 ./install.sh --shells macos,ii,k4   # deploy only these shells (first = default)
 ./install.sh --shells all           # every shell
+./install.sh --check                # read-only health check (exit 1 if broken)
 ./install.sh --help
 DRY_RUN=1 ./install.sh              # show what would run, change nothing
 DRY_RUN=1 ./install.sh --shells ii  # dry-run selective deploy
@@ -73,11 +75,14 @@ DOTFILES_REPO_URL=... ./install.sh  # override clone URL
 SHELLS=macos,k4 ./install.sh        # env form of --shells
 ```
 
-After install, verify again anytime:
+After install, verify again anytime — including **when the desktop comes up
+empty** (wallpaper but no dock/bar, missing hyprpm repos):
 
 ```bash
-./install.sh   # re-runs verify at the end (non-interactive → all shells already deployed)
+./install.sh --check   # read-only: what is broken + the command that fixes it
+./install.sh           # re-runs verify + health check (non-interactive → all shells already deployed)
 ```
+
 
 ## Update (existing installs)
 

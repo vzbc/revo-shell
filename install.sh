@@ -10,6 +10,7 @@ DRY_RUN="${DRY_RUN:-0}"
 REPO_URL="${DOTFILES_REPO_URL:-https://github.com/vzbc/revo-shell.git}"
 SUDO="${SUDO:-sudo}"
 SHELLS_FLAG="${SHELLS_FLAG:-}"
+CHECK_ONLY="${CHECK_ONLY:-0}"
 SELECTED_SHELLS=()
 QS_SKIP_NAMES=(previews guide modules config settings build dist node_modules)
 
@@ -24,6 +25,9 @@ Usage: ./install.sh [options]
 Options:
   --shells LIST     Comma-separated shell ids to deploy (e.g. macos,ii,k4)
                     Use "all" to deploy every shell (default when non-interactive).
+  --check           Read-only health check: hyprpm/repos, default shell, running
+                    shell, QML errors in its log, leftover /home/revo paths.
+                    Exit code 1 if anything is broken.
   -h, --help        Show this help
 
 Environment:
@@ -43,6 +47,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --shells=*)
       SHELLS_FLAG="${1#*=}"
+      shift
+      ;;
+    --check|check)
+      CHECK_ONLY=1
       shift
       ;;
     -h|--help)
@@ -553,6 +561,193 @@ enable_services() {
   $SUDO systemctl enable --now NetworkManager.service bluetooth.service upower.service 2>/dev/null || true
 }
 
+# ── Health check (read-only) ──────────────────────────────────
+# Proves the install actually *works*, not just that files landed:
+# hyprpm + its repos, the default-shell marker, the shell process,
+# QML errors in its log and leftover /home/revo paths.
+# Runs at the end of every install, and standalone via ./install.sh --check
+health_check() {
+  local pass=0 fail=0 warn=0
+  local -a fixes=()
+  local sid="" shell_dir="" shell_log="" marker lua conf dev_left live=0
+  local hyprpm_out repos
+
+  log "── health check ──────────────────────────────"
+
+  if have hyprpm; then
+    printf '  [ok]   hyprpm\n'; pass=$((pass + 1))
+  else
+    printf '  [FAIL] hyprpm (not installed) — no plugins/repos can work\n'
+    fail=$((fail + 1))
+    fixes+=("sudo pacman -S hyprpm        # Arch/CachyOS: hyprland ships without it")
+  fi
+
+  if have hyprctl; then
+    printf '  [ok]   hyprctl\n'; pass=$((pass + 1))
+  else
+    printf '  [FAIL] hyprctl missing — is Hyprland installed?\n'
+    fail=$((fail + 1))
+    fixes+=("sudo pacman -S hyprland")
+  fi
+
+  if have qs || have quickshell; then
+    printf '  [ok]   quickshell (qs)\n'; pass=$((pass + 1))
+  else
+    printf '  [FAIL] quickshell missing — no shell can start\n'
+    fail=$((fail + 1))
+    fixes+=("sudo pacman -S quickshell    # official Extra pkg (AUR: quickshell-git)")
+  fi
+
+  # hyprpm repositories — the "hyprpm repos are missing" report
+  if have hyprpm; then
+    hyprpm_out="$(hyprpm list 2>/dev/null | sed 's/\x1b\[[0-9;]*m//g' || true)"
+    repos="$(printf '%s' "$hyprpm_out" | grep -c 'Repository ' || true)"
+    if [[ "${repos:-0}" -gt 0 ]]; then
+      printf '  [ok]   hyprpm repos: %s\n' "$repos"
+      pass=$((pass + 1))
+    else
+      printf '  [FAIL] hyprpm repos: none — plugins will not load\n'
+      fail=$((fail + 1))
+      fixes+=("re-run ./install.sh          # adds the hyprpm repos (or ./update)")
+    fi
+  fi
+
+  # deployed shells
+  local shell_count
+  shell_count="$(find "$HOME/.config/quickshell" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ' || true)"
+  if [[ "${shell_count:-0}" -gt 0 ]]; then
+    printf '  [ok]   %s quickshell shell(s) deployed\n' "$shell_count"
+    pass=$((pass + 1))
+  else
+    printf '  [FAIL] no quickshell shells under ~/.config/quickshell\n'
+    fail=$((fail + 1))
+    fixes+=("./install.sh --shells macos  # deploy a shell")
+  fi
+
+  # default shell marker + the deployed autostart that must read it
+  marker="$HOME/.config/hypr/.revo_default_shell"
+  [[ -f "$marker" ]] && sid="$(tr -d ' \n' < "$marker")"
+  if [[ -n "$sid" && "$sid" != "default" ]]; then
+    shell_dir="$HOME/.config/quickshell/$sid"
+    if [[ -d "$shell_dir" ]]; then
+      printf '  [ok]   default shell: %s\n' "$sid"
+      pass=$((pass + 1))
+    else
+      printf '  [FAIL] default shell "%s" is not deployed (%s)\n' "$sid" "$shell_dir"
+      fail=$((fail + 1))
+      fixes+=("./install.sh --shells $sid")
+    fi
+  else
+    printf '  [warn] no default shell — login falls back to the legacy Main/TopBar shells\n'
+    warn=$((warn + 1))
+    fixes+=("./install.sh --shells macos  # set what starts at login")
+  fi
+
+  lua="$HOME/.config/hypr/configs/autostart.lua"
+  conf="$HOME/.config/hypr/configs/autostart.conf"
+  if [[ -f "$lua" ]]; then
+    if grep -q 'revo_default_shell' "$lua" 2>/dev/null; then
+      printf '  [ok]   autostart.lua launches the selected shell\n'
+      pass=$((pass + 1))
+    else
+      printf '  [FAIL] autostart.lua is an old build — the selected shell never starts\n'
+      fail=$((fail + 1))
+      fixes+=("re-run ./install.sh          # deploys the fixed autostart.lua")
+    fi
+    if grep -qE '(^|[^[:alnum:]_])h\.' "$lua" 2>/dev/null; then
+      printf '  [FAIL] autostart.lua still calls the undefined "h" (config dies at login)\n'
+      fail=$((fail + 1))
+      fixes+=("re-run ./install.sh          # deploys the fixed autostart.lua")
+    fi
+  elif [[ -f "$conf" ]] && grep -q 'REVO_DEFAULT_SHELL' "$conf" 2>/dev/null; then
+    printf '  [ok]   autostart.conf carries the default shell\n'
+    pass=$((pass + 1))
+  else
+    printf '  [warn] no deployed autostart that knows about the default shell\n'
+    warn=$((warn + 1))
+    fixes+=("re-run ./install.sh")
+  fi
+
+  # is the selected shell actually running? (only meaningful in a live session)
+  if [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]] || hyprctl version >/dev/null 2>&1; then
+    live=1
+  fi
+  if [[ -n "$sid" && -d "$shell_dir" ]]; then
+    if [[ "$live" == "1" ]]; then
+      if pgrep -f "quickshell/$sid" >/dev/null 2>&1 || pgrep -f "quickshell .*${sid}" >/dev/null 2>&1; then
+        printf '  [ok]   shell "%s" is running\n' "$sid"
+        pass=$((pass + 1))
+      else
+        printf '  [FAIL] shell "%s" is NOT running — the screen will look empty\n' "$sid"
+        fail=$((fail + 1))
+        fixes+=("bash ~/.config/hypr/scripts/toggle_qs_dots.sh $sid")
+      fi
+    else
+      printf '  [ok]   shell "%s" starts at the next Hyprland login\n' "$sid"
+      pass=$((pass + 1))
+    fi
+  fi
+
+  # QML errors in the shell log (toggle_qs_dots.sh writes these)
+  case "$sid" in
+    macos) shell_log="$HOME/macos.log" ;;
+    k4)    shell_log="/tmp/k4.log" ;;
+    ii)    shell_log="/tmp/ii.log" ;;
+    *)     shell_log="" ;;
+  esac
+  if [[ -n "$shell_log" && -f "$shell_log" ]]; then
+    if tail -200 "$shell_log" 2>/dev/null \
+        | grep -E '(^|[[:space:]])ERROR|Failed to load|Type .* unavailable|No PanelWindow backend' \
+          >/dev/null 2>&1; then
+      printf '  [FAIL] %s reports QML errors:\n' "$shell_log"
+      fail=$((fail + 1))
+      tail -200 "$shell_log" 2>/dev/null \
+        | grep -E '(^|[[:space:]])ERROR|Failed to load|Type .* unavailable|No PanelWindow backend' \
+        | tail -3 | sed 's/^/         /'
+      fixes+=("tail -40 $shell_log           # send us this output")
+    else
+      printf '  [ok]   %s: no QML errors\n' "$(basename "$shell_log")"
+      pass=$((pass + 1))
+    fi
+  fi
+
+  # no deployed config may still point at the dev machine
+  dev_left="$(count_dev_paths)"
+  if [[ "${dev_left:-0}" -eq 0 ]]; then
+    printf '  [ok]   no /home/revo paths in deployed configs\n'
+    pass=$((pass + 1))
+  else
+    printf '  [FAIL] %s file(s) still contain /home/revo\n' "$dev_left"
+    fail=$((fail + 1))
+    fixes+=("re-run ./install.sh          # fix_paths rewrites them")
+  fi
+
+  # python deps used by the shells' scripts
+  if python3 -c 'import requests, psutil' >/dev/null 2>&1; then
+    printf '  [ok]   python deps (requests, psutil)\n'
+    pass=$((pass + 1))
+  else
+    printf '  [warn] python deps missing — some shell scripts will fail\n'
+    warn=$((warn + 1))
+    fixes+=("re-run ./install.sh          # installs the pip requirements")
+  fi
+
+  log "health check: $pass ok, $fail failed, $warn warning(s)"
+  if [[ ${#fixes[@]} -gt 0 ]]; then
+    log "how to fix:"
+    local f
+    for f in "${fixes[@]}"; do
+      printf '  → %s\n' "$f"
+    done
+  fi
+  [[ $fail -eq 0 ]] && return 0 || return 1
+}
+
+# standalone mode: ./install.sh --check — diagnose only, change nothing
+if [[ "$CHECK_ONLY" == "1" ]]; then
+  if health_check; then exit 0; else exit 1; fi
+fi
+
 # ── Main ─────────────────────────────────────────────────────
 log "root: $ROOT"
 log "repo: $REPO_URL"
@@ -1050,3 +1245,10 @@ ensure_hyprpm_plugins || log "hyprpm plugin setup had errors — continuing"
 fix_plugin_paths || true
 
 verify || true
+
+# did all of that actually produce a working desktop?
+if [[ "$DRY_RUN" == "1" ]]; then
+  log "DRY: would run the health check (./install.sh --check)"
+else
+  health_check || log "health check failed — re-run ./install.sh --check to list the fixes"
+fi
