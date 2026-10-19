@@ -10,6 +10,10 @@ DRY_RUN="${DRY_RUN:-0}"
 REPO_URL="${DOTFILES_REPO_URL:-https://github.com/vzbc/revo-shell.git}"
 SUDO="${SUDO:-sudo}"
 SHELLS_FLAG="${SHELLS_FLAG:-}"
+SHELLS_EXPLICIT="${SHELLS_EXPLICIT:-0}"
+# hyprpm add builds plugins against Hyprland headers — first run is slow, but it
+# must never hang the install (plugins are optional; the desktop works without)
+HYPRPM_TIMEOUT="${HYPRPM_TIMEOUT:-600}"
 CHECK_ONLY="${CHECK_ONLY:-0}"
 SELECTED_SHELLS=()
 QS_SKIP_NAMES=(previews guide modules config settings build dist node_modules)
@@ -34,7 +38,10 @@ Environment:
   DRY_RUN=1         Print commands without changing the system
   DOTFILES_REPO_URL Override clone URL
   SHELLS=LIST       Same as --shells (env form)
+  HYPRPM_TIMEOUT=S  Give up on a hyprpm plugin build after S seconds (default 600)
 
+Fresh installs always need --shells (you get only what you pick; the first
+shell becomes the default). A re-run without --shells re-applies your choice.
 Interactive mode (TTY): a numbered multi-select menu is shown for shells.
 EOF
 }
@@ -67,6 +74,8 @@ done
 if [[ -z "$SHELLS_FLAG" && -n "${SHELLS:-}" ]]; then
   SHELLS_FLAG="$SHELLS"
 fi
+# a fresh install must say what to deploy — "all" is only ever an explicit choice
+[[ -n "$SHELLS_FLAG" ]] && SHELLS_EXPLICIT=1
 
 copy_tree() {
   local src="$1" dest="$2"
@@ -148,6 +157,7 @@ prompt_shell_selection() {
 
   # Non-interactive / explicit "all" / empty flag → full deploy
   if [[ ! -t 0 ]] || [[ -n "${NO_SHELL_PROMPT:-}" ]]; then
+    # no explicit choice: the caller decides (fresh install refuses, updates re-apply)
     SELECTED_SHELLS_ALL=1
     SELECTED_SHELLS=()
     return 0
@@ -165,6 +175,7 @@ prompt_shell_selection() {
   log "selection: $answer"
 
   if [[ "$answer" == "all" || "$answer" == "*" || "$answer" == "0" ]]; then
+    SHELLS_EXPLICIT=1
     SELECTED_SHELLS_ALL=1
     SELECTED_SHELLS=()
     return 0
@@ -181,6 +192,7 @@ prompt_shell_selection() {
     [[ -z "$token" ]] && continue
     if [[ "$token" =~ ^[0-9]+$ ]]; then
       if [[ "$token" -eq 0 ]]; then
+        SHELLS_EXPLICIT=1
         SELECTED_SHELLS_ALL=1
         SELECTED_SHELLS=()
         return 0
@@ -211,6 +223,7 @@ prompt_shell_selection() {
 
   if [[ ${#SELECTED_SHELLS[@]} -eq 0 ]]; then
     log "empty selection — deploying all shells"
+    SHELLS_EXPLICIT=1
     SELECTED_SHELLS_ALL=1
   fi
 }
@@ -770,6 +783,21 @@ else
   fi
 fi
 
+# A fresh install must say what to deploy — you get only what you pick.
+# Updates (a marker from a previous run) keep re-applying that same choice.
+if [[ "$SELECTED_SHELLS_ALL" == "1" && "$SHELLS_EXPLICIT" != "1" ]]; then
+  if [[ -f "$HOME/.config/hypr/.revo_default_shell" ]]; then
+    log "no --shells: re-applying the shell you chose before ($(tr -d ' \n' < "$HOME/.config/hypr/.revo_default_shell"))"
+  else
+    log "fresh install: refusing to deploy every shell — you get only what you pick"
+    log "  ./install.sh --shells macos        # one shell (it becomes the default)"
+    log "  ./install.sh --shells macos,ii,k4  # several (first = default)"
+    log "  ./install.sh --shells all          # everything, on purpose"
+    log "  available: $(list_available_shells | tr '\n' ' ')"
+    exit 1
+  fi
+fi
+
 # ── Deploy FIRST (files must land even if package install fails) ──
 copy_tree "$ROOT/hypr" "$HOME/.config/hypr"
 deploy_quickshell
@@ -964,17 +992,22 @@ hyprpm_add_repo() {
     return 0
   fi
   log "hyprpm add $name: clones Hyprland headers and builds the plugin — this first run can take a few minutes"
-  local errf
+  local errf st=0
   errf="$(mktemp)"
   # stream the build log (redirecting to a file made this look frozen)
-  if timeout 1800 hyprpm add "$url" 2>&1 | tee "$errf"; then
+  timeout "$HYPRPM_TIMEOUT" hyprpm add "$url" 2>&1 | tee "$errf" || st=$?
+  if [[ "$st" -eq 0 ]]; then
     printf '  [fixed] hyprpm repo %s\n' "$name"
+  elif [[ "$st" -eq 124 || "$st" -eq 137 ]]; then
+    printf '  [MISS] hyprpm repo %s (timed out after %ss — install continues without it)\n' "$name" "$HYPRPM_TIMEOUT"
+    printf '         → plugins are optional: run ./install.sh --check later, or HYPRPM_TIMEOUT=1800 ./install.sh\n'
   else
     printf '  [MISS] hyprpm repo %s (add failed)\n' "$name"
     sed 's/^/         /' "$errf" | tail -15
     printf '         → check network/git, then run: hyprpm add %s\n' "$url"
   fi
   rm -f "$errf"
+  return 0
 }
 
 ensure_hyprpm_plugins() {
@@ -1245,6 +1278,25 @@ ensure_hyprpm_plugins || log "hyprpm plugin setup had errors — continuing"
 fix_plugin_paths || true
 
 verify || true
+
+# ── 8) Make sure the chosen shell is actually up ───────────────
+# A later step failing (hyprpm build, native build, package error) must never
+# leave the machine without a desktop: the shell is deployed first and is
+# (re)started here even if everything in between gave up.
+if [[ "$DRY_RUN" != "1" && -f "$HOME/.config/hypr/.revo_default_shell" ]]; then
+  REVO_SHELL="$(tr -d ' \n' < "$HOME/.config/hypr/.revo_default_shell")"
+  if [[ -n "$REVO_SHELL" && "$REVO_SHELL" != "default" ]] \
+      && have hyprctl && [[ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]]; then
+    if pgrep -f "quickshell/$REVO_SHELL" >/dev/null 2>&1; then
+      log "shell '$REVO_SHELL' is running"
+    elif [[ -f "$HOME/.config/hypr/scripts/toggle_qs_dots.sh" ]]; then
+      log "shell '$REVO_SHELL' is down — starting it now"
+      bash "$HOME/.config/hypr/scripts/toggle_qs_dots.sh" "$REVO_SHELL" >/dev/null 2>&1 || true
+    else
+      log "shell '$REVO_SHELL' is down — start it with: qs -p ~/.config/quickshell/$REVO_SHELL/shell.qml"
+    fi
+  fi
+fi
 
 # did all of that actually produce a working desktop?
 if [[ "$DRY_RUN" == "1" ]]; then
