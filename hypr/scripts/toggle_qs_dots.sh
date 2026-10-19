@@ -63,11 +63,19 @@ start_dot() {
         fi
     elif [[ "$target" == "macos" ]]; then
         setsid -f quickshell -p "$QS_BASE/macos/shell.qml" >"$HOME/macos.log" 2>&1
-        setsid -f "$QS_BASE/k4/arrancar" >/tmp/k4.log 2>&1
+        # macOS dots ship with the k4 Dynamic Island (the notch) — optional:
+        # skipping it must not break the shell itself
+        if [[ -f "$QS_BASE/k4/arrancar" ]]; then
+            setsid -f "$QS_BASE/k4/arrancar" >/tmp/k4.log 2>&1
+        fi
     elif [[ "$target" == "ii" ]]; then
         setsid -f qs -p "$QS_BASE/ii" >/tmp/ii.log 2>&1
     elif [[ "$target" == "k4" ]]; then
-        setsid -f "$QS_BASE/k4/arrancar" >/tmp/k4.log 2>&1
+        if [[ -f "$QS_BASE/k4/arrancar" ]]; then
+            setsid -f "$QS_BASE/k4/arrancar" >/tmp/k4.log 2>&1
+        else
+            echo "k4 is not installed ($QS_BASE/k4/arrancar missing)" >&2
+        fi
     elif [[ "$target" == "ryoku" ]]; then
         setsid -f bash -c "$QS_BASE/ryoku/launch.sh" >/dev/null 2>&1
     elif [[ -d "$QS_BASE/$target" ]]; then
@@ -129,7 +137,7 @@ show_rofi_menu() {
         local label=""
         case "$dot" in
             default) label="default  │ ⚙️ Default (System Shell)" ;;
-            macos)   label="macos    │ 🍎 macOS + 🏝️ k4 Dynamic Island" ;;
+            macos)   label="macos    │ 🍎 macOS" ;;
             ii)      label="ii       │ 🪟 ii (Windows 11 Waffle)" ;;
             k4)      label="k4       │ 🏝️ k4 (Dynamic Island الكاملة)" ;;
             shell)   label="shell    │ 🌌 Caelestia Shell" ;;

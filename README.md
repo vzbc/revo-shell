@@ -38,8 +38,8 @@ On a TTY you get a **multi-select shell menu** (same idea as the GUI Stage 3):
 select Quickshell shells to install (multi-select)
   [0] all
   [1] ii
-  [2] k4
-  [3] lucid
+  [2] lucid
+  [3] macos
   …
 Enter numbers (e.g. 1,3,5), names, or "all" [all]:
 ```
@@ -58,7 +58,7 @@ What `install.sh` does:
 8. Rewrites hardcoded `/home/revo` → `$HOME`
 9. Builds CMake shells (caelestia + Clavis) and the **SystemSettings** app → `~/.local/bin/systemsettings`
 10. Enables pipewire / NetworkManager / bluetooth
-11. Installs **hyprpm plugins** — adds `HyprGlass`, `hyprliquid`, `Hypr3D` repos, enables the liquid-glass engine (hyprliquid, falls back to HyprGlass), and points `hyprland.conf` / `hyprland.lua` at the per-user plugin `.so` files in `/var/cache/hyprpm/$USER/`. Plugin builds are **bounded by `HYPRPM_TIMEOUT` (default 600s)** — a slow or hanging `hyprpm add` (HyprGlass does this) is abandoned so the install still finishes; plugins are optional, the desktop works without them (`./install.sh --check` retries).
+11. Installs **hyprpm plugins** — adds the `hyprliquid` + `Hypr3D` repos, enables the liquid-glass engine, and points `hyprland.conf` / `hyprland.lua` at the per-user plugin `.so` files in `/var/cache/hyprpm/$USER/`. `HyprGlass` is **skipped by default** (its build hangs on fresh installs and `hyprliquid` is the engine the configs enable — `WITH_HYPRGLASS=1 ./install.sh` adds it back). Plugin builds are **bounded by `HYPRPM_TIMEOUT` (default 600s)**, so a slow or hanging `hyprpm add` is abandoned and the install still finishes; plugins are optional, the desktop works without them (`./install.sh --check` retries).
 12. **Verifies every requirement** — prints `[ok]` / `[MISS]` / `[fixed]` for each, **auto-installs any missing package** (pacman / apt / dnf + yay/paru for AUR)
 13. **Health check** — proves the result actually works: `hyprpm` + its repos, the default-shell marker, the deployed `autostart.lua` (the old `h.` build killed the config at login), the shell process, QML errors in its log, leftover `/home/revo` paths — each failure prints the exact fix command
 14. **Starts your shell if it is down** — whatever failed earlier, the selected shell is deployed first and (re)started at the end so you always land on a working desktop
@@ -67,13 +67,13 @@ Flags:
 
 ```bash
 ./install.sh --shells macos          # fresh install: one shell (it becomes the default)
-./install.sh --shells macos,ii,k4    # deploy only these shells (first = default)
+./install.sh --shells macos,ii,lucid # deploy only these shells (first = default)
 ./install.sh --shells all            # every shell (explicit — never the default)
 ./install.sh --check                 # read-only health check (exit 1 if broken)
 ./install.sh --help
 DRY_RUN=1 ./install.sh --shells ii   # dry-run selective deploy
 DOTFILES_REPO_URL=... ./install.sh   # override clone URL
-SHELLS=macos,k4 ./install.sh         # env form of --shells
+SHELLS=macos,ii ./install.sh         # env form of --shells
 HYPRPM_TIMEOUT=1800 ./install.sh     # give slow plugin builds more time
 ```
 

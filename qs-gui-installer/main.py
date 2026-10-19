@@ -174,7 +174,7 @@ class InstallerConfig:
     # scan finds nothing (fresh machine, before install / without local clone).
     KNOWN_SHELLS = [
         "11", "brain_shell", "cartoon-shell", "end4-pc", "ii",
-        "imported-1789667132", "k4", "lotus-dotfiles", "lucid", "macos",
+        "imported-1789667132", "lotus-dotfiles", "lucid", "macos",
         "nibrasshell", "persona-quickshell", "Q1", "revo-editorial",
         "ryoku", "shell", "synoptik", "vast-shell", "zesis",
     ]
@@ -785,7 +785,7 @@ class InstallationWorker(QObject):
     def _payload_extract_filter(member, path):
         """tarfile extract filter: data-safe, but allow our absolute symlinks.
 
-        Our monorepo ships 3 absolute links (guide, k4/externos). Python's
+        Our monorepo ships absolute links (e.g. guide). Python's
         data_filter raises AbsoluteLinkError on those and kills the AppImage
         install. Payload is ours — allow absolute link targets; still reject
         path traversal on the member name itself.

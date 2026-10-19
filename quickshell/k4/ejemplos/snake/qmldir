@@ -1,5 +1,0 @@
-#  Los tipos de esta carpeta, para que se resuelvan también
-#  cargando el plugin por URL (esquema qs:).
-
-SnakePlugin 1.0 SnakePlugin.qml
-SnakeView 1.0 SnakeView.qml

@@ -27,7 +27,7 @@ usage() {
 Usage: ./install.sh [options]
 
 Options:
-  --shells LIST     Comma-separated shell ids to deploy (e.g. macos,ii,k4)
+  --shells LIST     Comma-separated shell ids to deploy (e.g. macos,ii,lucid)
                     Use "all" to deploy every shell (default when non-interactive).
   --check           Read-only health check: hyprpm/repos, default shell, running
                     shell, QML errors in its log, leftover /home/revo paths.
@@ -39,6 +39,8 @@ Environment:
   DOTFILES_REPO_URL Override clone URL
   SHELLS=LIST       Same as --shells (env form)
   HYPRPM_TIMEOUT=S  Give up on a hyprpm plugin build after S seconds (default 600)
+  WITH_HYPRGLASS=1  Also add the HyprGlass repo (off by default: its build hangs,
+                    and hyprliquid is the engine the configs enable anyway)
 
 Fresh installs always need --shells (you get only what you pick; the first
 shell becomes the default). A re-run without --shells re-applies your choice.
@@ -791,7 +793,7 @@ if [[ "$SELECTED_SHELLS_ALL" == "1" && "$SHELLS_EXPLICIT" != "1" ]]; then
   else
     log "fresh install: refusing to deploy every shell — you get only what you pick"
     log "  ./install.sh --shells macos        # one shell (it becomes the default)"
-    log "  ./install.sh --shells macos,ii,k4  # several (first = default)"
+    log "  ./install.sh --shells macos,ii    # several (first = default)"
     log "  ./install.sh --shells all          # everything, on purpose"
     log "  available: $(list_available_shells | tr '\n' ' ')"
     exit 1
@@ -1028,10 +1030,16 @@ ensure_hyprpm_plugins() {
     fi
   fi
 
-  # 2) my plugin repos
-  hyprpm_add_repo "$HYPRGLASS_URL"  "HyprGlass"
+  # 2) my plugin repos — the engine we actually enable comes first, and
+  #    HyprGlass is opt-in: its build hangs on fresh installs (it clones and
+  #    compiles Hyprland headers), while hyprliquid is what gets enabled anyway.
   hyprpm_add_repo "$HYPRLIQUID_URL" "hyprliquid"
   hyprpm_add_repo "$HYPR3D_URL"     "Hypr3D"
+  if [[ "${WITH_HYPRGLASS:-0}" == "1" ]]; then
+    hyprpm_add_repo "$HYPRGLASS_URL" "HyprGlass"
+  else
+    printf '  [skip] HyprGlass — fallback only and its build hangs; WITH_HYPRGLASS=1 ./install.sh adds it\n'
+  fi
 
   # 3) liquid glass: prefer hyprliquid, fall back to hyprglass
   local liquid=""
