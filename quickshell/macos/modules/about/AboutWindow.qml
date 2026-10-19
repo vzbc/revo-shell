@@ -90,7 +90,7 @@ PopupWindow {
         id: glass
         anchors.fill: parent
         radius: 22
-        color: Qt.rgba(0.11, 0.11, 0.13, 0.92)
+        color: Qt.rgba(0.11, 0.11, 0.13, 0.96)
         border.width: 0.5
         border.color: Qt.rgba(1, 1, 1, 0.12)
 
@@ -156,16 +156,43 @@ PopupWindow {
             anchors.fill: parent
             spacing: 0
 
-            Item { Layout.preferredHeight: 70 }
+            Item { Layout.preferredHeight: 56 }
 
-            Image {
+            Item {
                 Layout.alignment: Qt.AlignHCenter
-                width: 132
-                height: 132
-                source: "file:///usr/share/icons/Papirus/128x128/devices/computer-laptop.svg"
-                sourceSize { width: 132; height: 132 }
-                smooth: true
-                asynchronous: true
+                width: 150
+                height: 96
+
+                Rectangle {
+                    id: bezel
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: 132
+                    height: 84
+                    radius: 5
+                    color: "#1f1f24"
+
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: 124
+                        height: 76
+                        radius: 2
+                        gradient: Gradient {
+                            GradientStop { position: 0.0; color: "#7db4ec" }
+                            GradientStop { position: 0.45; color: "#4a8fe0" }
+                            GradientStop { position: 1.0; color: "#2f66b8" }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: bezel.bottom
+                    anchors.topMargin: -2
+                    width: 150
+                    height: 7
+                    radius: 3.5
+                    color: "#cfcfd6"
+                }
             }
 
             Item { Layout.preferredHeight: 18 }
@@ -210,10 +237,11 @@ PopupWindow {
                 opacity: aboutWindow.infoReady ? 1.0 : 0.0
                 Behavior on opacity { NumberAnimation { duration: 260; easing.type: Easing.OutQuad } }
 
-                // Chip
+                // Processor
                 Text {
-                    text: "Chip"
-                    color: Appearance.fgDim
+                    text: "Processor"
+                    color: "#ffffff"
+                    font.bold: true
                     font.family: aboutWindow.fontFamily
                     font.pointSize: 12
                     Layout.alignment: Qt.AlignRight
@@ -222,7 +250,31 @@ PopupWindow {
                 }
                 Text {
                     text: aboutWindow.chipDisplay
-                    color: Appearance.fg
+                    color: "#ffffff"
+                    font.bold: true
+                    font.family: aboutWindow.fontFamily
+                    font.pointSize: 12
+                    Layout.preferredWidth: 180
+                    Layout.minimumHeight: 2 * _fm.height
+                    wrapMode: Text.WordWrap
+                    verticalAlignment: Text.AlignVCenter
+                }
+
+                // Graphics
+                Text {
+                    text: "Graphics"
+                    color: "#ffffff"
+                    font.bold: true
+                    font.family: aboutWindow.fontFamily
+                    font.pointSize: 12
+                    Layout.alignment: Qt.AlignRight
+                    Layout.preferredWidth: 110
+                    horizontalAlignment: Text.AlignRight
+                }
+                Text {
+                    text: aboutWindow.graphicsDisplay
+                    color: "#ffffff"
+                    font.bold: true
                     font.family: aboutWindow.fontFamily
                     font.pointSize: 12
                     Layout.preferredWidth: 180
@@ -234,7 +286,8 @@ PopupWindow {
                 // Memory
                 Text {
                     text: "Memory"
-                    color: Appearance.fgDim
+                    color: "#ffffff"
+                    font.bold: true
                     font.family: aboutWindow.fontFamily
                     font.pointSize: 12
                     Layout.alignment: Qt.AlignRight
@@ -243,16 +296,39 @@ PopupWindow {
                 }
                 Text {
                     text: aboutWindow.memoryDisplay
-                    color: Appearance.fg
+                    color: "#ffffff"
+                    font.bold: true
                     font.family: aboutWindow.fontFamily
                     font.pointSize: 12
                     Layout.preferredWidth: 180
                 }
 
+                // Startup disk
+                Text {
+                    text: "Startup disk"
+                    color: "#ffffff"
+                    font.bold: true
+                    font.family: aboutWindow.fontFamily
+                    font.pointSize: 12
+                    Layout.alignment: Qt.AlignRight
+                    Layout.preferredWidth: 110
+                    horizontalAlignment: Text.AlignRight
+                }
+                Text {
+                    text: aboutWindow.diskDisplay
+                    color: "#ffffff"
+                    font.bold: true
+                    font.family: aboutWindow.fontFamily
+                    font.pointSize: 12
+                    Layout.preferredWidth: 180
+                    verticalAlignment: Text.AlignVCenter
+                }
+
                 // Serial number
                 Text {
                     text: "Serial number"
-                    color: Appearance.fgDim
+                    color: "#ffffff"
+                    font.bold: true
                     font.family: aboutWindow.fontFamily
                     font.pointSize: 12
                     Layout.alignment: Qt.AlignRight
@@ -261,7 +337,8 @@ PopupWindow {
                 }
                 Text {
                     text: aboutWindow.serialDisplay
-                    color: Appearance.fg
+                    color: "#ffffff"
+                    font.bold: true
                     font.family: aboutWindow.fontFamily
                     font.pointSize: 12
                     Layout.preferredWidth: 180
@@ -271,7 +348,8 @@ PopupWindow {
                 // macOS
                 Text {
                     text: "macOS"
-                    color: Appearance.fgDim
+                    color: "#ffffff"
+                    font.bold: true
                     font.family: aboutWindow.fontFamily
                     font.pointSize: 12
                     Layout.alignment: Qt.AlignRight
@@ -280,7 +358,8 @@ PopupWindow {
                 }
                 Text {
                     text: aboutWindow.osDisplay
-                    color: Appearance.fg
+                    color: "#ffffff"
+                    font.bold: true
                     font.family: aboutWindow.fontFamily
                     font.pointSize: 12
                     Layout.preferredWidth: 180
@@ -298,16 +377,24 @@ PopupWindow {
 
                 QQC2.Button {
                     text: "More Info..."
+                    font.family: aboutWindow.fontFamily
+                    font.pixelSize: 12
+                    contentItem: Text {
+                        text: parent.text
+                        color: "#ffffff"
+                        font.family: aboutWindow.fontFamily
+                        font.pixelSize: 12
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                    }
+                    background: Rectangle {
+                        radius: 6
+                        color: "#000000"
+                        border.color: Qt.rgba(1, 1, 1, 0.15)
+                        border.width: 1
+                    }
                     onClicked: {
                         Apps.launch("systemsettings");
-                        aboutWindow.visible = false;
-                    }
-                }
-
-                QQC2.Button {
-                    text: "Report a Bug..."
-                    onClicked: {
-                        Apps.launch("xdg-open https://github.com/lestercorderomurillo/macos-tahoe-liquid-kde/issues/new");
                         aboutWindow.visible = false;
                     }
                 }
@@ -328,7 +415,7 @@ PopupWindow {
                 }
                 Text {
                     Layout.alignment: Qt.AlignHCenter
-                    text: "Copyright \u00A9 1983\u20132026 Apple Inc."
+                    text: "\u2122 and \u00A9 1983\u20132026 Apple Inc."
                     color: Appearance.fgFaint
                     font.family: aboutWindow.fontFamily
                     font.pixelSize: 10

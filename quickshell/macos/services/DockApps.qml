@@ -63,6 +63,48 @@ Singleton {
     readonly property string minScript: Quickshell.env("HOME") + "/.config/hypr/scripts/minimize_window.py"
     property var _focusIds: []
 
+    // windows genie-minimized into the Dock (thumbnails between apps and separator)
+    property var minimizedItems: []
+    property string _minStatePath: Quickshell.env("HOME") + "/.cache/hypr_minimized.json"
+
+    Process {
+        id: _minPoll
+        running: false
+        command: ["cat", root._minStatePath]
+        stdout: StdioCollector {
+            onStreamFinished: root._onMinJson(text)
+        }
+    }
+
+    Timer {
+        id: _minTimer
+        interval: 900
+        running: true
+        repeat: true
+        onTriggered: { if (!_minPoll.running) _minPoll.running = true; }
+    }
+
+    function _onMinJson(text) {
+        try {
+            const arr = JSON.parse((text || "").trim() || "[]");
+            if (!Array.isArray(arr)) throw new Error("bad json");
+            const items = [];
+            for (const e of arr) {
+                if (e && e.addr && e.class) {
+                    items.push({
+                        addr: e.addr,
+                        cls: e.class,
+                        title: e.title || e.class,
+                        thumb: e.thumb || ""
+                    });
+                }
+            }
+            root.minimizedItems = items;
+        } catch (e) {
+            root.minimizedItems = [];
+        }
+    }
+
     // dock click: probe whether the app has genie-minimized windows, then
     // either restore them (the script focuses the restored window) or activate
     Process {
@@ -239,6 +281,17 @@ Singleton {
 
     function iconFor(appId) {
         return root._iconCache[appId] || root.pinnedIcon(appId) || "Placeholder.png";
+    }
+
+    function iconForClass(cls) {
+        if (!cls) return "";
+        const c = String(cls).toLowerCase();
+        for (const it of root.dockItems) {
+            for (const id of (it.appIds || [])) {
+                if (String(id || "").toLowerCase() === c) return root.iconFor(id);
+            }
+        }
+        return "";
     }
 
     // The shell's own windows all report appId "org.quickshell".

@@ -15,6 +15,7 @@ Singleton {
     property bool sessionOpen: false
     property bool aboutOpen: false
     property bool forceQuitOpen: false
+    property bool notificationsOpen: false
     property bool locked: false
     property string pendingConfirm: ""
 
@@ -29,6 +30,7 @@ Singleton {
         if (name === "controlcenter") return root.controlCenterOpen;
         if (name === "session") return root.sessionOpen;
         if (name === "forcequit") return root.forceQuitOpen;
+        if (name === "notifications") return root.notificationsOpen;
         return false;
     }
 
@@ -38,6 +40,7 @@ Singleton {
         if (except !== "controlcenter") root.controlCenterOpen = false;
         if (except !== "session") root.sessionOpen = false;
         if (except !== "forcequit") root.forceQuitOpen = false;
+        if (except !== "notifications") root.notificationsOpen = false;
         root.pendingConfirm = "";
     }
 
@@ -49,6 +52,7 @@ Singleton {
         else if (name === "launcher") root.launcherOpen = !currentlyOpen;
         else if (name === "controlcenter") root.controlCenterOpen = !currentlyOpen;
         else if (name === "session") root.sessionOpen = !currentlyOpen;
+        else if (name === "notifications") root.notificationsOpen = !currentlyOpen;
     }
 
     function openForceQuit() {

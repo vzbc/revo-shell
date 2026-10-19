@@ -1378,6 +1378,202 @@ PanelWindow {
         }
     }
 
+    // ---- Notification Center (clock) ----
+    PopupWindow {
+        id: notificationCenter
+        parentWindow: root; screen: Quickshell.screens[0]
+        relativeX: root.width - 390
+        relativeY: Appearance.barHeight + 8
+        implicitWidth: 380
+        implicitHeight: 460
+        visible: ShellController.notificationsOpen
+        color: "transparent"
+
+        property var history: []
+
+        function pushHistory(n) {
+            const item = {
+                id: n.id, appName: n.appName || "",
+                summary: n.summary || "", body: n.body || "",
+                icon: Notifications.iconFor(n), notif: n
+            };
+            const h = history.slice();
+            for (let i = 0; i < h.length; i++) {
+                if (h[i].id === item.id) { h.splice(i, 1); break; }
+            }
+            h.unshift(item);
+            if (h.length > 30) h.splice(30);
+            history = h;
+        }
+
+        function removeHistory(id) {
+            const h = history.slice();
+            for (let i = 0; i < h.length; i++) {
+                if (h[i].id === id) { h.splice(i, 1); break; }
+            }
+            history = h;
+        }
+
+        Connections {
+            target: Notifications
+            function onNotify(n) { notificationCenter.pushHistory(n); }
+            function onDiscard(id) { notificationCenter.removeHistory(id); }
+        }
+
+        Rectangle {
+            anchors.fill: parent; radius: 12
+            color: Qt.rgba(0.18, 0.18, 0.22, 0.45)
+            border.color: Appearance.menuBorder; border.width: 1
+
+            ColumnLayout {
+                anchors.fill: parent; anchors.margins: 12; spacing: 6
+
+                RowLayout {
+                    Layout.fillWidth: true; Layout.preferredHeight: 24
+                    Text {
+                        text: "Notification system"
+                        font { family: Appearance.fontFamily; pixelSize: 15; weight: Font.Bold }
+                        color: root.barFg; Layout.fillWidth: true
+                    }
+                    Rectangle {
+                        visible: notificationCenter.history.length > 0
+                        width: clearText.implicitWidth + 20; height: 24; radius: 12
+                        color: clearMa.containsMouse ? Appearance.fieldHover : Qt.rgba(1, 1, 1, 0.08)
+                        Text {
+                            id: clearText; anchors.centerIn: parent
+                            text: "Clear All"
+                            font { family: Appearance.fontFamily; pixelSize: 12; weight: Font.Medium }
+                            color: root.barFg
+                        }
+                        MouseArea { id: clearMa; anchors.fill: parent; hoverEnabled: true
+                            onClicked: {
+                                for (const it of notificationCenter.history) Notifications.dismiss(it.notif);
+                                notificationCenter.history = [];
+                            }
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true; Layout.preferredHeight: 36; radius: 10
+                    color: Qt.rgba(1, 1, 1, 0.06)
+                    border.color: Qt.rgba(1, 1, 1, 0.1); border.width: 1
+                    RowLayout {
+                        anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 10; spacing: 10
+                        Text { text: "🌙"; font.pixelSize: 14 }
+                        Text {
+                            text: "Do Not Disturb"
+                            font { family: Appearance.fontFamily; pixelSize: 13 }
+                            color: root.barFg; Layout.fillWidth: true
+                        }
+                        Rectangle {
+                            width: 38; height: 22; radius: 11
+                            color: NotificationDaemon.popupInhibited ? "#315bdc" : Qt.rgba(1, 1, 1, 0.15)
+                            Rectangle {
+                                y: 2; width: 18; height: 18; radius: 9; color: "white"
+                                x: NotificationDaemon.popupInhibited ? 18 : 2
+                                Behavior on x { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                            }
+                            MouseArea { anchors.fill: parent; onClicked: NotificationDaemon.toggleDND() }
+                        }
+                    }
+                }
+
+                Text {
+                    visible: notificationCenter.history.length === 0
+                    text: "No Notifications"
+                    font { family: Appearance.fontFamily; pixelSize: 14 }
+                    color: root.barFgDim
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
+                }
+                Flickable {
+                    visible: notificationCenter.history.length > 0
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    contentHeight: notifCol.height
+                    clip: true
+                    boundsBehavior: Flickable.StopAtBounds
+                    Column {
+                        id: notifCol
+                        width: notifCol.parent ? notifCol.parent.width : 356
+                        spacing: 8
+                        Repeater {
+                            model: notificationCenter.history
+                            delegate: Rectangle {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                implicitHeight: 64
+                                radius: 10
+                                color: "transparent"
+
+                                Item {
+                                    x: 10; y: 10; width: 44; height: 44
+                                    Rectangle {
+                                        anchors.fill: parent; radius: 10; color: "#315bdc"
+                                        visible: iconImg.status !== Image.Ready
+                                        Text { anchors.centerIn: parent; text: "🔔"; font.pixelSize: 20 }
+                                    }
+                                    Image {
+                                        id: iconImg; anchors.fill: parent
+                                        source: modelData.icon
+                                        fillMode: Image.PreserveAspectFit
+                                        asynchronous: true
+                                        visible: status === Image.Ready
+                                    }
+                                }
+
+                                Column {
+                                    x: 64; y: 10; width: parent.width - 64 - 40; spacing: 1
+                                    Text {
+                                        width: parent.width; text: modelData.appName
+                                        font { family: Appearance.fontFamily; pixelSize: 12; weight: Font.DemiBold }
+                                        color: root.barFgDim; elide: Text.ElideRight
+                                    }
+                                    Text {
+                                        width: parent.width; text: modelData.summary
+                                        font { family: Appearance.fontFamily; pixelSize: 13; weight: Font.Bold }
+                                        color: root.barFg; elide: Text.ElideRight
+                                    }
+                                    Text {
+                                        width: parent.width; text: modelData.body
+                                        font { family: Appearance.fontFamily; pixelSize: 12 }
+                                        color: root.barFgDim; elide: Text.ElideRight
+                                    }
+                                }
+
+                                Rectangle {
+                                    anchors.right: parent.right; anchors.rightMargin: 8
+                                    anchors.top: parent.top; anchors.topMargin: 8
+                                    width: 20; height: 20; radius: 10
+                                    color: delMa.containsMouse ? Appearance.fieldHover : "transparent"
+                                    visible: notifHover.hovered
+                                    Text { anchors.centerIn: parent; text: "✕"; font.pixelSize: 10; color: root.barFgDim }
+                                    MouseArea {
+                                        id: delMa; anchors.fill: parent; hoverEnabled: true
+                                        onClicked: {
+                                            Notifications.dismiss(modelData.notif);
+                                            notificationCenter.removeHistory(modelData.id);
+                                        }
+                                    }
+                                }
+                                HoverHandler { id: notifHover }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        Notifications.activate(modelData.notif);
+                                        Notifications.dismiss(modelData.notif);
+                                        notificationCenter.removeHistory(modelData.id);
+                                        ShellController.notificationsOpen = false;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // =================== POPOVERS ===================
 
     PopupWindow {

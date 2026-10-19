@@ -1,36 +1,66 @@
 if hl.plugin.hypr3d then
-    -- binds
     hl.bind("SUPER + F12", hl.plugin.hypr3d.toggle)
-    -- parameters
     hl.plugin.hypr3d.config({
-        -- every key is optional
         world = {
-            panorama = (os.getenv("HOME") or "") .. "/Pictures/apple_park_360.png", -- 360° room background (equirectangular)
-            grid = true,                      -- base 40x40 grid platform
+            panorama = (os.getenv("HOME") or "") .. "/Pictures/apple_park_360.png",
+            grid = false,
         },
         windows = {
-            window_scale = 0.5,   -- window size multiplier (real px at 100 px/m)
-            spawn_distance = 5,   -- distance from the camera new windows spawn at
+            window_scale = 0.25,
+            spawn_distance = 2,
         },
         player = {
-            look_sensitivity = 0.0025, -- mouse look, radians per pointer count
-            look_inertia = 0.03,       -- look glide after the mouse stops, sec
-            move_inertia = 0.05,       -- walk glide after keys release, sec
-            move_speed = 4.0,          -- walking speed, m/s
-            spawn = { x = 0, y = 0, z = 0 }, -- player position
-            flying = true,             -- on alse: gravity, Space jumps off the ground, Shift does nothing
-        },
-        map = {
-            path = (os.getenv("HOME") or "") .. "/Downloads/anime_class_room/scene.gltf",   -- glTF 2.0 map (.glb/.gltf)
-            transform = {
-                position = { x = 0, y = 0, z = 0 },
-                rotation = { x = 0, y = 0, z = 0 },
-                scale    = { x = 1, y = 1, z = 1 },
+            mesh = {
+                path = "~/player.gltf",
+                transform = {
+                    rotation = {0, 90, 0},
+                    scale =    {1.5, 1.5, 1.5},
+                },
+                emissive_scale = 1.0,
+                flat = true,
+                center = "origin",
             },
-            emissive_scale = 1.0, -- emission multiplier
-            flat = true,          -- textures carry all lighting
-            collision = true,     -- collide with the map
+            animations = {
+                idle = {source = "Idle"},
+                walk = {source = "Walking"},
+                run = {source = 2},
+                jump = {source = 3, duration_scale=2.4},
+            },
+            collision = true,
+            move_speed = 1.5,
+            spawn = {0, 67, 0},
+            flying = false,
+            walk_bob = true
         },
+        scene = {
+            mymap = {
+                mesh = {
+                    path = "",
+                    transform = {
+                        position = {1, 0, 0},
+                    },
+                    emissive_scale = 1.0,
+                    center_offset = {0, 34, 0},
+                },
+                collision = true,
+                static = true,
+            },
+            anyname = {
+                mesh = {
+                    path = (os.getenv("HOME") or "") .. "/Downloads/cute_anime_girl_3d_model__stylized_blue_hair/scene.gltf",
+                    transform = {
+                        position = {y = 3},
+                        scale =    {2, 2, 2},
+                    },
+                    emissive_scale = 1.0,
+                    flat = true,
+                    center = "origin",
+                    center_offset = {0, 20, 0},
+                },
+                collision = true,
+                static = false,
+                physics = true,
+            },
+        }
     })
-    -- That's all for now :p
 end

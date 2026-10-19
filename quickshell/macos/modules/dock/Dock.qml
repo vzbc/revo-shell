@@ -13,12 +13,14 @@ PanelWindow {
     // ── 1. الخصائص العادية والمخصصة (يجب أن تكون في البداية معاً) ──
     screen: Quickshell.screens[0]
     anchors {
-        bottom: true
-        left: true
-        right: true
+        bottom: !root.dockVertical
+        top: root.dockVertical
+        left: root.dockVertical ? root.dockLeft : true
+        right: root.dockVertical ? !root.dockLeft : true
     }
-    
-    height: root.capsuleHeight + root.iconZoomFactor + root.revealStrip
+
+    height: root.dockVertical ? root.capsuleWidth : root.winThick
+    width: root.winThick
     property bool isTrashFull: false
 
     // ── 2. العناصر المستقلة (تأتي بعد الخصائص مباشرة) ──
@@ -35,6 +37,12 @@ PanelWindow {
         id: trashOpener
         command: [Quickshell.env("HOME") + "/.local/bin/nautilus", "trash:///"]
         running: false
+    }
+
+    Process {
+        id: minRestoreProc
+        running: false
+        stdout: StdioCollector {}
     }
 
     Timer {
@@ -84,7 +92,9 @@ PanelWindow {
     // و anchor.rect يُRelativeTo نفس النافذة، فالقائمة تمتد للأساسب (y سالب).
     function layoutDownloads() {
         const screen = Quickshell.screens[0];
-        const pos = dlSlot.mapToItem(null, dlSlot.width / 2, 14);
+        const pos = root.dockVertical
+            ? dlSlot.mapToItem(null, dlSlot.width / 2, dlSlot.height / 2)
+            : dlSlot.mapToItem(null, dlSlot.width / 2, 14);
         const n = Math.max(1, root.fanModel.length);
         const w = 400;
         const headH = 72;   // زر Open in Finder (12 + 46 + 14)
@@ -93,9 +103,16 @@ PanelWindow {
         const visibleRows = 7;   // سبعة ملفات فقط ظاهرة (والباقي بالتمرير)
         const maxH = Math.min(screen.height - 12, headH + visibleRows * root.fanRowH + padB);
         const h = Math.min(headH + listNeed + padB, maxH);
-        const winTop = screen.height - root.height - 12;   // أعلى النافذة على الشاشة
-        const x = Math.max(6, Math.min(screen.width - w - 6, Math.round(pos.x - w / 2)));
-        const y = Math.max(6 - winTop, Math.round(pos.y + 6 - h));
+        let x, y;
+        if (root.dockVertical) {
+            const side = Math.max(0, (screen.height - root.capsuleWidth) / 2);
+            x = root.dockLeft ? root.width + 8 : -w - 8;
+            y = Math.max(6 - side, Math.min(root.height + side - h - 6, Math.round(pos.y - h / 2)));
+        } else {
+            const winTop = screen.height - root.height - 12;   // أعلى النافذة على الشاشة
+            x = Math.max(6, Math.min(screen.width - w - 6, Math.round(pos.x - w / 2)));
+            y = Math.max(6 - winTop, Math.round(pos.y + 6 - h));
+        }
         downloadsFan.implicitWidth = w;
         downloadsFan.implicitHeight = h;
         downloadsFan.anchor.rect.x = x;
@@ -165,7 +182,12 @@ PanelWindow {
             var c = kids[i];
             var app = c.app;
             if (!app) continue;
-            var pos = (c.x + c.width / 2) + "," + (c.y + c.height - 14 - root.iconBase / 2);
+            var pos = root.dockVertical
+                ? ((root.dockLeft
+                    ? c.x + root.dockIconPad + root.iconBase / 2
+                    : c.x + c.width - root.dockIconPad - root.iconBase / 2)
+                    + "," + (c.y + c.height / 2))
+                : (c.x + c.width / 2) + "," + (c.y + c.height - 14 - root.iconBase / 2);
             var ids = app.appIds || [];
             for (var j = 0; j < ids.length; j++) {
                 var id = (ids[j] || "").toLowerCase();
@@ -179,6 +201,13 @@ PanelWindow {
                 return pos;
         }
         return "";
+    }
+
+    IpcHandler {
+        target: "dock"
+        function iconRect(cls: string): string {
+            return root.iconLocalPos(cls);
+        }
     }
 
     Process {
@@ -286,14 +315,34 @@ PanelWindow {
 
     readonly property int slotWidth: Appearance.dockIconSize + 12
     readonly property int capsuleHeight: 80
-    readonly property int totalSlots: DockApps.dockItems.length + root.shotItems.length + 2
-    readonly property int sepCount: DockApps.runningApps.length > 0 ? 1 : 0
+    readonly property int totalSlots: DockApps.dockItems.length + root.shotItems.length + DockApps.minimizedItems.length + 2
+    readonly property int sepCount: 1
+    readonly property int minSlotExtra: 10
     readonly property int capsuleWidth: root.totalSlots * root.slotWidth + root.sepCount * 9 + 20
-    
+        + DockApps.minimizedItems.length * root.minSlotExtra
+    readonly property string dockPos: Appearance.dockPosition
+    readonly property bool dockVertical: root.dockPos !== "bottom"
+    readonly property bool dockLeft: root.dockPos === "left"
+    readonly property int winThick: root.capsuleHeight + root.iconZoomFactor + root.revealStrip
+    readonly property int dockIconPad: 14
+    property string tipText: ""
+    property var tipOwner: null
+    property real tipCX: 0
+    property real tipCY: 0
+
     margins {
-        bottom: Math.round(8 + root.hideOffset)
-        left: Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
-        right: Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
+        bottom: root.dockVertical
+            ? Math.max(0, Math.round((Quickshell.screens[0].height - root.capsuleWidth) / 2))
+            : Math.round(8 + root.hideOffset)
+        top: root.dockVertical
+            ? Math.max(0, Math.round((Quickshell.screens[0].height - root.capsuleWidth) / 2))
+            : 0
+        left: root.dockVertical
+            ? (root.dockLeft ? Math.round(8 + root.hideOffset) : 0)
+            : Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
+        right: root.dockVertical
+            ? (root.dockLeft ? 0 : Math.round(8 + root.hideOffset))
+            : Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
     }
    color: "transparent"
     WlrLayershell.namespace: "macos:dock"
@@ -301,7 +350,7 @@ PanelWindow {
     readonly property int iconZoomFactor: Appearance.dockMagnification ? Math.round(Appearance.dockZoom) : 0
     readonly property int revealStrip: 6
     property real hideOffset: Appearance.dockAutohide && !rootReveal.hovered
-        ? -(root.height - root.revealStrip) - 8 : 0
+        ? -(root.winThick - root.revealStrip) - 8 : 0
     Behavior on hideOffset {
         enabled: Appearance.dockAnimateHide
         NumberAnimation { duration: 260; easing.type: Easing.OutCubic }
@@ -324,13 +373,43 @@ PanelWindow {
         return root.activeAppId !== "" && slot.app.appIds.includes(root.activeAppId);
     }
 
+    function tipShow(iconItem, text) {
+        if (root.dragSourceIndex !== -1 || !iconItem) return;
+        root.tipOwner = iconItem;
+        root.tipText = text;
+        const c = iconItem.mapToItem(null, iconItem.width / 2, iconItem.height / 2);
+        if (root.dockVertical) {
+            const est = Math.max(48, text.length * 6 + 16);
+            root.tipCX = root.dockLeft ? root.width + 6 + est / 2 : -6 - est / 2;
+            root.tipCY = c.y;
+        } else {
+            const top = iconItem.mapToItem(null, 0, 0);
+            root.tipCX = c.x;
+            root.tipCY = top.y - 19;
+        }
+    }
+    function tipHide(iconItem) {
+        if (root.tipOwner === iconItem) {
+            root.tipText = "";
+            root.tipOwner = null;
+        }
+    }
+
     function openSlotMenu(slot) {
         if (!DockApps.isRunning(slot.app.appIds)) return;
-        const pos = slot.mapToItem(null, slot.width / 2, 0);
         root.menuSlotIndex = slot.index;
         root.menuTarget = slot.app;
-        slotMenu.relativeX = Math.max(6, Math.min(root.width - slotMenu.width - 6, pos.x - slotMenu.width / 2));
-        slotMenu.relativeY = -(slotMenu.height + 12);
+        if (root.dockVertical) {
+            const g = slot.mapToItem(null, 0, slot.height / 2);
+            const side = Math.max(0, (Quickshell.screens[0].height - root.capsuleWidth) / 2);
+            slotMenu.relativeX = root.dockLeft ? root.width + 8 : -slotMenu.width - 8;
+            slotMenu.relativeY = Math.max(6 - side,
+                Math.min(root.height + side - slotMenu.height - 6, g.y - slotMenu.height / 2));
+        } else {
+            const pos = slot.mapToItem(null, slot.width / 2, 0);
+            slotMenu.relativeX = Math.max(6, Math.min(root.width - slotMenu.width - 6, pos.x - slotMenu.width / 2));
+            slotMenu.relativeY = -(slotMenu.height + 12);
+        }
         ShellController.closeAll();
         root.downloadsOpen = false;
         root.menuOpen = true;
@@ -392,6 +471,33 @@ PanelWindow {
             color: Qt.rgba(glass.effTint.r, glass.effTint.g, glass.effTint.b, glass.effAlpha)
             border.color: root.glassBorder
             border.width: 1
+        }
+    }
+
+    PopupWindow {
+        id: nameTip
+        parentWindow: root
+        screen: Quickshell.screens[0]
+        color: "transparent"
+        implicitWidth: tipLabel.width + 16
+        implicitHeight: 22
+        visible: root.tipText !== "" && root.dragSourceIndex === -1 && !root.shotDragging
+        anchor.rect.x: root.tipCX - width / 2
+        anchor.rect.y: root.tipCY - height / 2
+
+        Rectangle {
+            anchors.fill: parent
+            radius: 6
+            color: Qt.rgba(0, 0, 0, 0.9)
+            border.color: Qt.rgba(255, 255, 255, 0.15)
+            border.width: 1
+            Text {
+                id: tipLabel
+                anchors.centerIn: parent
+                text: root.tipText
+                font { family: "SF Pro Display"; pixelSize: 11; weight: Font.Medium }
+                color: "#ffffff"
+            }
         }
     }
 
@@ -770,9 +876,15 @@ PanelWindow {
     ShaderLiquidGlass {
         id: capsuleBg
         anchors.bottom: parent.bottom
-        anchors.left: parent.left
-        anchors.right: parent.right
+        anchors.top: root.dockVertical ? parent.top : null
+        anchors.left: root.dockVertical
+            ? (root.dockLeft ? parent.left : null)
+            : parent.left
+        anchors.right: root.dockVertical
+            ? (root.dockLeft ? null : parent.right)
+            : parent.right
         height: root.capsuleHeight
+        width: root.capsuleHeight
         radius: 26
         tint: "#121217"
         tintAlpha: 0.30
@@ -787,23 +899,95 @@ PanelWindow {
             propagateComposedEvents: true
         }
 
-        RowLayout {
+        GridLayout {
             id: dockRow
             anchors.fill: parent
-            anchors.leftMargin: 10
-            anchors.rightMargin: 10
-            spacing: 0
+            anchors.leftMargin: root.dockVertical ? 0 : 10
+            anchors.rightMargin: root.dockVertical ? 0 : 10
+            anchors.topMargin: root.dockVertical ? 10 : 0
+            anchors.bottomMargin: root.dockVertical ? 10 : 0
+            columns: root.dockVertical ? 1 : 256
+            rowSpacing: 0
+            columnSpacing: 0
             z: 2
 
                         component DockSeparator: Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: root.capsuleHeight - 30
-                Layout.leftMargin: 4
-                Layout.rightMargin: 4
-                Layout.alignment: Qt.AlignBottom
-                Layout.bottomMargin: 15
+                Layout.preferredWidth: root.dockVertical ? root.capsuleHeight - 30 : 1
+                Layout.preferredHeight: root.dockVertical ? 1 : root.capsuleHeight - 30
+                Layout.leftMargin: root.dockVertical ? (root.dockLeft ? 15 : 0) : 4
+                Layout.rightMargin: root.dockVertical ? (root.dockLeft ? 0 : 15) : 4
+                Layout.topMargin: root.dockVertical ? 4 : 0
+                Layout.bottomMargin: root.dockVertical ? 0 : 15
+                Layout.alignment: root.dockVertical
+                    ? (root.dockLeft ? Qt.AlignLeft : Qt.AlignRight)
+                    : Qt.AlignBottom
                 color: root.divider
                 radius: 0.5
+            }
+
+            // نافذة مصغّرة بالجيني: مصغّرة آخر حالة مرئية + شارة التطبيق
+            component MinSlot: Item {
+                required property var modelData
+                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth + root.minSlotExtra
+                Layout.preferredHeight: root.dockVertical ? root.slotWidth + root.minSlotExtra : root.capsuleHeight
+                Layout.alignment: Qt.AlignBottom
+
+                Rectangle {
+                    id: thumbFrame
+                    anchors.horizontalCenter: root.dockVertical ? null : parent.horizontalCenter
+                    anchors.bottom: root.dockVertical ? null : parent.bottom
+                    anchors.bottomMargin: root.dockVertical ? 0 : 14
+                    anchors.verticalCenter: root.dockVertical ? parent.verticalCenter : null
+                    anchors.left: root.dockVertical && root.dockLeft ? parent.left : null
+                    anchors.right: root.dockVertical && !root.dockLeft ? parent.right : null
+                    anchors.leftMargin: root.dockVertical && root.dockLeft ? 14 : 0
+                    anchors.rightMargin: root.dockVertical && !root.dockLeft ? 14 : 0
+                    width: root.dockVertical ? root.capsuleHeight - 18 : root.iconBase + 14
+                    height: root.dockVertical ? root.iconBase - 8 : root.iconBase - 8
+                    radius: 6
+                    color: "#1c1c1e"
+                    border.color: Qt.rgba(255, 255, 255, 0.28)
+                    border.width: 1
+                    clip: true
+
+                    Image {
+                        anchors.fill: parent
+                        source: modelData.thumb ? "file://" + modelData.thumb : ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        mipmap: true
+                        smooth: true
+                    }
+                }
+
+                Image {
+                    id: appBadge
+                    anchors.right: thumbFrame.right
+                    anchors.bottom: thumbFrame.bottom
+                    width: 16
+                    height: 16
+                    source: DockApps.iconSource(DockApps.iconForClass(modelData.cls) || "Placeholder.png")
+                    asynchronous: true
+                    mipmap: true
+                    smooth: true
+                }
+
+                HoverHandler {
+                    id: minHover
+                    onHoveredChanged: {
+                        if (minHover.hovered) root.tipShow(thumbFrame, modelData.title || modelData.cls);
+                        else root.tipHide(thumbFrame);
+                    }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        minRestoreProc.running = false;
+                        minRestoreProc.command = ["python3", DockApps.minScript, "restore", modelData.addr];
+                        minRestoreProc.running = true;
+                    }
+                }
             }
 
 
@@ -811,8 +995,8 @@ PanelWindow {
                 id: slot
                 required property var modelData
                 required property int index
-                Layout.preferredWidth: root.slotWidth
-                Layout.preferredHeight: parent.height
+                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth
+                Layout.preferredHeight: root.dockVertical ? root.slotWidth : parent.height
 
                 property real dragXOffset: 0
                 property real shiftOffset: {
@@ -835,7 +1019,11 @@ PanelWindow {
                 }
 
                 transform: Translate {
-                    x: slot.index === root.dragSourceIndex ? slot.dragXOffset : slot.shiftOffset
+                    x: root.dockVertical ? 0
+                        : (slot.index === root.dragSourceIndex ? slot.dragXOffset : slot.shiftOffset)
+                    y: root.dockVertical
+                        ? (slot.index === root.dragSourceIndex ? slot.dragXOffset : slot.shiftOffset)
+                        : 0
                 }
 
                 z: slot.index === root.dragSourceIndex ? 100 : (slot.growSize > 0 ? 10 : 0)
@@ -939,12 +1127,10 @@ PanelWindow {
 
                 Rectangle {
                     id: activeGlow
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.top: icon.top
-                    anchors.bottom: icon.bottom
-                    anchors.topMargin: -7
-                    anchors.bottomMargin: -3
-                    width: 52 + 16
+                    x: icon.x - 8
+                    y: icon.y - 7
+                    width: icon.width + 16
+                    height: icon.height + 10
                     radius: 13
                     color: root.selectionBg
                     visible: opacity > 0
@@ -954,13 +1140,18 @@ PanelWindow {
 
                 Image {
                     id: icon
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 14 + slot.bounceLift
+                    anchors.horizontalCenter: root.dockVertical ? null : parent.horizontalCenter
+                    anchors.bottom: root.dockVertical ? null : parent.bottom
+                    anchors.bottomMargin: root.dockVertical ? 0 : root.dockIconPad + slot.bounceLift
+                    anchors.verticalCenter: root.dockVertical ? parent.verticalCenter : null
+                    anchors.left: root.dockVertical && root.dockLeft ? parent.left : null
+                    anchors.right: root.dockVertical && !root.dockLeft ? parent.right : null
+                    anchors.leftMargin: root.dockVertical && root.dockLeft ? root.dockIconPad + slot.bounceLift : 0
+                    anchors.rightMargin: root.dockVertical && !root.dockLeft ? root.dockIconPad + slot.bounceLift : 0
                     width: root.iconBase * slot.magScale
                     height: root.iconBase * slot.magScale
                     scale: slot.bounceScale
-                    transformOrigin: Item.Bottom
+                    transformOrigin: root.dockVertical ? (root.dockLeft ? Item.Left : Item.Right) : Item.Bottom
                     source: DockApps.iconSource(DockApps.iconFor(slot.app.appIds[0]))
                     asynchronous: true
                     mipmap: true
@@ -973,9 +1164,14 @@ PanelWindow {
 
                     Rectangle {
                         id: runningDot
-                        anchors.horizontalCenter: parent.horizontalCenter
-                        anchors.bottom: parent.bottom
-                        anchors.bottomMargin: -7
+                        anchors.horizontalCenter: root.dockVertical ? null : parent.horizontalCenter
+                        anchors.bottom: root.dockVertical ? null : parent.bottom
+                        anchors.bottomMargin: root.dockVertical ? 0 : -7
+                        anchors.verticalCenter: root.dockVertical ? parent.verticalCenter : null
+                        anchors.right: root.dockVertical && root.dockLeft ? parent.left : null
+                        anchors.rightMargin: root.dockVertical && root.dockLeft ? -7 : 0
+                        anchors.left: root.dockVertical && !root.dockLeft ? parent.right : null
+                        anchors.leftMargin: root.dockVertical && !root.dockLeft ? -7 : 0
                         width: 5
                         height: 5
                         radius: 2.5
@@ -1007,47 +1203,26 @@ PanelWindow {
                     }
                 }
 
-                               Rectangle {
-                    id: tooltip
-                    visible: hoverHandler.hovered && root.dragSourceIndex === -1
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: icon.top
-                    anchors.bottomMargin: 8
-                    width: tipText.width + 16
-                    height: 22
-                    radius: 6
-                    // ── التعديل هنا ليكون أسود داكن ──
-                    color: Qt.rgba(0, 0, 0, 0.9) // أسود نقي مع شفافية بسيطة جداً
-                    border.color: Qt.rgba(255, 255, 255, 0.15) // تقليل سطوع خط الحدود المحيط بالاسم
-                    border.width: 1
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
-
-                    Text {
-                        id: tipText
-                        anchors.centerIn: parent
-                        text: slot.app.name
-                        font { family: "SF Pro Display"; pixelSize: 11; weight: Font.Medium }
-                        color: "#ffffff"
-                    }
-                }
-
-
                 HoverHandler {
                     id: hoverHandler
                     enabled: root.dragSourceIndex === -1
                     onPointChanged: {
                         if (hoverHandler.hovered && root.instantHoveredIndex === slot.index) {
-                            root.instantHoveredFraction =
-                                Math.max(0.0, Math.min(1.0, hoverHandler.point.position.x / slot.width));
+                            root.instantHoveredFraction = Math.max(0.0, Math.min(1.0,
+                                (root.dockVertical ? hoverHandler.point.position.y
+                                    : hoverHandler.point.position.x)
+                                / (root.dockVertical ? slot.height : slot.width)));
                         }
                     }
                     onHoveredChanged: {
                         if (hoverHandler.hovered) {
                             root.instantHoveredIndex = slot.index;
                             root.instantHoveredFraction = 0.5;
+                            root.tipShow(icon, slot.app.name);
                         } else if (root.instantHoveredIndex === slot.index) {
                             root.instantHoveredIndex = -1;
                             root.instantHoveredFraction = 0.5;
+                            root.tipHide(icon);
                         }
                     }
                 }
@@ -1066,7 +1241,7 @@ PanelWindow {
                     onPressed: (mouse) => {
                         if (mouse.button === Qt.LeftButton) {
                             pressPos = Qt.point(mouse.x, mouse.y);
-                            grabX = mouse.x;
+                            grabX = root.dockVertical ? mouse.y : mouse.x;
                             isDragging = false;
                             dragOccurred = false;
                         }
@@ -1089,10 +1264,12 @@ PanelWindow {
                             }
 
                             if (isDragging && root.dragSourceIndex === slot.index) {
-                                const cursorDockX = slot.mapToItem(dockRow, mouse.x, 0).x;
-                                slot.dragXOffset = cursorDockX - slot.x - grabX;
+                                const mp = slot.mapToItem(dockRow, mouse.x, mouse.y);
+                                const cursorDockP = root.dockVertical ? mp.y : mp.x;
+                                const slotP = root.dockVertical ? slot.y : slot.x;
+                                slot.dragXOffset = cursorDockP - slotP - grabX;
 
-                                let targetIdx = Math.floor(cursorDockX / root.slotWidth);
+                                let targetIdx = Math.floor(cursorDockP / root.slotWidth);
                                 const maxPinnedIdx = Math.max(0, (DockApps.pinned ? DockApps.pinned.length : DockApps.dockItems.length) - 1);
                                 targetIdx = Math.max(0, Math.min(maxPinnedIdx, targetIdx));
                                 root.dragTargetIndex = targetIdx;
@@ -1163,16 +1340,20 @@ PanelWindow {
             component ShotSlot: Item {
                 id: sslot
                 required property var modelData
-                Layout.preferredWidth: root.slotWidth
-                Layout.preferredHeight: root.capsuleHeight
+                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth
+                Layout.preferredHeight: root.dockVertical ? root.slotWidth : root.capsuleHeight
                 Layout.alignment: Qt.AlignBottom
 
                 opacity: 0
                 scale: 0.3
-                transformOrigin: Item.Bottom
+                transformOrigin: root.dockVertical ? (root.dockLeft ? Item.Left : Item.Right) : Item.Bottom
 
-                readonly property real homeX: (sslot.width - root.iconBase) / 2
-                readonly property real homeY: sslot.height - 14 - Math.round(root.iconBase * 0.72)
+                readonly property real homeX: root.dockVertical
+                    ? (root.dockLeft ? 14 : sslot.width - 14 - root.iconBase)
+                    : (sslot.width - root.iconBase) / 2
+                readonly property real homeY: root.dockVertical
+                    ? (sslot.height - Math.round(root.iconBase * 0.72)) / 2
+                    : sslot.height - 14 - Math.round(root.iconBase * 0.72)
 
                 Component.onCompleted: popIn.start()
 
@@ -1211,28 +1392,13 @@ PanelWindow {
                     }
                 }
 
-                Rectangle {
-                    visible: sHover.hovered && !sMouse.pressed && !root.shotDragging
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: sIcon.top
-                    anchors.bottomMargin: 8
-                    width: sTipText.width + 16
-                    height: 22
-                    radius: 6
-                    color: Qt.rgba(0, 0, 0, 0.9)
-                    border.color: Qt.rgba(255, 255, 255, 0.15)
-                    border.width: 1
-                    z: 60
-                    Text {
-                        id: sTipText
-                        anchors.centerIn: parent
-                        text: sslot.modelData.name
-                        font { family: "SF Pro Display"; pixelSize: 11; weight: Font.Medium }
-                        color: "#ffffff"
+                HoverHandler {
+                    id: sHover
+                    onHoveredChanged: {
+                        if (sHover.hovered && !sMouse.pressed) root.tipShow(sIcon, sslot.modelData.name);
+                        else root.tipHide(sIcon);
                     }
                 }
-
-                HoverHandler { id: sHover }
 
                 MouseArea {
                     id: sMouse
@@ -1294,22 +1460,25 @@ PanelWindow {
                 delegate: DockSlot {}
             }
 
-            DockSeparator {
-                visible: DockApps.runningApps.length > 0
-            }
+            DockSeparator {}
 
                         // ── فولدر الداون لودس (ستاك ماك) ──
             Item {
                 id: dlSlot
-                Layout.preferredWidth: root.slotWidth
-                Layout.preferredHeight: root.capsuleHeight
+                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth
+                Layout.preferredHeight: root.dockVertical ? root.slotWidth : root.capsuleHeight
                 Layout.alignment: Qt.AlignBottom
 
                 Image {
                     id: dlIcon
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 14
+                    anchors.horizontalCenter: root.dockVertical ? null : parent.horizontalCenter
+                    anchors.bottom: root.dockVertical ? null : parent.bottom
+                    anchors.bottomMargin: root.dockVertical ? 0 : 14
+                    anchors.verticalCenter: root.dockVertical ? parent.verticalCenter : null
+                    anchors.left: root.dockVertical && root.dockLeft ? parent.left : null
+                    anchors.right: root.dockVertical && !root.dockLeft ? parent.right : null
+                    anchors.leftMargin: root.dockVertical && root.dockLeft ? 14 : 0
+                    anchors.rightMargin: root.dockVertical && !root.dockLeft ? 14 : 0
                     width: root.iconBase
                     height: root.iconBase
                     source: DockApps.folderSource()
@@ -1320,27 +1489,13 @@ PanelWindow {
                     opacity: Appearance.iconClearActive ? 0.55 : 1
                 }
 
-                Rectangle {
-                    visible: dlHover.hovered && root.dragSourceIndex === -1
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: dlIcon.top
-                    anchors.bottomMargin: 8
-                    width: dlTipText.width + 16
-                    height: 22
-                    radius: 6
-                    color: Qt.rgba(0, 0, 0, 0.9)
-                    border.color: Qt.rgba(255, 255, 255, 0.15)
-                    border.width: 1
-                    Text {
-                        id: dlTipText
-                        anchors.centerIn: parent
-                        text: "Downloads"
-                        font { family: "SF Pro Display"; pixelSize: 11; weight: Font.Medium }
-                        color: "#ffffff"
+                HoverHandler {
+                    id: dlHover
+                    onHoveredChanged: {
+                        if (dlHover.hovered) root.tipShow(dlIcon, "Downloads");
+                        else root.tipHide(dlIcon);
                     }
                 }
-
-                HoverHandler { id: dlHover }
 
                 MouseArea {
                     anchors.fill: parent
@@ -1358,24 +1513,34 @@ PanelWindow {
                 }
             }
 
+            // ── النوافذ المصغّرة بالجيني (مصغّرة مستطيلة جنب فولدر الداون لودس) ──
+            Repeater {
+                model: DockApps.minimizedItems
+                delegate: MinSlot {}
+            }
+
             // ── عناصر السكرين شوت (أيقونة التطبيق + شارة) ──
             Repeater {
                 model: root.shotItems
                 delegate: ShotSlot {}
             }
-
                         // ── كود سلة المهملات المطوّر ──
             Item {
                 id: trashSlot
-                Layout.preferredWidth: root.slotWidth
-                Layout.preferredHeight: root.capsuleHeight
+                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth
+                Layout.preferredHeight: root.dockVertical ? root.slotWidth : root.capsuleHeight
                 Layout.alignment: Qt.AlignBottom
 
                 Image {
                     id: trashIcon
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: parent.bottom
-                    anchors.bottomMargin: 14 
+                    anchors.horizontalCenter: root.dockVertical ? null : parent.horizontalCenter
+                    anchors.bottom: root.dockVertical ? null : parent.bottom
+                    anchors.bottomMargin: root.dockVertical ? 0 : 14
+                    anchors.verticalCenter: root.dockVertical ? parent.verticalCenter : null
+                    anchors.left: root.dockVertical && root.dockLeft ? parent.left : null
+                    anchors.right: root.dockVertical && !root.dockLeft ? parent.right : null
+                    anchors.leftMargin: root.dockVertical && root.dockLeft ? 14 : 0
+                    anchors.rightMargin: root.dockVertical && !root.dockLeft ? 14 : 0
                     width: root.iconBase
                     height: root.iconBase
                     source: DockApps.iconSource(root.isTrashFull ? "user-trash-full.png" : "Trash.png")
@@ -1399,27 +1564,13 @@ PanelWindow {
                     opacity: root.shotOverTrash ? 1 : 0
                 }
 
-                Rectangle {
-                    visible: trashHover.hovered && root.dragSourceIndex === -1
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    anchors.bottom: trashIcon.top
-                    anchors.bottomMargin: 8
-                    width: trashTipText.width + 16
-                    height: 22
-                    radius: 6
-                    color: Qt.rgba(0, 0, 0, 0.9)
-                    border.color: Qt.rgba(255, 255, 255, 0.15)
-                    border.width: 1
-                    Text {
-                        id: trashTipText
-                        anchors.centerIn: parent
-                        text: root.isTrashFull ? "Trash (full)" : "Trash"
-                        font { family: "SF Pro Display"; pixelSize: 11; weight: Font.Medium }
-                        color: "#ffffff"
+                HoverHandler {
+                    id: trashHover
+                    onHoveredChanged: {
+                        if (trashHover.hovered) root.tipShow(trashIcon, root.isTrashFull ? "Trash (full)" : "Trash");
+                        else root.tipHide(trashIcon);
                     }
                 }
-
-                HoverHandler { id: trashHover }
 
                 MouseArea {
                     anchors.fill: parent

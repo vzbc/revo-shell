@@ -57,5 +57,21 @@ if liquid_so then pcall(hl.plugin.load, liquid_so) end
 require("configs.hyprliquid")
 require("configs.hypr3d")
 
+-- hyprwalk (SUPER + F11 window walk): same guard as above — the .so is looked
+-- up in the hyprpm cache first, and the keybind is only registered when the
+-- plugin actually loaded, so a box without it never errors at login.
+local hyprwalk_so = first_existing({
+    "/var/cache/hyprpm/" .. USER_NAME .. "/hyprwalk/hyprwalk.so",
+    HOME_DIR .. "/.local/lib/hyprwalk.so",
+    HOME_DIR .. "/hyprwalk/build/hyprwalk.so",
+})
+if hyprwalk_so and pcall(hl.plugin.load, hyprwalk_so) then
+    hl.bind("SUPER + F11", function()
+        if hl.plugin and hl.plugin.hyprwalk and hl.plugin.hyprwalk.toggle then
+            hl.plugin.hyprwalk.toggle()
+        end
+    end)
+end
+
 -- Brain_ShellKeybinds (guarded — the file is user-specific and may not exist)
 pcall(dofile, HOME_DIR .. "/.config/Brain_Shell/Brain_ShellKeybinds.lua")

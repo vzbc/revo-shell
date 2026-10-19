@@ -103,7 +103,10 @@ hl.window_rule({
     match = { class = "^(uxplay)$" },
     float = true,
     center = true,
-    size = "378 812", -- الأبعاد الدقيقة لشاشة الآيفون بداخل ثيم eqSh
+    size = "360 780",
     opacity = "1 1",             
     tag = "+hyprglass_preset_liquid_true", 
+    border_size = 0,
+    rounding = 20
 })
+

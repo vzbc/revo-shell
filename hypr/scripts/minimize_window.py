@@ -28,6 +28,7 @@ import traceback
 
 STATE_PATH = os.path.expanduser("~/.cache/hypr_minimized.json")
 LOG_PATH = os.path.expanduser("~/.cache/hypr_minimize.log")
+THUMB_DIR = os.path.expanduser("~/.cache/minimized")
 SPECIAL = "special:minimized"
 QSCFG = os.path.expanduser("~/.config/quickshell/macos")
 DOCK_NS = "macos:dock"
@@ -136,10 +137,40 @@ def save_state(entries):
 
 def prune(entries):
     alive = {c.get("address") for c in clients()}
-    kept = [e for e in entries if e.get("addr") in alive]
+    kept = []
+    for e in entries:
+        if e.get("addr") in alive:
+            kept.append(e)
+        else:
+            drop_thumb(e)
     if kept != entries:
         save_state(kept)
     return kept
+
+
+def snap(addr, r0):
+    """Compositor screenshot of the window's last visible rect (grim)."""
+    if not r0 or r0[2] < 4 or r0[3] < 4:
+        return None
+    try:
+        os.makedirs(THUMB_DIR, exist_ok=True)
+        p = os.path.join(THUMB_DIR, f"{addr.replace(':', '_')}.png")
+        subprocess.run(["grim", "-g", f"{int(r0[0])},{int(r0[1])} {int(r0[2])}x{int(r0[3])}", p],
+                       capture_output=True, timeout=6)
+        if os.path.exists(p):
+            return p
+    except Exception as e:
+        log(f"snap {addr}: {e}")
+    return None
+
+
+def drop_thumb(entry):
+    p = (entry or {}).get("thumb")
+    if p:
+        try:
+            os.remove(p)
+        except OSError:
+            pass
 
 
 def rect_of(c):
@@ -390,6 +421,8 @@ def cmd_min(addr=None):
     }
     entries.append(entry)
     save_state(entries)
+    entry["thumb"] = snap(addr, entry.get("at"))
+    save_state(entries)
 
     qsv = False
     if animatable(c):
@@ -507,6 +540,7 @@ def cmd_restore(addr=None, nofocus=False):
 
     if not nofocus:
         focus_win(a)
+    drop_thumb(picked)
     log(f"restore {a} done ws={dest} tiled={was_tiled}")
     return 0
 
@@ -552,6 +586,11 @@ def cmd_clear():
     try:
         os.remove(STATE_PATH)
     except FileNotFoundError:
+        pass
+    try:
+        for f in os.listdir(THUMB_DIR):
+            os.remove(os.path.join(THUMB_DIR, f))
+    except OSError:
         pass
     return 0
 
