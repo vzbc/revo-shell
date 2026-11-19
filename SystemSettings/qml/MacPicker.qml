@@ -7,18 +7,28 @@ Item {
     property string value: ""
     property var options: []
     property bool pill: false
+    property real maxWidth: 100000
     signal accepted(string value)
 
-    implicitWidth: labelRow.implicitWidth + (pill ? 22 : 16)
-    height: pill ? 24 : 20
+    implicitWidth: Math.min(maxWidth, valueLabel.implicitWidth + 14 + (pill ? 26 : 16))
+    width: implicitWidth
+    height: pill ? Theme.controlHeight : 20
 
+    // capsule glass pop-up button (Tahoe)
     Rectangle {
         visible: pick.pill
         anchors.fill: parent
-        radius: 7
-        color: Theme.controlBg
+        radius: height / 2
+        color: pickArea.pressed ? Theme.pressedBg : (pickArea.containsMouse ? Theme.glassControlHover : Theme.controlBg)
         border.width: 1
         border.color: Theme.controlBorder
+    }
+    Rectangle {
+        visible: !pick.pill && pickArea.containsMouse
+        anchors.fill: parent
+        anchors.margins: -3
+        radius: height / 2
+        color: Theme.hoverBg
     }
 
     Row {
@@ -27,8 +37,11 @@ Item {
         spacing: 5
 
         Text {
+            id: valueLabel
             text: pick.value
-            font.family: "SF Pro Text"
+            width: Math.min(implicitWidth, pick.maxWidth - 14 - (pick.pill ? 26 : 16))
+            elide: Text.ElideRight
+            font.family: Theme.fontText
             font.pixelSize: 13
             color: Theme.btnText
             anchors.verticalCenter: parent.verticalCenter
@@ -43,7 +56,7 @@ Item {
             onPaint: {
                 const ctx = getContext("2d")
                 ctx.reset()
-                ctx.strokeStyle = "#6E6E73"
+                ctx.strokeStyle = Theme.stroke
                 ctx.lineWidth = 1.4
                 ctx.lineCap = "round"
                 ctx.lineJoin = "round"
@@ -66,25 +79,33 @@ Item {
     }
 
     MouseArea {
+        id: pickArea
         anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
+        hoverEnabled: true
         onClicked: menu.open()
     }
 
     Popup {
         id: menu
-        padding: 5
-        y: pick.height + 4
-        x: 0
+        padding: 6
+        readonly property int selIdx: Math.max(0, pick.options.indexOf(pick.value))
+        y: pick.pill ? -padding - selIdx * 25 + (pick.height - 24) / 2 : pick.height + 4
+        x: pick.pill ? -18 : 0
         modal: false
         focus: true
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
-        width: Math.max(120, menuCol.implicitWidth + 14)
+        width: Math.max(pick.width + 20, menuCol.implicitWidth + 16)
         implicitHeight: menuCol.implicitHeight + padding * 2
 
+        enter: Transition {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 110 }
+            NumberAnimation { property: "scale"; from: 0.96; to: 1; duration: 140; easing.type: Easing.OutCubic }
+        }
+        exit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 90 } }
+
         background: Rectangle {
-            radius: 9
+            radius: 13
             color: Theme.menuBg
             border.width: 1
             border.color: Theme.menuBorder
@@ -103,8 +124,8 @@ Item {
                     property bool selected: modelData === pick.value
 
                     width: menuCol.width
-                    height: 22
-                    radius: 5
+                    height: 24
+                    radius: 7
                     color: rowArea.containsMouse ? Theme.accent : "transparent"
 
                     Row {
@@ -114,16 +135,18 @@ Item {
                         spacing: 6
 
                         Text {
-                            visible: parent.parent.selected && !rowArea.containsMouse
-                            text: "✓"
+                            width: 12
+                            opacity: opt.selected ? 1 : 0
+                            text: "\u2713"
                             font.pixelSize: 12
-                            color: Theme.btnText
+                            font.bold: true
+                            color: rowArea.containsMouse ? "white" : Theme.btnText
                             anchors.verticalCenter: parent.verticalCenter
                         }
 
                         Text {
                             text: opt.modelData
-                            font.family: "SF Pro Text"
+                            font.family: Theme.fontText
                             font.pixelSize: 13
                             color: rowArea.containsMouse ? "white" : Theme.btnText
                             anchors.verticalCenter: parent.verticalCenter

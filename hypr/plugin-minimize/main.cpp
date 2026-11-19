@@ -3,7 +3,6 @@
 #include <hyprland/src/includes.hpp>
 
 #include <cstdint>
-#include <cstdlib>
 #include <format>
 #include <sstream>
 #include <stdexcept>
@@ -27,10 +26,7 @@
 void registerGenieLua();
 void clearGenieTransformers();
 
-inline std::string minScriptPath() {
-    const char* home = std::getenv("HOME");
-    return std::string(home ? home : "") + "/.config/hypr/scripts/minimize_window.py";
-}
+inline constexpr const char* MIN_SCRIPT           = "/home/revo/.config/hypr/scripts/minimize_window.py";
 inline constexpr const char* TOPLEVEL_CTOR_SYMBOL =
     "_ZN20CXDGToplevelResourceC1EN9Hyprutils6Memory14CSharedPointerI12CXdgToplevelEENS2_I19CXDGSurfaceResourceEE";
 
@@ -55,7 +51,7 @@ static void runMinimizeCmd(const char* op, PHLWINDOW window, bool nofocus) {
 
     const auto ADDR = reinterpret_cast<uintptr_t>(window.get());
 
-    std::string cmd = std::format("{} {} 0x{:x}", minScriptPath(), op, ADDR);
+    std::string cmd = std::format("{} {} 0x{:x}", MIN_SCRIPT, op, ADDR);
     if (nofocus)
         cmd += " nofocus";
 

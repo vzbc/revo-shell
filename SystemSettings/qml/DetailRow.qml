@@ -18,6 +18,7 @@ Item {
     property bool isSlider: false
     property real sliderValue: 0
     property real sliderMax: 1
+    property string buttonLabel: ""
 
     signal clicked
     signal toggled(bool checked)
@@ -38,10 +39,20 @@ Item {
         color: Theme.separator
     }
 
+    // pressed/hover feedback for navigable rows (Tahoe highlights the row)
+    Rectangle {
+        anchors.fill: parent
+        anchors.margins: 4
+        radius: Theme.cardRadius - 4
+        visible: row.chevron
+        color: rowArea.pressed ? Theme.pressedBg : (rowArea.containsMouse ? Theme.hoverBg : "transparent")
+    }
+
     MouseArea {
+        id: rowArea
         anchors.fill: parent
         z: -1
-        cursorShape: row.chevron || row.showSwitch ? Qt.ArrowCursor : Qt.PointingHandCursor
+        hoverEnabled: row.chevron
         onClicked: row.clicked()
     }
 
@@ -61,11 +72,13 @@ Item {
         anchors.left: parent.left
         anchors.leftMargin: row.iconFile.length > 0 ? 57 : 16
         anchors.verticalCenter: parent.verticalCenter
-        width: parent.width - anchors.leftMargin - (row.isSlider ? Math.max(150, parent.width * 0.42) + 34 : (row.pickerOptions.length > 0 ? 130 : 70))
+        width: parent.width - anchors.leftMargin - 16 - (row.isSlider ? slider.width + 24 : (row.pickerOptions.length > 0 ? picker.width + 24 : (row.value.length > 0 ? valueText.implicitWidth + 24 : 0) + (row.showSwitch ? 52 : 0) + (row.chevron ? 24 : 0) + (row.showInfo ? 24 : 0) + (row.buttonLabel.length > 0 ? rowBtn.width + 16 : 0)))
         spacing: 2
 
         Text {
             text: row.title
+            width: parent.width
+            elide: Text.ElideRight
             font.family: Theme.fontText
             font.pixelSize: 13
             color: row.dimmed ? Theme.textSecondary : row.titleColor
@@ -83,6 +96,7 @@ Item {
     }
 
     Text {
+        id: valueText
         visible: row.value.length > 0 && row.pickerOptions.length === 0 && !row.isSlider
         anchors.right: parent.right
         anchors.rightMargin: row.chevron ? 36 : 16
@@ -94,6 +108,8 @@ Item {
     }
 
     MacPicker {
+        id: picker
+        maxWidth: row.width * 0.5
         visible: row.pickerOptions.length > 0
         anchors.right: parent.right
         anchors.rightMargin: row.chevron ? 32 : 16
@@ -105,6 +121,7 @@ Item {
     }
 
     MacSlider {
+        id: slider
         visible: row.isSlider
         anchors.right: parent.right
         anchors.rightMargin: 16
@@ -125,6 +142,16 @@ Item {
         onToggled: (checked) => row.toggled(checked)
     }
 
+    MacButton {
+        id: rowBtn
+        visible: row.buttonLabel.length > 0
+        text: row.buttonLabel
+        anchors.right: parent.right
+        anchors.rightMargin: 16
+        anchors.verticalCenter: parent.verticalCenter
+        onClicked: row.clicked()
+    }
+
     InfoDot {
         visible: row.showInfo
         anchors.right: parent.right
@@ -132,6 +159,8 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         onClicked: row.infoClicked()
     }
+
+    Connections { target: Theme; function onDarkChanged() { chev.requestPaint() } }
 
     Canvas {
         id: chev
@@ -144,8 +173,8 @@ Item {
         onPaint: {
             const ctx = getContext("2d")
             ctx.reset()
-            ctx.strokeStyle = "#B4B4B8"
-            ctx.lineWidth = 1.4
+            ctx.strokeStyle = Theme.chevron
+            ctx.lineWidth = 1.6
             ctx.lineCap = "round"
             ctx.lineJoin = "round"
             ctx.beginPath()

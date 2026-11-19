@@ -7,29 +7,31 @@ Item {
     property bool signedIn: false
     property string accountName: ""
     property bool selected: false
-    readonly property bool highlighted: selected && cell.Window.window && cell.Window.window.active
+    readonly property bool highlighted: selected && (cell.Window.window ? cell.Window.window.active : true)
 
     signal clicked
 
     width: parent ? parent.width : 200
-    height: 44
+    height: 50
 
     Rectangle {
         anchors.fill: parent
-        anchors.leftMargin: 12
-        anchors.rightMargin: 12
-        radius: 8
-        color: cell.selected ? (cell.highlighted ? Theme.accent : Theme.selectedBg) : "transparent"
+        anchors.leftMargin: 8
+        anchors.rightMargin: 8
+        radius: Theme.rowRadius + 2
+        color: cell.selected ? (cell.highlighted ? Theme.accent : Theme.selectedBg)
+                             : (cellMouse.containsMouse ? Theme.hoverBg : "transparent")
+        Behavior on color { ColorAnimation { duration: 90 } }
     }
 
     Row {
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
-        anchors.leftMargin: 16
-        spacing: 8
+        anchors.leftMargin: 13
+        spacing: 9
 
         Avatar {
-            size: 32
+            size: 36
             avatarPath: { var m = Shell.userCfg; return String(Shell.uget("avatarPath", "")) }
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -62,8 +64,9 @@ Item {
     }
 
     MouseArea {
+        id: cellMouse
         anchors.fill: parent
-        cursorShape: Qt.PointingHandCursor
+        hoverEnabled: true
         onClicked: cell.clicked()
     }
 }

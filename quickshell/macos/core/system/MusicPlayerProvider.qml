@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/core/system/MusicPlayerProvider.qml
+../../../eqsh/core/system/MusicPlayerProvider.qml

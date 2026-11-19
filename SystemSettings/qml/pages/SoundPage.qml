@@ -70,7 +70,7 @@ Column {
     function play(path) {
         page.playingId = path
         stopPlay.restart()
-        Shell.run("paplay --volume=40000 " + path.replace(/'/g, "'\\''") + " >/dev/null 2>&1 &")
+        Shell.run("pw-play --volume=" + Number(eget("sound.alertVolume", 0.6)).toFixed(2) + " '" + path.replace(/'/g, "'\\''") + "' >/dev/null 2>&1 &")
         Shell.eset("sound.alertSound", path)
         rev++
     }
@@ -86,11 +86,17 @@ Column {
         DetailRow {
             title: "Alert volume"
             isSlider: true
-            sliderValue: page.audio.volume >= 0 ? page.audio.volume : 0.6
-            onMoved: (r) => {
-                page.audio.volume = r
-                Shell.setSinkVolume(r)
-                Shell.ipc("audio", "setVolume", [String(r)])
+            sliderValue: Number(eget("sound.alertVolume", 0.6))
+            onMoved: (r) => { alertCommit.v = r; alertCommit.restart() }
+            Timer {
+                id: alertCommit
+                property real v: 0.6
+                interval: 260
+                onTriggered: {
+                    Shell.eset("sound.alertVolume", Number(v.toFixed(2)))
+                    var p = String(eget("sound.alertSound", "/usr/share/sounds/freedesktop/stereo/message.oga"))
+                    Shell.run("pw-play --volume=" + v.toFixed(2) + " '" + p.replace(/'/g, "'\\''") + "' >/dev/null 2>&1 &")
+                }
             }
         }
 
@@ -137,7 +143,6 @@ Column {
     SectionHeader { text: "Alert sound" }
 
     GroupCard {
-        width: parent.width
         height: alertsCol.implicitHeight + 8
 
         Column {
@@ -188,6 +193,31 @@ Column {
     Item { width: 1; height: 4 }
 
     SectionHeader { text: "Output" }
+
+    GroupCard {
+        DetailRow {
+            title: "Output volume"
+            isSlider: true
+            sliderValue: page.audio.volume >= 0 ? page.audio.volume : 0.5
+            onMoved: (r) => {
+                page.audio.volume = r
+                Shell.ipc("audio", "setVolume", [String(r)])
+            }
+        }
+        DetailRow {
+            separator: true
+            title: "Mute"
+            showSwitch: true
+            switchOn: page.audio.muted === true
+            onToggled: (c) => {
+                Shell.run("wpctl set-mute @DEFAULT_AUDIO_SINK@ " + (c ? "1" : "0"))
+                page.audio = Shell.audioState()
+                rev++
+            }
+        }
+    }
+
+    Item { width: 1; height: 8 }
 
     GroupCard {
         Repeater {

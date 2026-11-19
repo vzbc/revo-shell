@@ -12,7 +12,7 @@ Singleton {
     property var userCfg: ({})
     FileView {
         id: cfgFile
-        path: "file://" + Quickshell.env("HOME") + "/.config/quickshell/macos/userconfig.json"
+        path: "file:///home/revo/.config/quickshell/macos/userconfig.json"
         watchChanges: true
         onLoaded: {
             try {
@@ -31,7 +31,7 @@ Singleton {
     }
     Process { id: cfgWriter; running: false }
     function set(k, v) {
-        cfgWriter.command = ["python3", Quickshell.env("HOME") + "/.config/quickshell/macos/scripts/setcfg.py", k, JSON.stringify(v)]
+        cfgWriter.command = ["python3", "/home/revo/.config/quickshell/macos/scripts/setcfg.py", k, JSON.stringify(v)]
         cfgWriter.running = true
     }
 
@@ -92,6 +92,9 @@ Singleton {
     property bool menubarClock: cfgGet("menubarClock", true)
     property bool menubarTray: cfgGet("menubarTray", true)
     property bool darkMode: cfgGet("darkMode", false)
+    property bool clock24h: cfgGet("clock24h", false)
+    property bool clockSeconds: cfgGet("clockSeconds", false)
+    property bool clockDate: cfgGet("clockDate", false)
 
     // ---- macOS Tahoe Appearance: Liquid Glass + Icon & widget style ----
     property string liquidGlass: cfgGet("liquidGlass", "Clear")

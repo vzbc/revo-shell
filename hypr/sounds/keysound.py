@@ -1,5 +1,4 @@
 import evdev
-import os
 import subprocess
 
 devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
@@ -21,7 +20,7 @@ if not keyboard:
 if not keyboard:
     exit(1)
 
-sound_dir = os.path.expanduser("~/.config/hypr/sounds/")
+sound_dir = "/home/revo/.config/hypr/sounds/"
 
 ignored_keys = {
     evdev.ecodes.KEY_LEFTSHIFT, evdev.ecodes.KEY_RIGHTSHIFT,

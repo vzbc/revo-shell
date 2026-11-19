@@ -7,9 +7,11 @@ Rectangle {
     property string title: ""
     property string subtitle: ""
 
-    x: 12
-    width: parent ? parent.width - 24 : 400
-    radius: 10
+    x: Theme.cardMargin
+    width: parent ? parent.width - 2 * Theme.cardMargin : 400
+    radius: Theme.cardRadius
+    border.width: 1
+    border.color: Theme.cardStroke
     color: Theme.cardBg
 
     implicitHeight: col.implicitHeight

@@ -140,7 +140,7 @@ PanelWindow {
             }
             Text {
                 width: parent.width
-                visible: root.current ? !!root.current.body : false
+                visible: root.current ? (!!root.current.body && Notifications.previews !== "Never") : false
                 text: root.current?.body ?? ""
                 font { family: Appearance.fontFamily; pixelSize: 13 }
                 color: Appearance.fgDim

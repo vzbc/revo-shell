@@ -31,10 +31,10 @@ Column {
 
     // ---- storage ----
     Rectangle {
-        x: 12
-        width: parent.width - 24
+        x: Theme.cardMargin
+        width: parent.width - 2 * Theme.cardMargin
         height: stCol.implicitHeight + 36
-        radius: 10
+        radius: Theme.cardRadius
         color: Theme.cardBg
 
         Column {

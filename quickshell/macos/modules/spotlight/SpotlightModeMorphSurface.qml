@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/modules/spotlight/SpotlightModeMorphSurface.qml
+../../../eqsh/modules/spotlight/SpotlightModeMorphSurface.qml

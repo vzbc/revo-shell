@@ -168,7 +168,9 @@ WlrLayershell {
             fragmentShader: Qt.resolvedUrl("../Assets/shaders/motion/motion.frag.qsb")
         }
 
-        CavaVisualizer {
+        // optional: needs the CavaMonitor plugin (see README) — a missing
+        // plugin only skips the visualizer instead of breaking the shell
+        Loader {
             id: s1_cava
             anchors {
                 left: parent.left
@@ -177,6 +179,7 @@ WlrLayershell {
                 topMargin: 0
             }
             height: 555
+            source: Qt.resolvedUrl("CavaVisualizer.qml")
         }
 
         Image {

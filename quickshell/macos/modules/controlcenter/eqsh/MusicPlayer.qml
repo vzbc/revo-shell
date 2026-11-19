@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/ui/components/panel/MusicPlayer.qml
+../../../../eqsh/ui/components/panel/MusicPlayer.qml

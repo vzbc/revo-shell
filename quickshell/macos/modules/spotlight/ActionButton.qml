@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/modules/spotlight/ActionButton.qml
+../../../eqsh/modules/spotlight/ActionButton.qml

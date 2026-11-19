@@ -39,7 +39,6 @@ Item {
     MouseArea {
         anchors.fill: parent
         z: -1
-        cursorShape: Qt.PointingHandCursor
         onClicked: row.clicked()
     }
 
@@ -63,8 +62,10 @@ Item {
 
     Text {
         anchors.left: parent.left
-        anchors.leftMargin: 57
+        anchors.leftMargin: (row.iconFile.length > 0 || row.appName.length > 0) ? 57 : 16
         anchors.verticalCenter: parent.verticalCenter
+        width: trailing.x - anchors.leftMargin - 12
+        elide: Text.ElideRight
         text: row.title.length > 0 ? row.title : row.appName
         font.family: Theme.fontText
         font.pixelSize: 13
@@ -82,7 +83,7 @@ Item {
         onPaint: {
             const ctx = getContext("2d")
             ctx.reset()
-            ctx.strokeStyle = "#B4B4B8"
+            ctx.strokeStyle = Theme.chevron
             ctx.lineWidth = 1.4
             ctx.lineCap = "round"
             ctx.lineJoin = "round"
@@ -112,6 +113,7 @@ Item {
 
         MacPicker {
             visible: row.showPicker
+            maxWidth: row.width * 0.45
             anchors.verticalCenter: parent.verticalCenter
             value: row.pickerValue
             options: row.pickerOptions

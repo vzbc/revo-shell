@@ -27,8 +27,8 @@ usage() {
 Usage: ./install.sh [options]
 
 Options:
-  --shells LIST     Comma-separated shell ids to deploy (e.g. macos,ii,lucid)
-                    Use "all" to deploy every shell (default when non-interactive).
+  --shells LIST     Shell ids, first = default shell (e.g. macos,ii,lucid).
+                    Every shell is always installed; this only picks the default.
   --check           Read-only health check: hyprpm/repos, default shell, running
                     shell, QML errors in its log, leftover /home/revo paths.
                     Exit code 1 if anything is broken.
@@ -42,9 +42,8 @@ Environment:
   WITH_HYPRGLASS=1  Also add the HyprGlass repo (off by default: its build hangs,
                     and hyprliquid is the engine the configs enable anyway)
 
-Fresh installs always need --shells (you get only what you pick; the first
-shell becomes the default). A re-run without --shells re-applies your choice.
-Interactive mode (TTY): a numbered multi-select menu is shown for shells.
+All shells are always installed. --shells (or the TTY menu) picks the default
+shell (the first one); without it the previous default is kept.
 EOF
 }
 
@@ -100,6 +99,22 @@ copy_tree() {
   fi
 }
 
+# shell needs something this repo can't ship (see <shell>/.revo-requires):
+#   path <file>   must exist        qml <Module>   QML module must be installed
+shell_runnable() {
+  local req="$1/.revo-requires" kind val
+  [[ -f "$req" ]] || return 0
+  while read -r kind val; do
+    [[ -z "$kind" || "$kind" == \#* ]] && continue
+    val="${val/#\~/$HOME}"
+    case "$kind" in
+      path) [[ -e "$val" ]] || return 1 ;;
+      qml)  [[ -d "/usr/lib/qt6/qml/$val" || -d "$HOME/.local/lib/qt6/qml/$val" ]] || return 1 ;;
+    esac
+  done < "$req"
+  return 0
+}
+
 # ── Shell selection (CLI multi-select like Stage3) ──────────
 is_skip_shell_dir() {
   local name="$1" n
@@ -120,7 +135,7 @@ list_available_shells() {
     is_skip_shell_dir "$base" && continue
     # shell must look like a quickshell root (shell.qml or any root *.qml)
     if [[ -f "$d/shell.qml" ]] || compgen -G "$d/*.qml" >/dev/null 2>&1; then
-      printf '%s\n' "$base"
+      shell_runnable "${d%/}" && printf '%s\n' "$base"
     fi
   done | sort -f
 }
@@ -165,7 +180,7 @@ prompt_shell_selection() {
     return 0
   fi
 
-  log "select Quickshell shells to install (multi-select)"
+  log "pick your shell (all shells are installed; the first you pick is the default)"
   printf '  [0] all\n'
   for i in "${!avail[@]}"; do
     printf '  [%d] %s\n' "$((i + 1))" "${avail[$i]}"
@@ -231,53 +246,13 @@ prompt_shell_selection() {
 }
 
 deploy_quickshell() {
+  # Like the original installer: always deploy the whole quickshell tree.
+  # Shells share root assets/dirs and launch each other's helpers, so a
+  # partial copy left some picks blank. The selection only picks the default.
   local src="$ROOT/quickshell"
   local dest="$HOME/.config/quickshell"
   [[ -d "$src" ]] || { log "skip (missing): $src"; return 0; }
-
-  if [[ "$SELECTED_SHELLS_ALL" == "1" ]] || [[ ${#SELECTED_SHELLS[@]} -eq 0 ]]; then
-    copy_tree "$src" "$dest"
-    return 0
-  fi
-
-  if [[ -d "$dest" ]] && [[ -n "$(ls -A "$dest" 2>/dev/null || true)" ]]; then
-    log "backup → $BACKUP_ROOT/quickshell"
-    run "mkdir -p '$BACKUP_ROOT'"
-    run "cp -a '$dest' '$BACKUP_ROOT/quickshell'"
-  fi
-  run "mkdir -p '$dest'"
-  log "copy shared quickshell root → $dest"
-  # root files only (shell.qml, assets, tools, …)
-  local item base
-  for item in "$src"/*; do
-    [[ -e "$item" ]] || continue
-    base="$(basename "$item")"
-    is_skip_shell_dir "$base" && continue
-    if [[ -d "$item" ]]; then
-      continue
-    fi
-    run "cp -a '$item' '$dest/$base'"
-  done
-  # shared non-shell dirs (settings, previews excluded by skip list)
-  if [[ -d "$src/settings" ]]; then
-    run "mkdir -p '$dest/settings'"
-    run "cp -a '$src/settings/.' '$dest/settings/'"
-  fi
-  # selected shells only
-  local sid
-  for sid in "${SELECTED_SHELLS[@]}"; do
-    if [[ -d "$src/$sid" ]]; then
-      log "copy shell: $sid"
-      run "mkdir -p '$dest/$sid'"
-      if have rsync; then
-        run "rsync -a --exclude '.git' '$src/$sid/' '$dest/$sid/'"
-      else
-        run "cp -a '$src/$sid/.' '$dest/$sid/'"
-      fi
-    else
-      log "MISS shell (not in repo): $sid"
-    fi
-  done
+  copy_tree "$src" "$dest"
 }
 
 set_default_shell() {
@@ -286,6 +261,10 @@ set_default_shell() {
   [[ -z "$shell_id" || "$shell_id" == "default" ]] && return 0
   local qs_dir="$HOME/.config/quickshell/$shell_id"
   [[ -d "$qs_dir" ]] || { log "default shell missing on disk: $qs_dir — skip"; return 0; }
+  if ! shell_runnable "$qs_dir"; then
+    log "default shell '$shell_id' can't run here ($(grep -v '^#' "$qs_dir/.revo-requires" | head -1) missing) — using macos"
+    shell_id=macos; qs_dir="$HOME/.config/quickshell/macos"
+  fi
 
   local launch=""
   local toggle="$HOME/.config/hypr/scripts/toggle_qs_dots.sh"
@@ -370,29 +349,41 @@ install_packages() {
         git curl wget jq python python-pip which libnotify xdg-utils xdg-user-dirs desktop-file-utils
         procps-ng psmisc util-linux coreutils findutils fd gawk sed grep zenity
         pipewire pipewire-pulse wireplumber libpulse playerctl cava mpv-mpris
-        networkmanager bluez bluez-utils brightnessctl upower power-profiles-daemon lm_sensors rfkill ddcutil
+        networkmanager bluez bluez-utils brightnessctl upower power-profiles-daemon lm_sensors ddcutil
         grim slurp wf-recorder hyprshot hyprpicker ffmpeg imagemagick wl-clipboard cliphist wtype swappy
-        matugen swww hyprpaper swaybg mpvpaper python-pywal swaync swayosd easyeffects
-        quickshell
-        kitty nautilus thunar rofi-wayland wofi fastfetch starship fish gnome-calculator
+        matugen hyprpaper swaybg mpvpaper swaync swayosd easyeffects
+        kitty nautilus thunar rofi wofi fastfetch starship fish gnome-calculator
         papirus-icon-theme adwaita-cursors xdg-desktop-portal-gtk
         ttf-jetbrains-mono-nerd ttf-nerd-fonts-symbols-common ttf-material-symbols-variable
-        noto-fonts noto-fonts-emoji ttf-rubik ttf-iosevka ttf-firacode
+        noto-fonts noto-fonts-emoji ttc-iosevka ttf-fira-code
         base-devel cmake ninja pkgconf clang gcc
       )
+      # pacman aborts the WHOLE transaction on one unknown name, so keep only
+      # what the sync db actually has (renamed/AUR-only names are logged)
+      local -a avail=() gone=()
+      local p
+      for p in "${PKGS[@]}"; do
+        if pacman -Si "$p" >/dev/null 2>&1 || pacman -Sg "$p" >/dev/null 2>&1; then avail+=("$p"); else gone+=("$p"); fi
+      done
+      [[ ${#gone[@]} -gt 0 ]] && log "not in your repos (skipped): ${gone[*]}"
       # shellcheck disable=SC2086
-      run "$SUDO pacman -S --noconfirm --needed ${PKGS[*]}" || log "pacman reported errors — continuing"
+      run "$SUDO pacman -S --noconfirm --needed ${avail[*]}" || log "pacman reported errors — continuing"
       AUR_HELPER=""
       have yay && AUR_HELPER=yay
       have paru && AUR_HELPER=paru
       if [[ -n "$AUR_HELPER" ]]; then
-        AUR_PKGS=(awww ttf-material-symbols-variable-git ttf-comicshannsmono-nerd ttf-meslo-nerd kde-material-you-colors)
-        # official `quickshell` covers qs/quickshell; only fall back to the AUR build
+        AUR_PKGS=(awww ttf-material-symbols-variable-git ttf-comicshannsmono-nerd ttf-meslo-nerd kde-material-you-colors
+                  python-pywal16 ttf-rubik-vf qt6-m3shapes-git)
+        # several shells (caelestia, lucid, Clavis) need APIs only in quickshell-git
         have qs || have quickshell || AUR_PKGS+=(quickshell-git)
         run "$AUR_HELPER -S --noconfirm --needed ${AUR_PKGS[*]}" || log "AUR partial — some optional packages skipped"
+        if pacman -Qq quickshell >/dev/null 2>&1 && ! pacman -Qq quickshell-git >/dev/null 2>&1; then
+          log "note: you have the tagged 'quickshell' — caelestia/lucid/Clavis need 'quickshell-git' ($AUR_HELPER -S quickshell-git)"
+        fi
       else
-        log "no yay/paru — skipping AUR extras (official quickshell/hyprpm come from the repos)"
+        log "no yay/paru — AUR extras skipped (quickshell from the repos; some shells need quickshell-git)"
       fi
+      have qs || have quickshell || run "$SUDO pacman -S --noconfirm --needed quickshell" || true
       ;;
     debian)
       run "$SUDO apt-get update -y"
@@ -549,6 +540,20 @@ fix_paths() {
     else
       log "rewrote /home/revo → $HOME in $n file(s)"
     fi
+  fi
+
+  # symlinks that still point into the dev home (e.g. a shell's cache file):
+  # sed above skips links, so retarget them at this $HOME
+  if [[ "$HOME" != "/home/revo" && "$DRY_RUN" != "1" ]]; then
+    local d l t
+    for d in "${FIX_PATHS_DIRS[@]}"; do
+      [[ -d "$d" ]] || continue
+      while IFS= read -r -d '' l; do
+        t="$(readlink "$l")"
+        [[ "$t" == /home/revo/* ]] || continue
+        ln -sfn "$HOME/${t#/home/revo/}" "$l" && n=$((n + 1))
+      done < <(find "$d" -type l -print0 2>/dev/null)
+    done
   fi
 
   # guide symlink
@@ -785,19 +790,10 @@ else
   fi
 fi
 
-# A fresh install must say what to deploy — you get only what you pick.
-# Updates (a marker from a previous run) keep re-applying that same choice.
-if [[ "$SELECTED_SHELLS_ALL" == "1" && "$SHELLS_EXPLICIT" != "1" ]]; then
-  if [[ -f "$HOME/.config/hypr/.revo_default_shell" ]]; then
-    log "no --shells: re-applying the shell you chose before ($(tr -d ' \n' < "$HOME/.config/hypr/.revo_default_shell"))"
-  else
-    log "fresh install: refusing to deploy every shell — you get only what you pick"
-    log "  ./install.sh --shells macos        # one shell (it becomes the default)"
-    log "  ./install.sh --shells macos,ii    # several (first = default)"
-    log "  ./install.sh --shells all          # everything, on purpose"
-    log "  available: $(list_available_shells | tr '\n' ' ')"
-    exit 1
-  fi
+# No explicit pick (non-interactive / "all"): deploy everything and keep the
+# previously chosen default shell, if any.
+if [[ "$SELECTED_SHELLS_ALL" == "1" && "$SHELLS_EXPLICIT" != "1" && -f "$HOME/.config/hypr/.revo_default_shell" ]]; then
+  log "no --shells: keeping your default shell ($(tr -d ' \n' < "$HOME/.config/hypr/.revo_default_shell"))"
 fi
 
 # ── Deploy FIRST (files must land even if package install fails) ──
@@ -806,6 +802,17 @@ deploy_quickshell
 copy_tree "$ROOT/wallpapers" "$HOME/Pictures/Wallpapers"
 copy_tree "$ROOT/rofi" "$HOME/.config/rofi"
 copy_tree "$ROOT/kitty" "$HOME/.config/kitty"
+# Siri backend for the macOS shell: scripts + sounds only — never touches the
+# user's downloaded models/voices (those come from siri27/src/fetch.sh)
+if [[ -d "$ROOT/siri27" ]]; then
+  run "mkdir -p '$HOME/.local/share/siri27'"
+  if have rsync; then
+    run "rsync -a '$ROOT/siri27/' '$HOME/.local/share/siri27/'" || log "siri27 copy failed (continuing)"
+  else
+    run "cp -a '$ROOT/siri27/.' '$HOME/.local/share/siri27/'" || log "siri27 copy failed (continuing)"
+  fi
+  run "chmod +x '$HOME/.local/share/siri27/src/fetch.sh' 2>/dev/null || true"
+fi
 
 if [[ "$DRY_RUN" != "1" ]]; then
   find "$HOME/.config/hypr" -type f -name '*.sh' -exec chmod +x {} + 2>/dev/null || true
@@ -875,7 +882,7 @@ REQUIRED_CMDS=(
   python python3 pip pip3
   git curl jq cmake ninja
   playerctl grim slurp wl-copy wl-paste
-  swww matugen swaync
+  awww matugen swaync
   pipewire wireplumber
   systemctl
 )
@@ -901,7 +908,7 @@ CMD_PKGS=(
   "slurp:slurp:slurp:slurp"
   "wl-copy:wl-clipboard:wl-clipboard:wl-clipboard"
   "wl-paste:wl-clipboard:wl-clipboard:wl-clipboard"
-  "swww:swww:swww:swww"
+  "awww:awww:awww:awww"
   "matugen:matugen:matugen:matugen"
   "swaync:swaync:swaync:swaync"
   "pipewire:pipewire:pipewire:pipewire"

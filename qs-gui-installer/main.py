@@ -81,6 +81,24 @@ else:
     TRY_QT = False
 
 # Installer Configuration
+
+def _shell_runnable(shell_dir) -> bool:
+    """False when <shell>/.revo-requires lists a path / QML module that is missing."""
+    req = Path(shell_dir) / ".revo-requires"
+    if not req.is_file():
+        return True
+    for line in req.read_text(errors="ignore").splitlines():
+        parts = line.split(None, 1)
+        if len(parts) != 2 or parts[0].startswith("#"):
+            continue
+        kind, val = parts[0], os.path.expanduser(parts[1].strip())
+        if kind == "path" and not os.path.exists(val):
+            return False
+        if kind == "qml" and not (os.path.isdir(f"/usr/lib/qt6/qml/{val}")
+                                  or os.path.isdir(os.path.expanduser(f"~/.local/lib/qt6/qml/{val}"))):
+            return False
+    return True
+
 class InstallerConfig:
     # Monorepo (hypr/ + quickshell/ + wallpapers/) — set after you create the GitHub repo
     DOTFILES_REPO_URL = "https://github.com/vzbc/revo-shell.git"
@@ -133,22 +151,22 @@ class InstallerConfig:
         "playerctl", "cava", "mpv-mpris",
         # network / bt / power / sensors
         "networkmanager", "bluez", "bluez-utils", "brightnessctl",
-        "upower", "power-profiles-daemon", "lm_sensors", "rfkill", "ddcutil",
+        "upower", "power-profiles-daemon", "lm_sensors", "ddcutil",
         # capture / clipboard
         "grim", "slurp", "wf-recorder", "hyprshot", "hyprpicker",
         "ffmpeg", "imagemagick", "wl-clipboard", "cliphist", "wtype", "swappy",
         # theming / wallpaper
-        "matugen", "swww", "hyprpaper", "swaybg", "mpvpaper", "python-pywal",
+        "matugen", "hyprpaper", "swaybg", "mpvpaper",
         "swaync", "swayosd", "easyeffects",
         # desktop apps used by shells (install if missing — GUI verifies later)
-        "kitty", "nautilus", "thunar", "rofi-wayland", "rofi", "wofi",
+        "kitty", "nautilus", "thunar", "rofi", "wofi",
         "fastfetch", "starship", "fish", "gnome-calculator",
         "papirus-icon-theme", "adwaita-cursors", "ttf-dejavu",
         "xdg-desktop-portal-gtk", "qt5compat",
         # fonts (UI + icons for shells)
         "ttf-jetbrains-mono-nerd", "ttf-nerd-fonts-symbols-common",
         "ttf-material-symbols-variable", "noto-fonts", "noto-fonts-emoji",
-        "ttf-rubik", "ttf-iosevka", "ttf-firacode",
+        "ttc-iosevka", "ttf-fira-code",
         # build toolchain for C++ shells
         "base-devel", "cmake", "ninja", "pkgconf", "clang", "gcc",
     ]
@@ -162,6 +180,9 @@ class InstallerConfig:
         "kde-material-you-colors",
         "hyprpolkitagent",
         "cliphist",
+        "python-pywal16",
+        "ttf-rubik-vf",
+        "qt6-m3shapes-git",  # caelestia shell
     ]
 
     PIP_PACKAGES = [
@@ -176,8 +197,8 @@ class InstallerConfig:
         "11", "brain_shell", "cartoon-shell", "end4-pc", "ii",
         "imported-1789667132", "lotus-dotfiles", "lucid", "macos",
         "nibrasshell", "persona-quickshell", "Q1", "revo-editorial",
-        "ryoku", "shell", "synoptik", "vast-shell", "zesis",
-    ]
+        "shell", "synoptik", "zesis", "eqsh", "macduo", "hyprland-minions",
+    ]  # ryoku / vast-shell need extras (.revo-requires): listed only when present
 
 # Data Models
 @dataclass
@@ -332,16 +353,19 @@ class InstallationWorker(QObject):
             quickshell_result = self._install_quickshell(shell_id)
 
             # Stage3 pick becomes system default (autostart launches it on login)
-            if shell_id:
-                self.progress_changed.emit(74, f"Setting default shell: {shell_id}…")
-                self._set_default_shell(shell_id)
 
             self.progress_changed.emit(76, "Installing rofi & kitty configs…")
             desk_result = self._install_desktop_configs()
+            self._install_siri27()
 
             # 4) Rewrite absolute /home/revo paths → current $HOME
             self.progress_changed.emit(80, "Fixing home paths…")
             self._fix_home_paths()
+
+            # set + start the default shell only once its files point at this $HOME
+            if shell_id:
+                self.progress_changed.emit(82, f"Setting default shell: {shell_id}…")
+                self._set_default_shell(shell_id)
 
             # 5) Python deps for shells + GUI
             self.progress_changed.emit(85, "Installing Python packages…")
@@ -1078,35 +1102,12 @@ class InstallationWorker(QObject):
             sid = (shell_id or "").strip()
             files_installed = 0
 
+            # Like the original installer: always deploy the whole tree. Shells
+            # share root assets/dirs, so a single-shell copy left some picks blank.
+            # The Stage3 pick only becomes the default shell (_set_default_shell).
+            files_installed = self._copy_tree(qs_src_root, quickshell_dest)
             if sid and sid != "default":
-                # Stage3 pick: deploy ONLY the selected shell (+ shared root assets).
-                one = qs_src_root / sid
-                if one.is_dir():
-                    files_installed = self._copy_tree(one, quickshell_dest / sid)
-                    logger.info(f"Selective install: shell '{sid}' ({files_installed} files)")
-                else:
-                    logger.warning(f"shell '{sid}' missing under monorepo — full quickshell tree")
-                    files_installed = self._copy_tree(qs_src_root, quickshell_dest)
-
-                # Shared root-level assets (splash, guide target pieces, tools) — not other shells.
-                for item in qs_src_root.iterdir():
-                    if not item.is_file():
-                        continue
-                    dest = quickshell_dest / item.name
-                    if dest.exists():
-                        continue
-                    try:
-                        shutil.copy2(str(item), str(dest))
-                        files_installed += 1
-                    except OSError:
-                        pass
-                # Shared settings dir (not a shell)
-                shared_settings = qs_src_root / "settings"
-                if shared_settings.is_dir() and not (quickshell_dest / "settings").is_dir():
-                    files_installed += self._copy_tree(shared_settings, quickshell_dest / "settings")
-            else:
-                # No Stage3 pick (or "default"): full tree — hypr Main.qml is the shell.
-                files_installed = self._copy_tree(qs_src_root, quickshell_dest)
+                logger.info(f"Installed all shells; default will be '{sid}'")
 
             for script_path in quickshell_dest.rglob("*"):
                 if script_path.is_file() and script_path.suffix in {".sh", ".fish"} or script_path.name in {"instalar", "install.sh"}:
@@ -1224,6 +1225,21 @@ class InstallationWorker(QObject):
         except Exception as e:
             logger.warning(f"immediate default shell start failed: {e}")
 
+    def _install_siri27(self) -> None:
+        """Siri backend for the macOS shell → ~/.local/share/siri27 (scripts +
+        sounds only; models/voices are fetched later by src/fetch.sh)."""
+        try:
+            repo_dir = self._staged_repo
+            src = repo_dir / "siri27" if repo_dir else None
+            if src and src.is_dir():
+                n = self._copy_tree(src, Path.home() / ".local" / "share" / "siri27")
+                fetch = Path.home() / ".local" / "share" / "siri27" / "src" / "fetch.sh"
+                if fetch.is_file():
+                    os.chmod(str(fetch), 0o755)
+                logger.info(f"siri27 backend: {n} files")
+        except Exception as e:
+            logger.warning(f"siri27 install skipped: {e}")
+
     def _install_desktop_configs(self) -> Dict:
         """Deploy monorepo rofi/ and kitty/ → ~/.config/{rofi,kitty}.
         Also ensure the packages themselves are present (install if missing)."""
@@ -1304,38 +1320,53 @@ class InstallationWorker(QObject):
         )
 
     def _fix_home_paths(self) -> None:
-        """Rewrite hardcoded /home/revo → current $HOME in deployed configs."""
+        """Rewrite hardcoded /home/revo → current $HOME in deployed configs
+        (any text file, like install.sh) and retarget symlinks into it."""
         home = str(Path.home())
+        if home == "/home/revo":
+            return
         roots = [
             Path.home() / ".config" / "hypr",
             Path.home() / ".config" / "quickshell",
             Path.home() / ".config" / "rofi",
             Path.home() / ".config" / "kitty",
         ]
-        text_exts = {".conf", ".lua", ".json", ".sh", ".qml", ".py", ".js", ".ts", ".md", ".ini"}
+        skip_dirs = {"node_modules", "build", ".git", "__pycache__", ".next", ".cache", "dist"}
         changed = 0
         for root in roots:
             if not root.is_dir():
                 continue
-            for p in root.rglob("*"):
-                if not p.is_file() or p.suffix.lower() not in text_exts:
-                    continue
-                if p.is_symlink():
-                    continue
-                try:
-                    data = p.read_text(errors="ignore")
-                except Exception:
-                    continue
-                if "/home/revo/" not in data:
-                    continue
-                new = data.replace("/home/revo/", home + "/")
-                if new != data:
+            for dirpath, dirnames, filenames in os.walk(root):
+                dirnames[:] = [d for d in dirnames if d not in skip_dirs]
+                for name in filenames + dirnames:
+                    p = Path(dirpath) / name
+                    if p.is_symlink():
+                        try:
+                            t = os.readlink(p)
+                        except OSError:
+                            continue
+                        if t.startswith("/home/revo/"):
+                            try:
+                                p.unlink()
+                                p.symlink_to(home + "/" + t[len("/home/revo/"):])
+                                changed += 1
+                            except OSError:
+                                pass
+                        continue
+                    if name in dirnames or not p.is_file():
+                        continue
                     try:
-                        p.write_text(new)
+                        raw = p.read_bytes()
+                    except OSError:
+                        continue
+                    if b"\0" in raw[:8192] or b"/home/revo/" not in raw:
+                        continue
+                    try:
+                        p.write_bytes(raw.replace(b"/home/revo/", home.encode() + b"/"))
                         changed += 1
                     except OSError:
                         pass
-        logger.info(f"Rewrote /home/revo paths in {changed} files")
+        logger.info(f"Rewrote /home/revo paths in {changed} files/links")
 
     def _install_python_packages(self) -> None:
         """pip --user for shell extras + any requirements.txt in monorepo."""
@@ -1583,6 +1614,8 @@ if TRY_QT:
                     )
                     if not has_qml:
                         continue
+                    if not _shell_runnable(entry):
+                        continue  # needs something this repo can't ship (.revo-requires)
                     sid = entry.name
                     if sid in found:
                         # Prefer installed path when both exist

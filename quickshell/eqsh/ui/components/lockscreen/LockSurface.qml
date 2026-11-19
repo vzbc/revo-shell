@@ -251,10 +251,10 @@ Rectangle {
 			id: mediaGlass
 			anchors.bottom: inputArea.top
 			anchors.horizontalCenter: inputArea.horizontalCenter
-			anchors.bottomMargin: 60
-			width: 330
-			height: 200
-			radius: 30
+			anchors.bottomMargin: 80
+			width: 460
+			height: 250
+			radius: 34
 			GlassMaterial {
 				id: mediaGlassInternal
 				anchors.fill: parent
@@ -267,7 +267,7 @@ Rectangle {
 					NumberAnimation { duration: 400; easing.type: Easing.OutBack; easing.overshoot: 3 }
 				}
 				pos: Qt.point(1, 1)
-				size: Qt.point(328, 198)
+				size: Qt.point(458, 248)
 				source: mediaBlurSource
 				blurSource: mediaBlurSource
 				bloomSource: mediaBlurSource
@@ -307,172 +307,361 @@ Rectangle {
 			enabled: MusicPlayerProvider.isAvailable
 			visible: MusicPlayerProvider.isAvailable
 			anchors.fill: mediaGlass
-			anchors.margins: 25
+			anchors.margins: 22
+			Component.onDestruction: MusicPlayerProvider.lyricsWanted = false
 			Item {
+				id: mediaRoot
 				anchors.fill: parent
-				MultiEffect {
-					source: thumbnail
-					anchors.fill: thumbnail
-					blurEnabled: true
-					blur: 1
-					blurMultiplier: 1
-					blurMax: 64
-					scale: 2
-					autoPaddingEnabled: true
-				}
+				// layout unit: 1.0 at a 150 px tall bubble (MacLock uses height/1200)
+				readonly property real u: Math.max(0.6, height / 150)
+				readonly property var pl: MusicPlayerProvider.activePlayer
+
+				// cover art (MacLock style: rounded square, note while loading, tap to expand)
 				ClippingRectangle {
-					id: thumbnail
-					anchors.bottom: time.top
+					id: art
 					anchors.left: parent.left
-					anchors.margins: 10
-					anchors.bottomMargin: 20
-					width: 60
-					height: 60
-					radius: 15
-					color: "#10ffffff"
+					anchors.leftMargin: 16 * u
+					anchors.top: parent.top
+					anchors.topMargin: 14 * u
+					width: 58 * u
+					height: width
+					radius: 11 * u
+					color: Qt.rgba(1, 1, 1, 0.12)
 					Image {
+						id: coverImg
 						anchors.fill: parent
 						fillMode: Image.PreserveAspectCrop
 						source: MusicPlayerProvider.thumbnail
 						smooth: true
 						mipmap: true
+						asynchronous: true
+					}
+					Rectangle {
+						anchors.fill: parent
+						radius: parent.radius
+						color: "transparent"
+						border.width: 1
+						border.color: Qt.rgba(1, 1, 1, 0.14)
+					}
+					TapHandler { onTapped: parent.artMode = !parent.artMode }
+					HoverHandler { cursorShape: Qt.PointingHandCursor }
+					Text {
+						anchors.centerIn: parent
+						text: "\u266A"
+						font.pixelSize: 24 * u
+						color: Qt.rgba(1, 1, 1, 0.6)
+						visible: coverImg.status !== Image.Ready
 					}
 				}
-				CFText {
-					id: title
-					anchors {
-						top: thumbnail.top
-						left: thumbnail.right
-						right: parent.right
-						topMargin: 10
-						leftMargin: 10
-						rightMargin: 10
-					}
-					text: MusicPlayerProvider.title
-					elide: Text.ElideRight
-					font.weight: 600
-				}
-				Text {
-					id: artist
-					anchors {
-						top: title.bottom
-						left: thumbnail.right
-						right: parent.right
-						leftMargin: 10
-						rightMargin: 10
-					}
-					text: MusicPlayerProvider.artist
-					color: "#aaffffff"
-					elide: Text.ElideRight
-					font.weight: 400
-				}
-				// Progress Bar
-				CFText {
-					id: time
-					anchors {
-						left: parent.left
-						leftMargin: 10
-						bottom: controls.top
-						bottomMargin: 10
-					}
-					// position is in seconds
-					text: Qt.formatTime(new Date(MusicPlayerProvider.position * 1000), "mm:ss")
-					color: "#aaffffff"
-					elide: Text.ElideRight
-				}
-				ProgressBar {
-					id: control
-					anchors {
-						left: time.right
-						leftMargin: 10
-						right: remainingTime.left
-						rightMargin: 10
-						verticalCenter: time.verticalCenter
-					}
-					height: 5
-					value: MusicPlayerProvider.position / MusicPlayerProvider.duration
-					background: Rectangle {
-						implicitHeight: 5
-						color: '#50aaaaaa'
-						radius: 5
-					}
-					contentItem: Item {
-						implicitHeight: 5
 
-						// Progress indicator for determinate state.
+				// title + artist
+				Column {
+					id: txtCol
+					anchors.left: art.right
+					anchors.leftMargin: 14 * u
+					anchors.right: parent.right
+					anchors.rightMargin: 14 * u
+					anchors.verticalCenter: art.verticalCenter
+					spacing: 2 * u
+					CFText {
+						width: parent.width
+						text: MusicPlayerProvider.title
+						elide: Text.ElideRight
+						font.weight: 600
+						font.pixelSize: 15 * u
+					}
+					Text {
+						width: parent.width
+						text: MusicPlayerProvider.artist
+						color: Qt.rgba(1, 1, 1, 0.66)
+						elide: Text.ElideRight
+						font.weight: 400
+						font.pixelSize: 13 * u
+					}
+				}
+
+				// scrubber (time / bar / remaining)
+				Item {
+					id: scrub
+					anchors.left: parent.left
+					anchors.leftMargin: 16 * u
+					anchors.right: parent.right
+					anchors.rightMargin: 16 * u
+					anchors.top: txtCol.bottom
+					anchors.topMargin: 12 * u
+					height: 16 * u
+					readonly property real len: MusicPlayerProvider.duration || 0
+					readonly property real frac: len > 0 ? Math.max(0, Math.min(1, MusicPlayerProvider.position / len)) : 0
+					function fmt(sec) { var s = Math.max(0, Math.floor(sec)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+					CFText {
+						id: tL
+						anchors.left: parent.left
+						anchors.verticalCenter: parent.verticalCenter
+						text: scrub.fmt(MusicPlayerProvider.position)
+						color: Qt.rgba(1, 1, 1, 0.6)
+						font.pixelSize: 11 * u
+					}
+					CFText {
+						id: tR
+						anchors.right: parent.right
+						anchors.verticalCenter: parent.verticalCenter
+						text: scrub.len > 0 ? "-" + scrub.fmt(scrub.len - MusicPlayerProvider.position) : "--:--"
+						color: Qt.rgba(1, 1, 1, 0.6)
+						font.pixelSize: 11 * u
+					}
+					Item {
+						id: bar
+						anchors.left: tL.right
+						anchors.leftMargin: 10 * u
+						anchors.right: tR.left
+						anchors.rightMargin: 10 * u
+						anchors.verticalCenter: parent.verticalCenter
+						height: 5 * u
+						Rectangle { anchors.fill: parent; radius: height / 2; color: Qt.rgba(1, 1, 1, 0.22) }
 						Rectangle {
-							width: control.visualPosition * parent.width
-							height: parent.height
-							radius: 5
-							color: '#ffffff'
-							visible: !control.indeterminate
+							height: parent.height; radius: height / 2
+							width: Math.max(height, parent.width * scrub.frac)
+							color: Qt.rgba(1, 1, 1, 0.88)
+							Behavior on width { NumberAnimation { duration: 480; easing.type: Easing.Linear } }
+						}
+						MouseArea {
+							anchors.fill: parent; anchors.margins: -8
+							hoverEnabled: true
+							cursorShape: Qt.PointingHandCursor
+							onClicked: mouse => {
+								if (scrub.len > 0 && parent.pl) {
+									parent.pl.position = Math.max(0, Math.min(1, mouse.x / bar.width)) * scrub.len;
+								}
+							}
 						}
 					}
 				}
-				CFText {
-					id: remainingTime
-					anchors {
-						right: parent.right
-						rightMargin: 10
-						bottom: controls.top
-						bottomMargin: 10
-					}
-					// position is in seconds
-					text: Qt.formatTime(new Date((MusicPlayerProvider.duration-MusicPlayerProvider.position) * 1000), "-mm:ss")
-					color: "#aaffffff"
-					elide: Text.ElideLeft
-				}
+
+				// transport controls + lyrics button (MacLock layout)
 				Row {
-					id: controls
-					anchors.bottom: parent.bottom
-					anchors.bottomMargin: 10
 					anchors.horizontalCenter: parent.horizontalCenter
-					spacing: 0
-					Button {
-						width: 50
-						height: 50
-						background: Item {}
-						icon {
-							width: 35
-							height: 35
-							color: "#ffffff"
-							source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/backward.svg")
-						}
-						onClicked: {
-							MusicPlayerProvider.previous()
+					anchors.top: scrub.bottom
+					anchors.topMargin: 10 * u
+					spacing: 26 * u
+					Repeater {
+						model: ["prev", "play", "next"]
+						delegate: Item {
+							required property string modelData
+							readonly property bool big: modelData === "play"
+							width: (big ? 38 : 32) * mediaRoot.u
+							height: 34 * mediaRoot.u
+							Rectangle {
+								anchors.centerIn: parent
+								width: 40 * mediaRoot.u; height: width; radius: width / 2
+								color: Qt.rgba(1, 1, 1, tma.containsMouse ? 0.12 : 0)
+								scale: tma.containsMouse ? 1 : 0.6
+								Behavior on scale { NumberAnimation { duration: 260; easing.type: Easing.OutQuint } }
+							}
+							Button {
+								anchors.centerIn: parent
+								width: (big ? 38 : 32) * mediaRoot.u
+								height: 34 * mediaRoot.u
+								background: Item {}
+								icon {
+									width: (big ? 26 : 22) * mediaRoot.u
+									height: width
+									color: "#ffffff"
+									source: parent.modelData === "prev" ? Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/backward.svg")
+										: parent.modelData === "next" ? Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/forward.svg")
+										: (MusicPlayerProvider.isPlaying ? Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/pause.svg") : Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/play.svg"))
+								}
+							}
+							MouseArea {
+								id: tma
+								anchors.fill: parent; anchors.margins: -4
+								hoverEnabled: true
+								cursorShape: Qt.PointingHandCursor
+								onClicked: {
+									if (parent.modelData === "prev") MusicPlayerProvider.previous();
+									else if (parent.modelData === "next") MusicPlayerProvider.next();
+									else MusicPlayerProvider.togglePlay();
+								}
+							}
 						}
 					}
-					Button {
-						width: 50
-						height: 50
-						background: Item {}
-						icon {
-							width: 50
-							height: 50
-							color: "#ffffff"
-							source: MusicPlayerProvider.isPlaying ? Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/pause.svg") : Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/play.svg")
-						}
-						onClicked: {
-							MusicPlayerProvider.togglePlay()
+				}
+
+				// lyrics button (Apple's quote bubble) — right of the controls
+				Item {
+					id: lyrBtn
+					anchors.right: parent.right
+					anchors.rightMargin: 14 * u
+					anchors.top: scrub.bottom
+					anchors.topMargin: 12 * u
+					width: 32 * u; height: 34 * u
+					property bool active: parent.lyricsOn
+					Rectangle {
+						anchors.centerIn: parent
+						width: 30 * u; height: width; radius: 9 * u
+						color: lyrBtn.active ? Qt.rgba(1, 1, 1, 0.92) : Qt.rgba(1, 1, 1, lyrMa.containsMouse ? 0.14 : 0)
+						scale: lyrMa.pressed ? 0.88 : 1
+						Behavior on color { ColorAnimation { duration: 220 } }
+						Behavior on scale { NumberAnimation { duration: 240; easing.type: Easing.OutQuint } }
+						Canvas {
+							id: quoteIcon
+							anchors.centerIn: parent
+							width: 18 * u; height: width
+							property color ink: lyrBtn.active ? "#1c1c1e" : "white"
+							onInkChanged: requestPaint()
+							onWidthChanged: requestPaint()
+							onPaint: {
+								var c = getContext("2d"); c.reset();
+								var s = width / 18; c.scale(s, s);
+								c.fillStyle = ink; c.strokeStyle = ink; c.lineWidth = 1.5; c.lineJoin = "round";
+								c.beginPath();
+								c.moveTo(4.5, 2.5); c.lineTo(13.5, 2.5); c.arcTo(16, 2.5, 16, 5, 2.5); c.lineTo(16, 10.5); c.arcTo(16, 13, 13.5, 13, 2.5);
+								c.lineTo(8, 13); c.lineTo(4.6, 15.8); c.lineTo(4.6, 13); c.arcTo(2, 13, 2, 10.5, 2.5); c.lineTo(2, 5); c.arcTo(2, 2.5, 4.5, 2.5, 2.5);
+								c.closePath(); c.stroke();
+								function q(x) { c.beginPath(); c.arc(x, 7, 1.35, 0, Math.PI * 2); c.fill(); c.beginPath(); c.moveTo(x + 1.2, 7); c.quadraticCurveTo(x + 1.3, 9.6, x - 0.6, 10.4); c.stroke(); }
+								q(6.6); q(10.8);
+							}
 						}
 					}
-					Button {
-						width: 50
-						height: 50
-						background: Item {}
-						icon {
-							width: 35
-							height: 35
-							color: "#ffffff"
-							source: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/music/forward.svg")
-						}
+					MouseArea {
+						id: lyrMa
+						anchors.fill: parent; anchors.margins: -4
+						hoverEnabled: true
+						cursorShape: Qt.PointingHandCursor
 						onClicked: {
-							MusicPlayerProvider.next()
+							parent.lyricsOn = !parent.lyricsOn;
+							MusicPlayerProvider.lyricsWanted = parent.lyricsOn;
 						}
+					}
+				}
+
+				// ── lyrics overlay (MacLock Apple-Music style) ──
+				property bool lyricsOn: false
+				property bool artMode: false
+				Connections {
+					target: MusicPlayerProvider
+					function onLyricsWantedChanged() {
+						if (!MusicPlayerProvider.lyricsWanted && parent.lyricsOn) parent.lyricsOn = false;
+					}
+				}
+				Rectangle {
+					id: lyricsOverlay
+					anchors.fill: parent
+					radius: 15
+					color: Qt.rgba(0, 0, 0, 0.45)
+					visible: parent.lyricsOn
+					clip: true
+					readonly property real lyrTarget: {
+						var L = MusicPlayerProvider.lyricsLines;
+						if (!MusicPlayerProvider.lyricsSynced || L.length === 0) return -height * 0.30;
+						var p = MusicPlayerProvider.position + 0.25, c = -1;
+						for (var i = 0; i < L.length; i++) { if (L[i].t <= p) c = i; else break; }
+						var it = c >= 0 ? lyrRep.itemAt(c) : null;
+						return it ? it.y - height * 0.30 : -height * 0.30;
+					}
+					Column {
+						id: lyrCol
+						width: parent.width
+						spacing: 8 * u
+						Repeater {
+							id: lyrRep
+							model: MusicPlayerProvider.lyricsLines
+							delegate: Item {
+								id: ln
+								required property var modelData
+								required property int index
+								readonly property int rel: {
+									var L = MusicPlayerProvider.lyricsLines;
+									if (!MusicPlayerProvider.lyricsSynced || L.length === 0) return 0;
+									var p = MusicPlayerProvider.position + 0.25, c = -1;
+									for (var i = 0; i < L.length; i++) { if (L[i].t <= p) c = i; else break; }
+									return index - c;
+								}
+								readonly property bool cur: MusicPlayerProvider.lyricsSynced && index === lyrRep.currentIndex
+								readonly property bool gap: (modelData.text || "") === ""
+								width: lyrCol.width
+								height: gap ? 14 * u : lt.implicitHeight
+								transform: Translate {
+									id: lnTr
+									y: -lyricsOverlay.lyrTarget
+									Behavior on y { NumberAnimation { duration: 500 + Math.max(0, Math.min(8, ln.rel)) * 20; easing.type: Easing.OutQuint } }
+								}
+								opacity: !MusicPlayerProvider.lyricsSynced ? 0.9 : (cur ? 1 : (Math.abs(rel) === 1 ? 0.42 : 0.26))
+								Behavior on opacity { NumberAnimation { duration: 380 } }
+								Text {
+									id: lt
+									visible: !ln.gap
+									width: parent.width
+									text: ln.modelData.text
+									wrapMode: Text.WordWrap
+									color: "white"
+									font.family: Fonts.sFProDisplayRegular.family
+									font.pixelSize: 15 * u
+									font.weight: Font.Bold
+									lineHeight: 1.08
+									transformOrigin: Item.Left
+									scale: ln.cur || !MusicPlayerProvider.lyricsSynced ? 1 : 0.965
+									Behavior on scale { NumberAnimation { duration: 420; easing.type: Easing.OutQuint } }
+									layer.enabled: MusicPlayerProvider.lyricsSynced && !ln.cur && Math.abs(ln.rel) <= 6
+									layer.sourceRect: Qt.rect(-12, -8, width + 24, height + 16)
+									layer.effect: MultiEffect { blurEnabled: true; blurMax: 16; blur: Math.min(0.55, 0.14 * Math.abs(ln.rel)) }
+								}
+								Row {
+									visible: ln.gap
+									anchors.verticalCenter: parent.verticalCenter
+									spacing: 4 * u
+									Repeater {
+										model: 3
+										delegate: Rectangle {
+											required property int index
+											width: 5 * u; height: width; radius: width / 2
+											color: "white"
+											opacity: ln.cur ? 0.95 : 0.35
+											SequentialAnimation on scale {
+												running: ln.cur; loops: Animation.Infinite
+												PauseAnimation { duration: index * 160 }
+												NumberAnimation { from: 0.7; to: 1.15; duration: 520; easing.type: Easing.InOutSine }
+												NumberAnimation { from: 1.15; to: 0.7; duration: 520; easing.type: Easing.InOutSine }
+											}
+										}
+									}
+								}
+								readonly property real shownY: y + lnTr.y
+								readonly property bool inBand: shownY + height > lyricsOverlay.height * 0.20 && shownY < lyricsOverlay.height * 0.74
+								MouseArea {
+									anchors.fill: parent
+									enabled: ln.inBand && MusicPlayerProvider.lyricsSynced && MusicPlayerProvider.activePlayer.canSeek
+									cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+									onClicked: { MusicPlayerProvider.activePlayer.seek(ln.modelData.t); }
+								}
+								HoverHandler { enabled: ln.inBand && MusicPlayerProvider.lyricsSynced; cursorShape: Qt.PointingHandCursor }
+							}
+						}
+					}
+					layer.enabled: true
+					layer.effect: ShaderEffect {
+						fragmentShader: Qt.resolvedUrl("fade.frag.qsb")
+						property real fadeTop: 0.24
+						property real fadeBottom: 0.30
+					}
+					Text {
+						anchors.centerIn: parent
+						horizontalAlignment: Text.AlignHCenter
+						visible: MusicPlayerProvider.lyricsLines.length === 0
+						text: {
+							if (MusicPlayerProvider.lyricsState === "loading") return "Loading lyrics\u2026";
+							if (MusicPlayerProvider.lyricsState === "offline") return "Lyrics are unavailable right now";
+							if (MusicPlayerProvider.lyricsState === "none") return "No lyrics for this song";
+							return "No lyrics";
+						}
+						color: Qt.rgba(1, 1, 1, 0.55)
+						font.family: Fonts.sFProDisplayRegular.family
+						font.pixelSize: 10 * u
+						font.weight: Font.DemiBold
 					}
 				}
 			}
 		}
+
 
 		ShaderEffectSource {
 			id: dateClockBlurSource

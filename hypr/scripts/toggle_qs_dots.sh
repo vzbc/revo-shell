@@ -6,6 +6,22 @@
 QS_BASE="$HOME/.config/quickshell"
 HYPR_QS="$HOME/.config/hypr/scripts/quickshell"
 
+# shell needs something this repo can't ship (see <shell>/.revo-requires):
+#   path <file>   must exist        qml <Module>   QML module must be installed
+shell_runnable() {
+  local req="$1/.revo-requires" kind val
+  [[ -f "$req" ]] || return 0
+  while read -r kind val; do
+    [[ -z "$kind" || "$kind" == \#* ]] && continue
+    val="${val/#\~/$HOME}"
+    case "$kind" in
+      path) [[ -e "$val" ]] || return 1 ;;
+      qml)  [[ -d "/usr/lib/qt6/qml/$val" || -d "$HOME/.local/lib/qt6/qml/$val" ]] || return 1 ;;
+    esac
+  done < "$req"
+  return 0
+}
+
 # ─── 1. Detect Currently Active Dot ───────────────────────
 get_active_dot() {
     if pgrep -f "ryoku/shell/ipc/ryoku-shell" >/dev/null 2>&1; then
@@ -52,6 +68,10 @@ stop_all_quickshell() {
 # ─── 3. Start Specific Dot ────────────────────────────────
 start_dot() {
     local target="$1"
+    if [[ -d "$QS_BASE/$target" ]] && ! shell_runnable "$QS_BASE/$target"; then
+        notify-send -a "Quickshell" "$target can't start" "$(grep -v '^#' "$QS_BASE/$target/.revo-requires" | head -1) is missing" 2>/dev/null || true
+        return 1
+    fi
     stop_all_quickshell
 
     if [[ "$target" == "default" ]]; then
@@ -95,7 +115,7 @@ start_dot() {
 get_available_dots() {
     local dots=("default")
     for d in "$QS_BASE"/*/; do
-        if [[ -d "$d" && -f "$d/shell.qml" ]]; then
+        if [[ -d "$d" && -f "$d/shell.qml" ]] && shell_runnable "${d%/}"; then
             dots+=("$(basename "$d")")
         fi
     done

@@ -1,0 +1,2 @@
+# needs the Vast QML plugin (C++), which is not shipped here
+qml Vast

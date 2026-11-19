@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/Logger.qml
+../eqsh/Logger.qml

@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/core/system/NetworkManager.qml
+../../../eqsh/core/system/NetworkManager.qml

@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-import json, random, string
-
-serial = ''.join(random.choices(string.ascii_uppercase + string.digits, k=12))
+import json
 
 info = {
     "vendor": "MacBook Pro",
-    "model": "16-inch, M5",
+    "model": "13-inch, 2020 Four Thunderbolt 3 ports",
     "year": "",
-    "chip": "Apple M5",
+    "chip": "2.92 GHz 13th Gen Intel Core(TM) i7-73700H",
     "cores": "",
-    "memory": "64 GB",
-    "graphics": "",
-    "disk": "",
+    "memory": "16 GB 5200 MHz RAM",
+    "graphics": "NVIDIA GeForce RTX 4060 Laptop GPU 8 GB",
+    "disk": "macOS",
     "network": "",
-    "serial": serial,
-    "os": "Tahoe 26.5",
+    "serial": "G82D21YML7H",
+    "os": "Tahoe 26.7.1",
     "theme_version": ""
 }
 

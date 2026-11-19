@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 import ".."
 import "../Pages.js" as Pages
 
@@ -27,13 +28,29 @@ Column {
 
     DockPreview {
         id: preview
-        width: parent.width
+        x: Theme.cardMargin
+        width: parent.width - 2 * Theme.cardMargin
+        layer.enabled: true
+        layer.effect: MultiEffect {
+            maskEnabled: true
+            maskSource: previewMask
+            maskThresholdMin: 0.5
+            maskSpreadAtMin: 1.0
+        }
         position: String(uget("dockPosition", eget("dock.position", "bottom"))).toLowerCase()
         iconSize: Number(uget("dockIconSize", 52))
         magnify: uget("dockMagnification", true) === true
         autohide: uget("dockAutohide", false) === true
         indicators: uget("dockIndicators", true) === true
         animateOpen: uget("dockShowAnimation", true) === true
+    }
+    Rectangle {
+        id: previewMask
+        width: preview.width
+        height: preview.height
+        radius: Theme.cardRadius
+        visible: false
+        layer.enabled: true
     }
 
     // ============================ Dock ============================

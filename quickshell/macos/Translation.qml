@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/Translation.qml
+../eqsh/Translation.qml

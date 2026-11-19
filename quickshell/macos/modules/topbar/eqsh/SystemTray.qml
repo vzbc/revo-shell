@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/ui/components/panel/SystemTray.qml
+../../../../eqsh/ui/components/panel/SystemTray.qml

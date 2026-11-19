@@ -371,22 +371,6 @@ var content = {
             { t: "Move image", v: "⌥⌘8" }
         ] }
     ],
-    "acc.display": [
-        { header: "Vision", rows: [
-            { t: "Invert Colours", sw: false, on: false },
-            { t: "Reduce Transparency", sw: false, on: false },
-            { t: "Increase Contrast", sw: false, on: false },
-            { t: "Differentiate without Colour", sw: false, on: false }
-        ] },
-        { header: "Cursor", rows: [
-            { t: "Shake mouse pointer to locate", sw: true, on: true },
-            { t: "Pointer size", v: "Default" }
-        ] },
-        { header: "Display", rows: [
-            { t: "Reduce motion", sw: false, on: false, to: "acc.motion" },
-            { t: "Dim flashing lights", sw: false, on: false, to: "acc.motion" }
-        ] }
-    ],
     "acc.readSpeak": [
         { header: "Spoken Content", rows: [
             { t: "Speak selection", sw: false, on: false },
@@ -710,16 +694,6 @@ var content = {
     "icloud.family": [ { rows: [ { t: "Manage Family…", c: true } ] } ],
 
     // ============ Keyboard ============
-    "keyboard.input": [
-        { header: "Key Repeat", rows: [
-            { t: "Key repeat rate", v: "Fast" },
-            { t: "Delay until repeat", v: "Short" }
-        ] },
-        { header: "Keyboard Shortcuts", rows: [
-            { t: "Keyboard Shortcuts…", c: true },
-            { t: "Modifier keys…", c: true }
-        ] }
-    ],
     "keyboard.dictation": [ { rows: [ { t: "Dictation", sw: false, on: false }, { t: "Shortcut", v: "Press 🌐 twice" } ] } ],
     "keyboard.textReplacements": [ { rows: [ { t: "Add…", c: true }, { t: "omw → On my way!", c: true } ] } ],
     "keyboard.hardware": [
@@ -970,20 +944,6 @@ content["appearance"] = [
     ] }
 ]
 
-content["siri"] = [
-    { rows: [
-        { t: "Apple Intelligence", sw: true, on: true },
-        { t: "Siri", sw: true, on: true },
-        { t: "Listen for", v: "\"Siri\"" },
-        { t: "Keyboard shortcut", v: "Hold ⌘ Space" },
-        { t: "Language", v: "English (United States)" },
-        { t: "Voice", v: "Voice 4" }
-    ] },
-    { header: "Siri & Dictation History", rows: [
-        { t: "Delete Siri & Dictation History…", red: true, c: true }
-    ] },
-    { note: "Apple Intelligence is a personal intelligence system built into your Mac." }
-]
 
 content["desktopDock"] = [
     { header: "Desktop & Stage Manager", rows: [
@@ -1084,27 +1044,6 @@ content["wallpaper"] = [
     ] }
 ]
 
-content["notifications"] = [
-    { header: "Application Notifications", rows: [
-        { t: "Calendar", to: "notifications.appSettings" },
-        { t: "Mail", to: "notifications.appSettings" },
-        { t: "Messages", to: "notifications.appSettings" },
-        { t: "Safari", to: "notifications.appSettings" },
-        { t: "System Settings", to: "notifications.appSettings" }
-    ] },
-    { header: "Notification Centre", rows: [
-        { t: "Show previews", v: "When Unlocked" },
-        { t: "Allow notifications when the display is sleeping", sw: true, on: true },
-        { t: "Allow notifications when the screen is locked", sw: true, on: true },
-        { t: "Allow notifications when mirroring or sharing the display", sw: false, on: false }
-    ] },
-    { header: "Options", rows: [
-        { t: "Focus", to: "notifications.focus" },
-        { t: "Notification Summaries", to: "notifications.summaries" },
-        { t: "Smart Summary", sw: true, on: true },
-        { t: "Siri Suggestions", sw: true, on: true }
-    ] }
-]
 
 content["sound"] = [
     { header: "Output", rows: [
@@ -1127,24 +1066,6 @@ content["sound"] = [
     ] }
 ]
 
-content["focus"] = [
-    { header: "Focus", rows: [
-        { t: "Do Not Disturb", sw: false, on: false, to: "focus.schedules" },
-        { t: "Work", sw: false, on: false, to: "focus.schedules" },
-        { t: "Personal", sw: false, on: false, to: "focus.schedules" },
-        { t: "Sleep", sw: false, on: false, to: "focus.schedules" }
-    ] },
-    { header: "Focus Status", rows: [
-        { t: "Share Focus status", sw: true, on: true },
-        { t: "Focus filters", c: true, to: "focus.filters" }
-    ] },
-    { header: "Options", rows: [
-        { t: "Share across devices", sw: true, on: true, to: "focus.iCloud" },
-        { t: "Smart Activation", sw: false, on: false },
-        { t: "Add Schedule…", c: true, to: "focus.schedules" }
-    ] },
-    { note: "When a Focus is on, notifications from apps and people will be silenced." }
-]
 
 content["screenTime"] = [
     { rows: [
@@ -1230,38 +1151,7 @@ content["privacy.filevault"] = [
     { note: "FileVault encrypts the contents of your startup disk so your data stays secure." }
 ]
 
-content["touchIDPassword"] = [
-    { rows: [
-        { t: "Touch ID & Password", sw: true, on: true, to: "touchID.fingerprint" },
-        { t: "Add Fingerprint…", c: true, to: "touchID.fingerprint" },
-        { t: "iPhone & Apple Watch", v: "None", c: true }
-    ] },
-    { header: "Password", rows: [
-        { t: "Change Password…", c: true, to: "touchID.password" },
-        { t: "Use Touch ID to unlock", sw: true, on: true },
-        { t: "Use Touch ID for Apple Pay", sw: true, on: true },
-        { t: "Use Touch ID to unlock your Mac", sw: true, on: true }
-    ] },
-    { header: "Options", rows: [
-        { t: "Automatically log out after inactivity", sw: false, on: false },
-        { t: "Require password immediately", sw: true, on: true }
-    ] }
-]
 
-content["usersGroups"] = [
-    { header: "Users", rows: [
-        { t: "{name}", s: "Admin, Me", to: "users.edit" },
-        { t: "Guest User", s: "Off", to: "users.guest" }
-    ] },
-    { header: "Options", rows: [
-        { t: "Automatically log in as", v: "Off", to: "users.autoLogin" },
-        { t: "Guest user", sw: false, on: false, to: "users.guest" },
-        { t: "Network account server", v: "None", c: true }
-    ] },
-    { header: "Add", rows: [
-        { t: "Add User, Group or Shared Account…", c: true }
-    ] }
-]
 
 content["internetAccounts"] = [
     { header: "Accounts", rows: [
@@ -1343,48 +1233,8 @@ content["walletApplePay"] = [
     { note: "Wallet lets you keep cards, tickets, and keys in one place." }
 ]
 
-content["keyboard"] = [
-    { rows: [
-        { t: "Key Repeat Rate", v: "Fast" },
-        { t: "Delay Until Repeat", v: "Short" },
-        { t: "Adjust keyboard brightness in low light", sw: true, on: true }
-    ] },
-    { header: "Text Input", rows: [
-        { t: "Input Sources", c: true, to: "keyboard.input" },
-        { t: "Dictation", sw: false, on: false, to: "keyboard.dictation" },
-        { t: "Text Replacements…", c: true, to: "keyboard.textReplacements" }
-    ] },
-    { header: "Shortcuts", rows: [
-        { t: "Keyboard Shortcuts…", c: true, to: "keyboard.input" },
-        { t: "Modifier keys…", c: true, to: "keyboard.hardware" },
-        { t: "Turn keyboard backlight off after inactivity", v: "5 seconds" }
-    ] }
-]
 
-content["trackpad"] = [
-    { rows: [
-        { t: "Point & Click", c: true, to: "trackpad.pointClick" },
-        { t: "Scroll & Zoom", c: true, to: "trackpad.scrollZoom" },
-        { t: "More Gestures", c: true, to: "trackpad.moreGestures" }
-    ] },
-    { header: "Accessibility", rows: [
-        { t: "Silent clicking", sw: false, on: false },
-        { t: "Force Click and haptic feedback", sw: true, on: true },
-        { t: "Tracking speed", v: "Normal" }
-    ] }
-]
 
-content["printersScanners"] = [
-    { rows: [
-        { t: "No printers", dim: true },
-        { t: "Add Printer, Scanner or Fax…", c: true, to: "printers.add" }
-    ] },
-    { header: "Options", rows: [
-        { t: "Default printer", v: "Last Printer Used", to: "printers.options" },
-        { t: "Default paper size", v: "A4", to: "printers.options" }
-    ] },
-    { note: "Printers on your network are added automatically." }
-]
 
 content["accessibility"] = [
     { header: "Vision", rows: [
@@ -1414,3 +1264,173 @@ content["accessibility"] = [
     ] },
     { note: "Accessibility features make it easier to see, hear, and interact with your Mac." }
 ]
+
+// ============ macOS 27 panes wired to the shell ============
+content["keyboard"] = [
+    { rows: [
+        { t: "Key repeat rate", sl: true, cfg: "input.repeatRate", def: 25, min: 2, max: 60, step: 1, minLabel: "Off", maxLabel: "Fast" },
+        { t: "Delay until repeat", sl: true, cfg: "input.repeatDelay", def: 600, min: 1200, max: 150, step: 50, minLabel: "Long", maxLabel: "Short" },
+        { t: "Show Input menu in menu bar", sw: true, cfg: "menubarKeyboard", def: true }
+    ] },
+    { header: "Text Input", rows: [
+        { t: "Input Sources", v: "{layouts}", b: "Edit…", to: "keyboard.input" },
+        { t: "Correct spelling automatically", sw: true, on: true },
+        { t: "Capitalize words automatically", sw: true, on: true },
+        { t: "Add period with double-space", sw: true, on: true }
+    ] },
+    { header: "Keyboard Shortcuts", rows: [
+        { t: "Keyboard Shortcuts…", b: "Keyboard Shortcuts…", cmd: "kitty --title 'Keyboard Shortcuts' -e ${EDITOR:-nano} \"$HOME/.config/hypr/configs/keybinds.lua\" >/dev/null 2>&1 &" },
+        { t: "Keyboard navigation", s: "Use keyboard navigation to move focus between controls. Press Tab to move focus forward and Shift Tab to move focus backward.", sw: true, on: false }
+    ] },
+    { header: "Dictation", rows: [
+        { t: "Dictation", s: "Use Dictation wherever you can type text.", sw: true, on: false, to: "keyboard.dictation" }
+    ] }
+]
+content["keyboard.input"] = [
+    { header: "Input Sources", rows: [
+        { t: "Layouts in use", v: "{layouts}" },
+        { t: "Switch to next input source", b: "Switch", cmd: "hyprctl switchxkblayout all next >/dev/null 2>&1" },
+        { t: "Layouts", opts: ["us", "us,ara", "us,ara,fr", "us,de", "us,fr", "us,es", "us,ru", "us,tr"], cfg: "input.kbLayout", def: "us,ara" },
+        { t: "Automatically switch to a document’s input source", sw: true, on: false }
+    ] },
+    { note: "Changes apply immediately to every keyboard through Hyprland (input:kb_layout)." }
+]
+content["mouse"] = [
+    { rows: [
+        { t: "Tracking speed", sl: true, cfg: "input.mouseSpeed", def: 0, min: -1, max: 1, step: 0.05, minLabel: "Slow", maxLabel: "Fast" },
+        { t: "Natural scrolling", s: "Content tracks finger movement", sw: true, cfg: "input.naturalScroll", def: false },
+        { t: "Secondary click", opts: ["Click Right Side", "Click Left Side"], cfg: "input.secondaryClick", def: "Click Right Side" },
+        { t: "Double-Click Speed", sl: true, cfg: "input.doubleClick", def: 0.5, min: 0, max: 1, step: 0.1, minLabel: "Slow", maxLabel: "Fast" },
+        { t: "Scrolling Speed", sl: true, cfg: "input.scrollFactor", def: 1, min: 0.2, max: 3, step: 0.1, minLabel: "Slow", maxLabel: "Fast" }
+    ] },
+    { header: "Advanced", rows: [
+        { t: "Pointer acceleration", s: "Speed up the pointer when the mouse moves quickly.", sw: true, cfg: "input.mouseAccel", def: true }
+    ] }
+]
+content["trackpad"] = [
+    { rows: [
+        { t: "Point & Click", c: true, to: "trackpad.pointClick" },
+        { t: "Scroll & Zoom", c: true, to: "trackpad.scrollZoom" },
+        { t: "More Gestures", c: true, to: "trackpad.moreGestures" }
+    ] },
+    { header: "Point & Click", rows: [
+        { t: "Tracking speed", sl: true, cfg: "input.touchpadSpeed", def: 0, min: -1, max: 1, step: 0.05, minLabel: "Slow", maxLabel: "Fast" },
+        { t: "Tap to click", s: "Tap with one finger", sw: true, cfg: "input.tapToClick", def: true },
+        { t: "Secondary click", opts: ["Click or Tap with Two Fingers", "Click in Bottom Right Corner", "Click in Bottom Left Corner", "Off"], cfg: "input.touchpadSecondary", def: "Click or Tap with Two Fingers" },
+        { t: "Three finger drag", sw: true, cfg: "input.threeFingerDrag", def: false }
+    ] },
+    { header: "Scroll & Zoom", rows: [
+        { t: "Natural scrolling", s: "Content tracks finger movement", sw: true, cfg: "input.touchpadNatural", def: false },
+        { t: "Scroll speed", sl: true, cfg: "input.touchpadScroll", def: 1, min: 0.2, max: 3, step: 0.1, minLabel: "Slow", maxLabel: "Fast" },
+        { t: "Disable while typing", sw: true, cfg: "input.disableWhileTyping", def: true }
+    ] }
+]
+content["trackpad.pointClick"] = content["trackpad"].slice(1, 2)
+content["trackpad.scrollZoom"] = content["trackpad"].slice(2, 3)
+content["notifications"] = [
+    { header: "Notification Center", rows: [
+        { t: "Show previews", opts: ["Always", "When Unlocked", "Never"], cfg: "notifications.previews", def: "When Unlocked" },
+        { t: "Allow notifications when the display is sleeping", sw: true, cfg: "notifications.whenSleeping", def: true },
+        { t: "Allow notifications when the screen is locked", sw: true, cfg: "notifications.whenLocked", def: true },
+        { t: "Allow notifications when mirroring or sharing the display", sw: true, cfg: "notifications.whenSharing", def: false },
+        { t: "Play sound for notification", sw: true, cfg: "notifications.sound", def: true },
+        { t: "Summarize notifications", sw: true, on: false, to: "notifications.summaries" }
+    ] },
+    { header: "Application Notifications", rows: [
+        { t: "Notification Center", b: "Open", ipct: "notificationCenter", ipcf: "toggle" },
+        { t: "Reset Notifications…", red: true, c: true, run: "notify-send 'System Settings' 'Notification settings were reset.'" }
+    ] }
+]
+content["focus"] = [
+    { header: "Focus", rows: [
+        { t: "Do Not Disturb", s: "Silence notification banners and sounds.", sw: true, cfg: "focus.dnd", def: false },
+        { t: "Sleep", sw: true, cfg: "focus.sleep", def: false },
+        { t: "Personal", sw: true, on: false },
+        { t: "Work", sw: true, on: false }
+    ] },
+    { header: "Options", rows: [
+        { t: "Share across devices", sw: true, on: true, to: "focus.iCloud" },
+        { t: "Focus status", v: "On", c: true, to: "focus.filters" },
+        { t: "Add Schedule…", c: true, to: "focus.schedules" }
+    ] },
+    { note: "When a Focus is on, notifications from the shell are silenced and banners are hidden. Do Not Disturb also appears in the menu bar." }
+]
+content["siri"] = [
+    { rows: [
+        { t: "Apple Intelligence & Siri", s: "Ask the shell assistant about anything.", sw: true, cfg: "siri.enabled", def: true },
+        { t: "Ask Siri", b: "Open", ipct: "ai", ipcf: "toggle" },
+        { t: "Keyboard shortcut", v: "Hold ⌘ Space" },
+        { t: "Show Siri in menu bar", sw: true, cfg: "menubar.siri", def: false }
+    ] },
+    { header: "Siri & Dictation History", rows: [
+        { t: "Delete Siri & Dictation History…", red: true, c: true, run: "rm -f \"$HOME/.cache/quickshell/sigrid_history.json\" 2>/dev/null; notify-send 'Siri' 'Siri & Dictation history deleted.'" }
+    ] }
+]
+content["touchIDPassword"] = [
+    { header: "Login Password", rows: [
+        { t: "Login password", v: "••••••••", b: "Change…", cmd: "kitty --title 'Change Password' -e sh -c 'passwd; printf \"\\nPress Enter to close\"; read _' >/dev/null 2>&1 &" }
+    ] },
+    { header: "Touch ID", rows: [
+        { t: "Fingerprints", v: "{fingerprints}", b: "Add Fingerprint…", cmd: "kitty --title 'Add Fingerprint' -e sh -c 'command -v fprintd-enroll >/dev/null && fprintd-enroll || echo \"fprintd is not installed\"; printf \"\\nPress Enter to close\"; read _' >/dev/null 2>&1 &" },
+        { t: "Use Touch ID to unlock your Mac", sw: true, cfg: "auth.fingerprintUnlock", def: false }
+    ] }
+]
+content["usersGroups"] = [
+    { rows: [
+        { t: "{realname}", s: "Admin", v: "{user}", to: "users.edit" },
+        { t: "Guest User", s: "Off", to: "users.guest" }
+    ] },
+    { rows: [
+        { t: "Automatically log in as", v: "Off", to: "users.autoLogin" },
+        { t: "Add User…", b: "Add User…", cmd: "kitty --title 'Add User' -e sh -c 'printf \"New user name: \"; read u; [ -n \"$u\" ] && sudo useradd -m \"$u\" && sudo passwd \"$u\"; printf \"\\nPress Enter to close\"; read _' >/dev/null 2>&1 &" }
+    ] }
+]
+content["printersScanners"] = [
+    { rows: [
+        { t: "Printers", v: "{printers}" },
+        { t: "Add Printer, Scanner or Fax…", b: "Add Printer, Scanner or Fax…", cmd: "system-config-printer >/dev/null 2>&1 &" }
+    ] },
+    { header: "Options", rows: [
+        { t: "Default printer", v: "Last Printer Used", to: "printers.options" },
+        { t: "Default paper size", opts: ["A4", "US Letter", "US Legal", "A3", "A5"], cfg: "printers.paper", def: "A4", cmd: "", cmdFmt: "lpoptions -o media={v} >/dev/null 2>&1" },
+        { t: "Open CUPS web interface", b: "Open", cmd: "xdg-open http://localhost:631 >/dev/null 2>&1 &" }
+    ] }
+]
+content["acc.display"] = [
+    { header: "Display", rows: [
+        { t: "Increase contrast", sw: true, cfg: "accessibility.increaseContrast", def: false },
+        { t: "Reduce transparency", sw: true, cfg: "accessibility.reduceTransparency", def: false },
+        { t: "Invert colors", sw: true, cfg: "accessibility.invertColors", def: false },
+        { t: "Differentiate without color", sw: true, on: false }
+    ] },
+    { header: "Pointer", rows: [
+        { t: "Pointer size", sl: true, cfg: "accessibility.cursorSize", def: 24, min: 16, max: 96, step: 4, minLabel: "Normal", maxLabel: "Large" },
+        { t: "Shake mouse pointer to locate", sw: true, on: true }
+    ] },
+    { header: "Motion", rows: [
+        { t: "Reduce motion", c: true, to: "acc.motion" }
+    ] }
+]
+content["menuBar.clock"] = [
+    { header: "Date", rows: [
+        { t: "Show date", opts: ["When Space Allows", "Always", "Never"], cfg: "clockDateMode", def: "When Space Allows" },
+        { t: "Show the day of the week", sw: true, cfg: "clockDay", def: true }
+    ] },
+    { header: "Time", rows: [
+        { t: "Style", opts: ["Digital", "Analog"], cfg: "clockStyle", def: "Digital" },
+        { t: "Use a 24-hour clock", sw: true, cfg: "clock24h", def: false },
+        { t: "Show AM/PM", sw: true, cfg: "clockAmPm", def: true },
+        { t: "Flash the time separators", sw: true, cfg: "clockFlash", def: false },
+        { t: "Display the time with seconds", sw: true, cfg: "clockSeconds", def: false }
+    ] }
+]
+content["menuBar.battery"] = [
+    { rows: [
+        { t: "Show Percentage", sw: true, cfg: "menubarBatteryPercent", def: false },
+        { t: "Show Energy Mode", sw: true, cfg: "menubarEnergyMode", def: false }
+    ] }
+]
+titles["keyboard.input"] = "Input Sources"
+titles["mouse"] = "Mouse"
+titles["menuBar.clock"] = "Clock Options"
+titles["menuBar.battery"] = "Battery Options"

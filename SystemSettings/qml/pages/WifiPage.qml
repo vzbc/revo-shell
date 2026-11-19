@@ -240,7 +240,6 @@ Column {
 
     GroupCard {
         visible: page.known.length > 0
-        width: parent.width
 
         Repeater {
             model: page.known
@@ -269,7 +268,6 @@ Column {
 
     GroupCard {
         visible: page.wifiOn && page.others.length > 0
-        width: parent.width
 
         Repeater {
             model: page.others

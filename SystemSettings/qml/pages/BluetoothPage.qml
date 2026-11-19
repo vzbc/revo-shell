@@ -109,7 +109,6 @@ Column {
     SectionHeader { text: "My Devices" }
 
     GroupCard {
-        width: parent.width
 
         Repeater {
             model: page.paired
@@ -145,7 +144,6 @@ Column {
     SectionHeader { text: "Nearby Devices" }
 
     GroupCard {
-        width: parent.width
 
         Repeater {
             model: page.nearby

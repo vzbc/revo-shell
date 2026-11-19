@@ -63,6 +63,7 @@ Column {
                     delegate: Loader {
                         id: rowLoader
                         required property var modelData
+                        required property int index
                         width: block.width
                         height: item ? item.height : 0
 
@@ -77,7 +78,7 @@ Column {
                                 subtitle: page.resolve(rowLoader.modelData.s || "")
                                 iconFile: rowLoader.modelData.i || ""
                                 isSlider: true
-                                separator: rowLoader.modelData.sep === true
+                                separator: rowLoader.index > 0
                                 sliderValue: page.norm(rowLoader.modelData)
                                 value: page.fmt(rowLoader.modelData, page.readVal(rowLoader.modelData))
                                 onMoved: (v) => page.sliderMoved(rowLoader.modelData, v)
@@ -98,6 +99,8 @@ Column {
                                 showSwitch: rowLoader.modelData.sw === true
                                 switchOn: page.readBool(rowLoader.modelData)
                                 showInfo: rowLoader.modelData.info === true
+                                buttonLabel: rowLoader.modelData.b !== undefined ? rowLoader.modelData.b : ""
+                                separator: rowLoader.index > 0
                                 dimmed: rowLoader.modelData.dim === true
                                 titleColor: rowLoader.modelData.red === true ? Theme.red : Theme.textPrimary
 
@@ -116,8 +119,9 @@ Column {
 
             Text {
                 visible: modelData.note !== undefined && modelData.note.length > 0
-                x: 28
-                width: parent.width - 56
+                x: Theme.cardMargin + 4
+                width: parent.width - 2 * (Theme.cardMargin + 4)
+                topPadding: 6
                 wrapMode: Text.WordWrap
                 text: modelData.note !== undefined ? modelData.note : ""
                 font { family: Theme.fontText; pixelSize: 12 }
@@ -133,6 +137,16 @@ Column {
 
     // ---------- generic config binding ----------
 
+    // Rows with no explicit binding still persist (like macOS): they get an
+    // automatic key under pages.<pageId>.<row title> in userconfig.json.
+    function autoKey(row) {
+        var t = String(row.t || "row").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "")
+        return "pages." + String(page.pageId).replace(/\./g, "_") + "." + t
+    }
+    function bound(row) {
+        return row.cfg !== undefined || row.ecfg !== undefined || row.valKey !== undefined || row.act !== undefined
+    }
+
     function readVal(row) {
         bumpU; bumpE
         if (row.cfg !== undefined) {
@@ -145,8 +159,10 @@ Column {
         }
         if (row.v !== undefined)
             return page.resolve(row.v)
-        if (row.opts !== undefined)
-            return row.value !== undefined ? row.value : row.opts[0]
+        if (row.opts !== undefined || row.sl !== undefined) {
+            var dflt = row.value !== undefined ? row.value : (row.opts !== undefined ? row.opts[0] : (row.min !== undefined ? row.min : 0))
+            return Shell.uget(autoKey(row), dflt)
+        }
         return ""
     }
 
@@ -157,6 +173,8 @@ Column {
             Shell.eset(row.ecfg, val)
         else if (row.valKey !== undefined)
             Shell.uset(row.valKey, val)
+        else
+            Shell.uset(autoKey(row), val)
 
         rev++
 
@@ -167,9 +185,11 @@ Column {
 
     function sideEffects(row, val) {
         if (row.cmd !== undefined && row.cmd.length > 0)
-            Shell.run(typeof val === "string" && row.cmdFmt !== undefined
-                      ? row.cmdFmt.split("{v}").join(val)
+            Shell.run(row.cmdFmt !== undefined && val !== undefined
+                      ? row.cmdFmt.split("{v}").join(String(val))
                       : row.cmd)
+        else if (row.cmdFmt !== undefined && val !== undefined)
+            Shell.run(row.cmdFmt.split("{v}").join(String(val)))
         if (row.ipct !== undefined)
             Shell.ipc(row.ipct, row.ipcf, row.ipca !== undefined ? row.ipca : [])
         if (row.run !== undefined && row.run.length > 0)
@@ -189,7 +209,7 @@ Column {
             return Shell.eget(row.ecfg, row.def !== undefined ? row.def : false) === true
         if (row.act !== undefined)
             return actState(row.act)
-        return row.on === true
+        return Shell.uget(autoKey(row), row.on === true) === true
     }
 
     function actState(name) {
@@ -240,7 +260,7 @@ Column {
             writeVal(row, val)
             return
         }
-        row.on = val
+        Shell.uset(autoKey(row), val)
         rev++
         sideEffects(row, val)
     }
@@ -321,7 +341,11 @@ Column {
         ip: Shell.execOut("ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -1", 1500),
         uptime: Shell.execOut("uptime -p 2>/dev/null | sed \"s/^up //\"", 1500),
         country: Shell.execOut("locale -k country_name 2>/dev/null | awk -F'\"' \'/country_name/{print $2; exit}\'", 1500),
-        lang: Shell.execOut("locale -k language 2>/dev/null | awk -F'\"' \'/language/{print $2; exit}\'", 1500)
+        lang: Shell.execOut("locale -k language 2>/dev/null | awk -F'\"' \'/language/{print $2; exit}\'", 1500),
+        layouts: Shell.execOut("hyprctl getoption input:kb_layout 2>/dev/null | sed -n 's/^str: //p' | tr 'a-z' 'A-Z' | sed 's/,/, /g'", 1200),
+        printers: Shell.execOut("lpstat -p 2>/dev/null | awk '/^printer/{print $2}' | paste -sd, - | sed 's/,/, /g'", 1500) || "No printers",
+        realname: Shell.execOut("getent passwd $(id -un) | cut -d: -f5 | cut -d, -f1", 1200),
+        fingerprints: Shell.execOut("command -v fprintd-list >/dev/null && fprintd-list $(id -un) 2>/dev/null | grep -c ' - #' || echo 'Not available'", 1500)
         })
         return _live
     }
@@ -341,7 +365,10 @@ Column {
         var map = { "{host}": L.host, "{user}": L.user, "{model}": L.model,
                     "{serial}": L.serial, "{cpu}": L.cpu, "{ram}": L.ram,
                     "{os}": L.os, "{kernel}": L.kernel, "{ip}": L.ip,
-                    "{uptime}": L.uptime, "{country}": L.country, "{lang}": L.lang }
+                    "{uptime}": L.uptime, "{country}": L.country, "{lang}": L.lang,
+                    "{layouts}": L.layouts, "{printers}": L.printers,
+                    "{realname}": L.realname.length > 0 ? L.realname : L.user,
+                    "{fingerprints}": L.fingerprints }
         for (var k in map) {
             if (s.indexOf(k) >= 0)
                 s = s.split(k).join(map[k] && map[k].length > 0 ? map[k] : "\u2014")

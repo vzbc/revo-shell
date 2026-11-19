@@ -11,7 +11,8 @@
         "showBackground": false
     },
     "battery": {
-        "displayOff": "Never"
+        "displayOff": "Never",
+        "lowPower": "Never"
     },
     "darkMode": true,
     "dock": {
@@ -19,17 +20,17 @@
     },
     "dockAnimateHide": true,
     "dockAutohide": false,
-    "dockIconSize": 52,
+    "dockIconSize": 48,
     "dockIndicators": true,
     "dockMagnification": true,
     "dockPosition": "bottom",
     "dockShowAnimation": true,
-    "dockZoom": 69,
+    "dockZoom": 74,
     "folderColor": "",
     "highlightColor": "#0A6CFF",
     "iconStyle": "Default",
     "iconStyleMode": "Always",
-    "iconTint": "#62BA46",
+    "iconTint": "#0D3570",
     "liquidGlass": "Clear",
     "liquidGlassIntensity": 0,
     "menubar": {
@@ -38,6 +39,7 @@
         "clock": true,
         "controlcenter": true,
         "display": true,
+        "enabledApps": "ChatGPTHelper|DockFlow|Elgato Stream Deck|LookAway|Notion Calendar|PastePal|Rize|Substage|Umbra|Creative Cloud",
         "mirror": false,
         "siri": false,
         "sound": true,

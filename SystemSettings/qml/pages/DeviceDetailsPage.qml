@@ -47,10 +47,10 @@ Column {
 
     // ---- device hero ----
     Rectangle {
-        width: parent.width - 24
-        x: 12
+        width: parent.width - 2 * Theme.cardMargin
+        x: Theme.cardMargin
         height: heroCol.implicitHeight + 36
-        radius: 10
+        radius: Theme.cardRadius
         color: Theme.cardBg
 
         Column {

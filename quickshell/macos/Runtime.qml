@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/Runtime.qml
+../eqsh/Runtime.qml

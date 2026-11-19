@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/Time.qml
+../eqsh/Time.qml

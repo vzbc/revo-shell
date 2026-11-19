@@ -18,6 +18,8 @@ https://github.com/user-attachments/assets/42df3de9-9fab-4843-9afc-35f82d5852f7
 | `rofi/` | `~/.config/rofi` |
 | `kitty/` | `~/.config/kitty` |
 | `SystemSettings/` | built → `~/.local/bin/systemsettings` |
+| `siri27/` | `~/.local/share/siri27` (Siri backend, see `siri27/README.md`) |
+| `extras/electron-tl/` | optional: macOS traffic lights for Electron apps |
 | `install.sh` | **run this (CLI)** |
 | `update` / `update.sh` | **run this to pull new additions** |
 | `qs-gui-installer/` | run this (GUI) |
@@ -44,16 +46,16 @@ select Quickshell shells to install (multi-select)
 Enter numbers (e.g. 1,3,5), names, or "all" [all]:
 ```
 
-**A fresh install always says what to deploy**: non-interactive runs (scripts, no TTY) need `--shells` — the installer refuses to guess and deploys only what you picked (the first shell becomes the default). Re-running without `--shells` re-applies your previous choice, so updates keep working.
+**Every shell is always installed** (shells share assets and helpers, so a partial copy could leave a pick blank). The menu / `--shells` only chooses the **default shell** (the first one). Without a choice the previous default is kept.
 
 What `install.sh` does:
 
-1. Lets you pick which shells to install (menu / `--shells` — required on a fresh install; you get only what you pick)
+1. Lets you pick your default shell (menu / `--shells`; every shell is installed either way)
 2. Detects your package manager (pacman / apt / dnf)
 3. Installs **system packages** needed by the installer and shells
 4. Installs AUR packages via yay/paru when available (`quickshell-git`, fonts, …)
 5. Installs Python deps (`pip --user`)
-6. Deploys `hypr/`, selected `quickshell/` shells (+ shared root assets), `rofi/`, `kitty/` → `~/.config/`, `wallpapers/` → `~/Pictures/Wallpapers`
+6. Deploys `hypr/`, `quickshell/` (all shells), `rofi/`, `kitty/` → `~/.config/`, `wallpapers/` → `~/Pictures/Wallpapers`, `siri27/` → `~/.local/share/siri27` (Siri for the macOS shell)
 7. Sets the **first selected shell** as the Hyprland default (`# REVO_DEFAULT_SHELL` in autostart) — a previously saved default is re-applied on updates
 8. Rewrites hardcoded `/home/revo` → `$HOME`
 9. Builds CMake shells (caelestia + Clavis) and the **SystemSettings** app → `~/.local/bin/systemsettings`
@@ -66,9 +68,9 @@ What `install.sh` does:
 Flags:
 
 ```bash
-./install.sh --shells macos          # fresh install: one shell (it becomes the default)
-./install.sh --shells macos,ii,lucid # deploy only these shells (first = default)
-./install.sh --shells all            # every shell (explicit — never the default)
+./install.sh --shells macos          # default shell = macos
+./install.sh --shells macos,ii,lucid # first one is the default
+./install.sh                         # keep the previous default
 ./install.sh --check                 # read-only health check (exit 1 if broken)
 ./install.sh --help
 DRY_RUN=1 ./install.sh --shells ii   # dry-run selective deploy

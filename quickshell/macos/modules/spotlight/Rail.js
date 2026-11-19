@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/modules/spotlight/Rail.js
+../../../eqsh/modules/spotlight/Rail.js

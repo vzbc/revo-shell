@@ -1,0 +1,7 @@
+#!/bin/bash
+# Obsidian with macOS traffic lights (same as /usr/bin/obsidian + injector).
+OBSIDIAN_USER_FLAGS_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/obsidian/user-flags.conf"
+if [[ -f "${OBSIDIAN_USER_FLAGS_FILE}" ]]; then
+   OBSIDIAN_USER_FLAGS=$(grep -v '^#' "$OBSIDIAN_USER_FLAGS_FILE")
+fi
+exec electron43 -r "$HOME/.local/share/electron-tl/tl-main.js" /usr/lib/obsidian/app.asar $OBSIDIAN_USER_FLAGS "$@"

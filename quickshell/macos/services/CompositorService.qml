@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/services/CompositorService.qml
+../../eqsh/services/CompositorService.qml

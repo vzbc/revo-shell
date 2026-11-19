@@ -83,10 +83,10 @@ Column {
 
     // ---------- level card ----------
     Rectangle {
-        x: 12
-        width: parent.width - 24
+        x: Theme.cardMargin
+        width: parent.width - 2 * Theme.cardMargin
         height: lvCol.implicitHeight + 36
-        radius: 10
+        radius: Theme.cardRadius
         color: Theme.cardBg
 
         Column {

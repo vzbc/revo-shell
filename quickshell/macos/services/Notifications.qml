@@ -6,6 +6,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Notifications
 import Quickshell.Hyprland
+import "../modules/common"
 
 Singleton {
     id: root
@@ -19,6 +20,13 @@ Singleton {
     property var latest: null
     property int count: 0
     property bool toastOpen: false
+
+    // System Settings > Focus / Notifications
+    readonly property var _focusCfg: Appearance.cfgGet("focus", ({})) || ({})
+    readonly property var _notifCfg: Appearance.cfgGet("notifications", ({})) || ({})
+    readonly property bool doNotDisturb: _focusCfg.dnd === true || _focusCfg.sleep === true
+    readonly property string previews: _notifCfg.previews !== undefined ? String(_notifCfg.previews) : "When Unlocked"
+    readonly property bool allowWhenLocked: _notifCfg.whenLocked !== false
 
     // recent = reversed tracked list (newest first)
     readonly property var recent: {
@@ -313,8 +321,13 @@ Singleton {
             if (root.list.length > 80) root.list.pop();
             root.latest = notification
             root.count += 1
-            root.toastOpen = true
-            _toastTimer.restart()
+            // Focus silences banners; they still land in Notification Center
+            const silenced = root.doNotDisturb
+                || (!root.allowWhenLocked && ShellController.locked);
+            if (!silenced) {
+                root.toastOpen = true
+                _toastTimer.restart()
+            }
             root.notify(notification);
         }
     }

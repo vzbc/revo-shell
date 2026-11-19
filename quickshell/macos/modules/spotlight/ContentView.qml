@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/modules/spotlight/ContentView.qml
+../../../eqsh/modules/spotlight/ContentView.qml

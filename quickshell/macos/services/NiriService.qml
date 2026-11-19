@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/services/NiriService.qml
+../../eqsh/services/NiriService.qml

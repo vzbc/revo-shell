@@ -75,6 +75,17 @@ Column {
         rev++
     }
 
+    // "Reset Control Center…": restore every menu bar item to its default
+    function resetControls() {
+        var defs = { spotlight: true, wifi: true, bluetooth: true, battery: true, sound: true,
+                     display: true, nowPlaying: true, focus: true, mirror: true, clock: true,
+                     tray: true, controlCenter: true, siri: false, timeMachine: false, weather: false }
+        for (var k in defs)
+            page.set(k, defs[k])
+        Shell.uset("menubarKeyboard", true)
+        Shell.run("notify-send 'Control Center' 'Control Center was reset to its default layout.'")
+    }
+
     function g(name, def) {
         bumpU; bumpE
         var k = keyMap[name]
@@ -173,7 +184,7 @@ Column {
     BlueLink {
         x: 16
         label: "Add Controls…"
-        onClicked: console.log("Add Controls window — TODO")
+        onClicked: Shell.ipc("controlCenter", "open", [])
     }
 
     Item { width: 1; height: 4 }
@@ -184,7 +195,7 @@ Column {
             title: "Clock"
             showButton: true
             buttonLabel: "Clock Options…"
-            onButtonClicked: console.log("Clock Options — TODO")
+            onButtonClicked: page.navigate("menuBar.clock")
         }
         MenuControlRow {
             separator: true
@@ -227,7 +238,7 @@ Column {
             onToggled: page.set("battery", checked)
             showButton: true
             buttonLabel: "Battery Options…"
-            onButtonClicked: console.log("Battery Options — TODO")
+            onButtonClicked: page.navigate("menuBar.battery")
         }
         MenuControlRow {
             separator: true
@@ -356,7 +367,7 @@ Column {
         MacButton {
             anchors.verticalCenter: parent.verticalCenter
             text: "Reset Control Center…"
-            onClicked: console.log("Reset Control Center — TODO")
+            onClicked: page.resetControls()
         }
     }
 

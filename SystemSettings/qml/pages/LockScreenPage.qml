@@ -112,11 +112,11 @@ Column {
 
         Rectangle {
             id: previewBox
-            x: 12
+            x: Theme.cardMargin
             y: 10
-            width: parent.width - 24
+            width: parent.width - 2 * Theme.cardMargin
             height: Math.round(width * 0.36)
-            radius: 10
+            radius: Theme.cardRadius
             clip: true
             color: Theme.dark ? "#0c0c10" : "#1b1b1f"
 

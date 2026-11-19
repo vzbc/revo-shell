@@ -6,7 +6,7 @@ var roots = ["appleId", "wifi", "bluetooth", "network", "battery", "energy",
     "displays", "spotlight", "wallpaper", "notifications", "sound", "focus",
     "screenTime", "lockScreen", "privacySecurity", "touchIDPassword",
     "usersGroups", "internetAccounts", "gameCenter", "icloud", "walletApplePay",
-    "keyboard", "trackpad", "printersScanners"]
+    "keyboard", "mouse", "trackpad", "printersScanners"]
 
 var info = {
     appleId: { title: "Sign in", icon: "sb_signin", root: true },
@@ -37,6 +37,7 @@ var info = {
     icloud: { title: "iCloud", icon: "sb_icloud", root: true },
     walletApplePay: { title: "Wallet & Apple Pay", icon: "sb_wallet", root: true },
     keyboard: { title: "Keyboard", icon: "sb_keyboard", root: true },
+    mouse: { title: "Mouse", icon: "sb_trackpad", root: true },
     trackpad: { title: "Trackpad", icon: "sb_trackpad", root: true },
     printersScanners: { title: "Printers & Scanners", icon: "sb_printer", root: true },
 
@@ -105,10 +106,23 @@ var info = {
     // Users sub-pages
     "users.edit": { title: "User Details" },
 
+    // Menu Bar sub-pages
+    "menuBar.clock": { title: "Clock Options" },
+    "menuBar.battery": { title: "Battery Options" },
+    "keyboard.input": { title: "Input Sources" },
+
     // Sound sub-pages
     "sound.effects": { title: "Sound Effects" },
     "sound.output": { title: "Output" },
-    "sound.input": { title: "Input" }
+    "sound.input": { title: "Input" },
+
+    // Apple Intelligence & Siri sub-pages
+    "siri.responses": { title: "Siri Responses" },
+    "siri.voice": { title: "Voice" },
+    "siri.privacy": { title: "Ask Siri, Dictation & Privacy" },
+    "siri.ext.chatgpt": { title: "ChatGPT" },
+    "siri.ext.claude": { title: "Claude" },
+    "siri.ext.local": { title: "Local Model" }
 }
 
 // Pages with a dedicated QML file (relative to qml/ directory)
@@ -136,5 +150,12 @@ var files = {
     bluetooth: "pages/BluetoothPage.qml",
     network: "pages/NetworkPage.qml",
     battery: "pages/BatteryPage.qml",
-    icloud: "pages/IcloudPage.qml"
+    icloud: "pages/IcloudPage.qml",
+    siri: "pages/SiriPage.qml",
+    "siri.responses": "pages/SiriPage.qml",
+    "siri.voice": "pages/SiriPage.qml",
+    "siri.privacy": "pages/SiriPage.qml",
+    "siri.ext.chatgpt": "pages/SiriPage.qml",
+    "siri.ext.claude": "pages/SiriPage.qml",
+    "siri.ext.local": "pages/SiriPage.qml"
 }

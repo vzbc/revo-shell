@@ -256,9 +256,9 @@ Column {
 
             Item {
                 id: modeBox
-                x: 12
+                x: Theme.cardMargin
                 y: 12
-                width: parent.width - 24
+                width: parent.width - 2 * Theme.cardMargin
                 height: 74
 
                 Text {
@@ -321,9 +321,9 @@ Column {
 
             Item {
                 id: colorBox
-                x: 12
+                x: Theme.cardMargin
                 y: 12
-                width: parent.width - 24
+                width: parent.width - 2 * Theme.cardMargin
                 height: 74
 
                 Text {
@@ -455,7 +455,7 @@ Column {
             }
 
             GroupCard {
-                width: parent.width - 24
+                width: parent.width - 2 * Theme.cardMargin
                 height: sec.modelData.files.length > 0 ? strip.implicitHeight + 24 : 56
 
                 Text {
@@ -472,9 +472,9 @@ Column {
                 Item {
                     id: strip
                     visible: sec.modelData.files.length > 0
-                    x: 12
+                    x: Theme.cardMargin
                     y: 12
-                    width: parent.width - 24
+                    width: parent.width - 2 * Theme.cardMargin
                     height: 96
 
                     Flickable {

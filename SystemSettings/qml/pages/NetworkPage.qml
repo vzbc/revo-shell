@@ -79,7 +79,6 @@ Column {
     }
 
     GroupCard {
-        width: parent.width
 
         DetailRow {
             title: "Wi-Fi"

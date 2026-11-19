@@ -14,15 +14,16 @@ if hl.plugin.hyprliquid then
         }
     });
 
-    -- Dock: alpha-shaped surface with icons (radius 26 in QML)
+    -- Dock: same Liquid Glass as the Control Center (eqsh:blur rule below)
     hl.layer_rule(
     {
         name = "macos-dock",
         match = { namespace = "macos:dock" },
         ["hyprliquid:effect"] = "liquid_glass",
-        ["hyprliquid:corner_radius"] = 26,
-        ["hyprliquid:z_radius"] = 26,
-        ["hyprliquid:highlight_style"] = 4,
+        ["hyprliquid:corner_radius"] = 24,
+        ["hyprliquid:z_radius"] = 24,          -- full lens depth across the rounded edge
+        ["hyprliquid:glass_ior"] = 1.18,       -- stronger edge refraction (default 1.035)
+        ["hyprliquid:highlight_style"] = 0,
         ["hyprliquid:glass_dispersion"] = false,
         ["hyprliquid:vdf_map_mode"] = 1,
         ["hyprliquid:vdf_map_update_policy"] = "onchange",
@@ -57,3 +58,4 @@ if hl.plugin.hyprliquid then
         ["hyprliquid:vdf_map_update_policy"] = "onchange",
     });
 end
+

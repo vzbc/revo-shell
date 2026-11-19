@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/core/system/Brightness.qml
+../../../eqsh/core/system/Brightness.qml

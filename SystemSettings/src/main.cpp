@@ -18,6 +18,9 @@ int main(int argc, char *argv[])
     QQuickStyle::setStyle(QStringLiteral("Basic"));
 
     QQmlApplicationEngine engine;
+    // The QML module is embedded under qrc:/ (no QTP0001); without this the
+    // binary only starts from the build dir, whose qt.conf adds that path.
+    engine.addImportPath(QStringLiteral("qrc:/"));
 
     // absolute home for QML — never hardcode a dev user's path
     engine.rootContext()->setContextProperty(QStringLiteral("HOME_DIR"), QDir::homePath());

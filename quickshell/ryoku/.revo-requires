@@ -1,0 +1,2 @@
+# not in this repo: the Ryoku shell runs from its own dev checkout
+path ~/.local/src/ryoku-arch

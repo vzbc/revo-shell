@@ -1,0 +1,19 @@
+#!/usr/bin/bash
+# Cursor with macOS traffic lights. Runs an unpacked copy of the AppImage whose
+# main.js loads the injector; re-unpacks automatically when the AppImage changes.
+set -euo pipefail
+IMG="$HOME/Applications/Cursor.AppImage"
+BASE="$HOME/.local/share/electron-tl/apps"
+DEST="$BASE/cursor"
+STAMP="$DEST/.source-stamp"
+cur="$(stat -c '%s:%Y' "$IMG")"
+if [[ ! -f "$STAMP" || "$(cat "$STAMP")" != "$cur" ]]; then
+  tmp="$(mktemp -d "$BASE/.cursor-XXXXXX")"
+  (cd "$tmp" && "$IMG" --appimage-extract >/dev/null)
+  python3 -I "$HOME/.local/share/electron-tl/patch-entry.py" "$tmp/squashfs-root/usr/share/cursor/resources/app"
+  rm -rf "$DEST"
+  mv "$tmp/squashfs-root" "$DEST"
+  rmdir "$tmp"
+  echo "$cur" > "$STAMP"
+fi
+exec "$DEST/AppRun" "$@"

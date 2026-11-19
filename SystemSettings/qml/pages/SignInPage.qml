@@ -295,9 +295,9 @@ Column {
 
         // Header card
         Rectangle {
-            x: 12
-            width: parent.width - 24
-            radius: 10
+            x: Theme.cardMargin
+            width: parent.width - 2 * Theme.cardMargin
+            radius: Theme.cardRadius
             color: Theme.cardBg
             height: headerCol.implicitHeight + 48
 

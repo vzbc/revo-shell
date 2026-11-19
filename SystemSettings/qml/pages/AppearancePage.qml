@@ -470,9 +470,9 @@ Column {
 
         Item {
             id: lgBox
-            x: 12
+            x: Theme.cardMargin
             y: 12
-            width: parent.width - 24
+            width: parent.width - 2 * Theme.cardMargin
             height: 206
 
             // ---- live preview: wallpaper with liquid-glass widgets ----
@@ -774,9 +774,9 @@ Column {
 
         Item {
             id: styleBox
-            x: 12
+            x: Theme.cardMargin
             y: 12
-            width: parent.width - 24
+            width: parent.width - 2 * Theme.cardMargin
             height: 104
 
             Row {

@@ -1,0 +1,45 @@
+{
+  "default": {
+    "x": 13,
+    "y": 13,
+    "size": 14,
+    "gap": 8,
+    "probe": true,
+    "enabled": true
+  },
+  "apps": {
+    "code-oss": {
+      "y": 11,
+      "x": 13,
+      "css": ".monaco-workbench .part.titlebar .window-appicon { background-image: none !important; width: 74px !important; } .monaco-workbench.fullscreen .part.titlebar .window-appicon { width: 0 !important; }"
+    },
+    "Cursor": {
+      "y": 11,
+      "x": 13,
+      "css": ".monaco-workbench .part.titlebar .window-appicon { background-image: none !important; width: 74px !important; } .monaco-workbench.fullscreen .part.titlebar .window-appicon { width: 0 !important; }",
+      "probeTree": ".glass-in-app-menubar"
+    },
+    "ChatGPT": {
+      "stripOverlay": true,
+      "x": 14,
+      "y": 11,
+      "css": "[class^=\"ApplicationMenuTopBar\"] > div:first-child { padding-inline-start: 78px !important; }"
+    },
+    "Claude": {
+      "stripOverlay": true,
+      "x": 13,
+      "y": 10
+    },
+    "t3code": {
+      "stripOverlay": true
+    },
+    "obsidian": {
+      "x": 13,
+      "y": 13,
+      "hide": [
+        ".titlebar-button-container.mod-right"
+      ],
+      "css": "body.is-hidden-frameless:not(.is-fullscreen) { --frame-left-space: 78px !important; --frame-right-space: 0px !important; } body.is-hidden-frameless:not(.is-fullscreen) .workspace-tabs.mod-top-left-space .workspace-tab-header-container { padding-left: var(--frame-left-space) !important; } body.is-hidden-frameless:not(.is-fullscreen) .sidebar-toggle-button.mod-left { left: var(--frame-left-space) !important; }"
+    }
+  }
+}

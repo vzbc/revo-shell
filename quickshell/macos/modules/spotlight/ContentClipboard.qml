@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/modules/spotlight/ContentClipboard.qml
+../../../eqsh/modules/spotlight/ContentClipboard.qml

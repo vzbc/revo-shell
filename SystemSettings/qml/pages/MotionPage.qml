@@ -45,7 +45,7 @@ Column {
             switchOn: mo.vehicleCues
             onToggled: mo.vehicleCues = checked
             showInfo: true
-            onInfoClicked: console.log("Vehicle Motion Cues info — TODO")
+            onInfoClicked: Shell.run("xdg-open https://support.apple.com/guide/mac-help/change-display-settings-for-accessibility-unac089/mac >/dev/null 2>&1 &")
         }
     }
 

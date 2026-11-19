@@ -1,1 +1,1 @@
-/home/revo/.config/quickshell/eqsh/services/ClipboardService.qml
+../../eqsh/services/ClipboardService.qml

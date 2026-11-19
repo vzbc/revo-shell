@@ -197,7 +197,7 @@ MouseArea {
                             {
                                 icon: "wallpaper",
                                 name: "wallpapers",
-                                path: Quickshell.env("HOME") + "/.config/wallpapers"
+                                path: "/home/revo/.config/wallpapers"
                             },
                             ...(Config.options.policies.weeb === 1 ? [
                                     {

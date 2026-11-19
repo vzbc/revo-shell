@@ -1,0 +1,19 @@
+#!/usr/bin/bash
+# Code - OSS with macOS traffic lights: same as /usr/bin/code-oss but starts the
+# GUI directly so electron's default_app can --require the injector first.
+set -euo pipefail
+name=electron42
+flags_file="${XDG_CONFIG_HOME:-$HOME/.config}/${name}-flags.conf"
+fallback_file="${XDG_CONFIG_HOME:-$HOME/.config}/electron-flags.conf"
+lines=()
+if [[ -f "${flags_file}" ]]; then mapfile -t lines < "${flags_file}"
+elif [[ -f "${fallback_file}" ]]; then mapfile -t lines < "${fallback_file}"; fi
+flags=()
+for line in "${lines[@]}"; do [[ ! "${line}" =~ ^[[:space:]]*#.* ]] && [[ -n "${line}" ]] && flags+=("${line}"); done
+codeflags=()
+if [[ -f "${XDG_CONFIG_HOME:-$HOME/.config}/code-flags.conf" ]]; then
+  mapfile -t cl < "${XDG_CONFIG_HOME:-$HOME/.config}/code-flags.conf"
+  for line in "${cl[@]}"; do [[ ! "${line}" =~ ^[[:space:]]*#.* ]] && [[ -n "${line}" ]] && codeflags+=("${line}"); done
+fi
+export ELECTRON_IS_DEV=0 ELECTRON_FORCE_IS_PACKAGED=true
+exec /usr/lib/${name}/electron "${flags[@]}" -r "$HOME/.local/share/electron-tl/tl-main.js" /usr/lib/code/code.mjs "${codeflags[@]}" "$@"

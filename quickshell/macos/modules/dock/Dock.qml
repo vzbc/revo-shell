@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -19,7 +20,7 @@ PanelWindow {
         right: root.dockVertical ? !root.dockLeft : true
     }
 
-    height: root.dockVertical ? root.capsuleWidth : root.winThick
+    height: root.dockVertical ? root.capsuleWidth + 2 * root.fishPad : root.winThick
     width: root.winThick
     property bool isTrashFull: false
 
@@ -35,7 +36,7 @@ PanelWindow {
 
     Process {
         id: trashOpener
-        command: [Quickshell.env("HOME") + "/.local/bin/nautilus", "trash:///"]
+        command: ["/home/revo/.local/bin/nautilus", "trash:///"]
         running: false
     }
 
@@ -314,17 +315,20 @@ PanelWindow {
     readonly property color accent: "#0c84ff"
 
     readonly property int slotWidth: Appearance.dockIconSize + 12
-    readonly property int capsuleHeight: 80
+    // DockBar: distanceTop 6 + tileSize + distanceBottom 10 (Dock.app init)
+    readonly property int capsuleHeight: root.slotWidth + 16
     readonly property int totalSlots: DockApps.dockItems.length + root.shotItems.length + DockApps.minimizedItems.length + 2
     readonly property int sepCount: 1
     readonly property int minSlotExtra: 10
-    readonly property int capsuleWidth: root.totalSlots * root.slotWidth + root.sepCount * 9 + 20
+    // DockBar.distanceSides = 8 on each end
+    readonly property int capsuleWidth: root.totalSlots * root.slotWidth + root.sepCount * 9 + 16
         + DockApps.minimizedItems.length * root.minSlotExtra
     readonly property string dockPos: Appearance.dockPosition
     readonly property bool dockVertical: root.dockPos !== "bottom"
     readonly property bool dockLeft: root.dockPos === "left"
     readonly property int winThick: root.capsuleHeight + root.iconZoomFactor + root.revealStrip
-    readonly property int dockIconPad: 14
+    // icon sits distanceBottom (10) + tile padding above the platter edge
+    readonly property int dockIconPad: 10 + Math.round((root.slotWidth - root.iconBase) / 2)
     property string tipText: ""
     property var tipOwner: null
     property real tipCX: 0
@@ -332,23 +336,113 @@ PanelWindow {
 
     margins {
         bottom: root.dockVertical
-            ? Math.max(0, Math.round((Quickshell.screens[0].height - root.capsuleWidth) / 2))
+            ? Math.max(0, Math.round((Quickshell.screens[0].height - root.capsuleWidth) / 2) - root.fishPad)
             : Math.round(8 + root.hideOffset)
         top: root.dockVertical
-            ? Math.max(0, Math.round((Quickshell.screens[0].height - root.capsuleWidth) / 2))
+            ? Math.max(0, Math.round((Quickshell.screens[0].height - root.capsuleWidth) / 2) - root.fishPad)
             : 0
         left: root.dockVertical
             ? (root.dockLeft ? Math.round(8 + root.hideOffset) : 0)
-            : Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
+            : Math.max(0, Math.round((Quickshell.screens[0].width - root.capsuleWidth) / 2) - root.fishPad)
         right: root.dockVertical
             ? (root.dockLeft ? 0 : Math.round(8 + root.hideOffset))
-            : Math.max(0, (Quickshell.screens[0].width - root.capsuleWidth) / 2)
+            : Math.max(0, Math.round((Quickshell.screens[0].width - root.capsuleWidth) / 2) - root.fishPad)
     }
    color: "transparent"
     WlrLayershell.namespace: "macos:dock"
 
     readonly property int iconZoomFactor: Appearance.dockMagnification ? Math.round(Appearance.dockZoom) : 0
     readonly property int revealStrip: 6
+
+    // ── macOS 27 Dock magnification ("fish"), decoded from Dock.app ─────────
+    //   -[DockBar fSize]     = 3.0   -> fishSize  R = 3 × tileSize
+    //   -[DockBar fishSpeed] = 42.0  -> ramp ms  = floor(42·ln(1 + |Δ|/2) + 1)
+    //   -[DockBar moveSpeed] = 350   -> ramp ms while dragging
+    //   realScale M = ((largeSize − tileSize)/2) / sin(π·tileSize / 4R) × fish
+    //   every tile edge x maps to  x + M·sin(π·(x − fishCenter) / 2R)  (|d| < R)
+    //                          or  x ± M                                (|d| ≥ R)
+    //   fishCenter = pointer position clamped to [barLeft, barRight]
+    readonly property real fishFSize: 3.0
+    readonly property real fishSpeed: 42.0
+    readonly property real fishMoveSpeed: 350.0
+    readonly property bool fishEnabled: Appearance.dockMagnification && root.iconZoomFactor > 0
+    readonly property real fishPitch: root.slotWidth
+    readonly property real fishLargePitch: root.slotWidth * (root.iconBase + root.iconZoomFactor) / root.iconBase
+    readonly property real fishSizeR: root.fishFSize * root.fishPitch
+    readonly property real fishMaxScale: root.fishEnabled
+        ? ((root.fishLargePitch - root.fishPitch) * 0.5) / Math.sin(Math.PI * root.fishPitch / (4 * root.fishSizeR))
+        : 0
+    readonly property int fishPad: Math.ceil(root.fishMaxScale) + 2
+    property real fish: 0
+    readonly property real realScale: root.fishMaxScale * root.fish
+    readonly property real currentFish: (root.fishLargePitch - root.fishPitch) * root.fish
+    property real fishCenter: 0
+    readonly property real barStart: root.fishPad                       // unmagnified platter start
+    readonly property real barEnd: root.fishPad + root.capsuleWidth
+    readonly property real rowBase: root.fishPad + 8                     // first tile edge
+
+    function fx(x) {
+        if (root.realScale <= 0) return x;
+        const d = x - root.fishCenter;
+        if (d <= -root.fishSizeR) return x - root.realScale;
+        if (d >= root.fishSizeR) return x + root.realScale;
+        return x + root.realScale * Math.sin(Math.PI * d / (2 * root.fishSizeR));
+    }
+    function magLen(start, len) { return root.fx(start + len) - root.fx(start); }
+
+    // unmagnified tile starts along the dock axis (row order of dockRow)
+    readonly property real sepStart: root.rowBase + DockApps.dockItems.length * root.slotWidth
+    readonly property real dlStart: root.sepStart + 9
+    readonly property real minStart: root.dlStart + root.slotWidth
+    readonly property real shotStart: root.minStart + DockApps.minimizedItems.length * (root.slotWidth + root.minSlotExtra)
+    readonly property real trashStart: root.shotStart + root.shotItems.length * root.slotWidth
+
+    NumberAnimation {
+        id: fishAnim
+        target: root
+        property: "fish"
+        easing.type: Easing.Linear          // DockFloatAnimatedProperty easing 0
+    }
+    function setFishing(on) {
+        const to = (on && root.fishEnabled) ? 1 : 0;
+        if (fishAnim.running && fishAnim.to === to) return;
+        if (!fishAnim.running && root.fish === to) return;
+        const target = to === 1 ? root.fishLargePitch : root.fishPitch;
+        const delta = Math.abs(target - (root.fishPitch + root.currentFish));
+        fishAnim.stop();
+        fishAnim.from = root.fish;
+        fishAnim.to = to;
+        fishAnim.duration = root.dragSourceIndex !== -1
+            ? root.fishMoveSpeed
+            : Math.floor(root.fishSpeed * Math.log(1 + delta * 0.5) + 1);
+        fishAnim.start();
+    }
+
+    HoverHandler {
+        id: fishHover
+        onPointChanged: {
+            if (!fishHover.hovered) return;
+            const p = root.dockVertical ? fishHover.point.position.y : fishHover.point.position.x;
+            root.fishCenter = Math.max(root.barStart, Math.min(root.barEnd, p));
+        }
+        onHoveredChanged: root.setFishing(fishHover.hovered)
+    }
+
+    // input only where the Dock is (platter, plus the magnified band while fishing)
+    Item {
+        id: dockHitArea
+        readonly property bool full: (Appearance.dockAutohide && root.hideOffset < 0)
+            || root.dragSourceIndex !== -1 || root.shotDragging || root.menuOpen
+        // thickness across the dock: platter, plus the magnified band while fishing
+        readonly property real thick: root.capsuleHeight + (root.fish > 0 ? root.iconZoomFactor : 0)
+        readonly property real a0: root.fx(root.barStart)
+        readonly property real a1: root.fx(root.barEnd)
+        x: full ? 0 : root.dockVertical ? (root.dockLeft ? 0 : parent.width - thick) : a0
+        y: full ? 0 : root.dockVertical ? a0 : parent.height - thick
+        width: full ? parent.width : root.dockVertical ? thick : a1 - a0
+        height: full ? parent.height : root.dockVertical ? a1 - a0 : thick
+    }
+    mask: Region { item: dockHitArea }
     property real hideOffset: Appearance.dockAutohide && !rootReveal.hovered
         ? -(root.winThick - root.revealStrip) - 8 : 0
     Behavior on hideOffset {
@@ -447,6 +541,10 @@ PanelWindow {
         // true => follow the Appearance "Liquid Glass" setting (Clear / Tinted + intensity)
         property bool followSetting: true
         property real alphaBoost: 0
+        // Glass rendered by the compositor (hyprliquid "apple_glass"): keep
+        // only a near-invisible fill so the surface alpha still defines the
+        // glass shape, and let the compositor draw rim/refraction.
+        property bool compositorGlass: false
 
         readonly property color effTint: followSetting ? Appearance.liquidGlassTint : tint
         readonly property real effAlpha: followSetting
@@ -468,9 +566,51 @@ PanelWindow {
             id: capsuleBg
             anchors.fill: parent
             radius: glass.radius
-            color: Qt.rgba(glass.effTint.r, glass.effTint.g, glass.effTint.b, glass.effAlpha)
-            border.color: root.glassBorder
+            color: glass.compositorGlass ? Qt.rgba(1, 1, 1, 0.012)
+                 : Qt.rgba(glass.effTint.r, glass.effTint.g, glass.effTint.b, glass.effAlpha)
+        }
+        // Liquid Glass highlight: light falls from the top edge and fades
+        // down the sides (SwiftUI Material.Layer.SDFLayer.GlassHighlight)
+        Rectangle {
+            visible: !glass.compositorGlass
+            anchors.fill: parent
+            radius: glass.radius
+            color: "transparent"
             border.width: 1
+            border.color: Qt.rgba(1, 1, 1, 0.42)
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: rimFade
+            }
+        }
+        Item {
+            id: rimFade
+            anchors.fill: parent
+            visible: false
+            layer.enabled: true
+            Rectangle {
+                anchors.fill: parent
+                gradient: Gradient {
+                    GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 1.0) }
+                    GradientStop { position: 0.45; color: Qt.rgba(1, 1, 1, 0.30) }
+                    GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.55) }
+                }
+            }
+        }
+        // soft inner sheen across the upper half
+        Rectangle {
+            visible: !glass.compositorGlass
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.top: parent.top
+            anchors.margins: 1
+            height: parent.height * 0.5
+            radius: glass.radius - 1
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.10) }
+                GradientStop { position: 1.0; color: Qt.rgba(1, 1, 1, 0.0) }
+            }
         }
     }
 
@@ -706,7 +846,7 @@ PanelWindow {
                 MouseArea {
                     anchors.fill: parent
                     onClicked: {
-                        dlOpener.command = [Quickshell.env("HOME") + "/.local/bin/nautilus", "--new-window", "file://" + Quickshell.env("HOME") + "/Downloads"];
+                        dlOpener.command = ["/home/revo/.local/bin/nautilus", "--new-window", "file:///home/revo/Downloads"];
                         dlOpener.running = true;
                         root.downloadsOpen = false;
                     }
@@ -873,21 +1013,16 @@ PanelWindow {
         }
     }
 
-    ShaderLiquidGlass {
+    DockGlass {
         id: capsuleBg
-        anchors.bottom: parent.bottom
-        anchors.top: root.dockVertical ? parent.top : null
-        anchors.left: root.dockVertical
-            ? (root.dockLeft ? parent.left : null)
-            : parent.left
-        anchors.right: root.dockVertical
-            ? (root.dockLeft ? null : parent.right)
-            : parent.right
-        height: root.capsuleHeight
-        width: root.capsuleHeight
-        radius: 26
-        tint: "#121217"
-        tintAlpha: 0.30
+        anchors.bottom: root.dockVertical ? undefined : parent.bottom
+        anchors.left: root.dockVertical && root.dockLeft ? parent.left : undefined
+        anchors.right: root.dockVertical && !root.dockLeft ? parent.right : undefined
+        x: root.dockVertical ? 0 : root.fx(root.barStart)
+        y: root.dockVertical ? root.fx(root.barStart) : 0
+        height: root.dockVertical ? root.fx(root.barEnd) - root.fx(root.barStart) : root.capsuleHeight
+        width: root.dockVertical ? root.capsuleHeight : root.fx(root.barEnd) - root.fx(root.barStart)
+        radius: 24      // -[DockGlassMaterialLayerController] setCornerRadius: 24
     }
 
 
@@ -901,11 +1036,10 @@ PanelWindow {
 
         GridLayout {
             id: dockRow
-            anchors.fill: parent
-            anchors.leftMargin: root.dockVertical ? 0 : 10
-            anchors.rightMargin: root.dockVertical ? 0 : 10
-            anchors.topMargin: root.dockVertical ? 10 : 0
-            anchors.bottomMargin: root.dockVertical ? 10 : 0
+            x: root.dockVertical ? 0 : root.fx(root.rowBase)
+            y: root.dockVertical ? root.fx(root.rowBase) : 0
+            width: root.dockVertical ? parent.width : implicitWidth
+            height: root.dockVertical ? implicitHeight : parent.height
             columns: root.dockVertical ? 1 : 256
             rowSpacing: 0
             columnSpacing: 0
@@ -914,10 +1048,11 @@ PanelWindow {
                         component DockSeparator: Rectangle {
                 Layout.preferredWidth: root.dockVertical ? root.capsuleHeight - 30 : 1
                 Layout.preferredHeight: root.dockVertical ? 1 : root.capsuleHeight - 30
-                Layout.leftMargin: root.dockVertical ? (root.dockLeft ? 15 : 0) : 4
-                Layout.rightMargin: root.dockVertical ? (root.dockLeft ? 0 : 15) : 4
-                Layout.topMargin: root.dockVertical ? 4 : 0
-                Layout.bottomMargin: root.dockVertical ? 0 : 15
+                readonly property real k: root.magLen(root.sepStart, 9) / 9
+                Layout.leftMargin: root.dockVertical ? (root.dockLeft ? 15 : 0) : 4 * k
+                Layout.rightMargin: root.dockVertical ? (root.dockLeft ? 0 : 15) : 4 * k
+                Layout.topMargin: root.dockVertical ? 4 * k : 0
+                Layout.bottomMargin: root.dockVertical ? 4 * k : 15
                 Layout.alignment: root.dockVertical
                     ? (root.dockLeft ? Qt.AlignLeft : Qt.AlignRight)
                     : Qt.AlignBottom
@@ -928,8 +1063,10 @@ PanelWindow {
             // نافذة مصغّرة بالجيني: مصغّرة آخر حالة مرئية + شارة التطبيق
             component MinSlot: Item {
                 required property var modelData
-                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth + root.minSlotExtra
-                Layout.preferredHeight: root.dockVertical ? root.slotWidth + root.minSlotExtra : root.capsuleHeight
+                required property int index
+                readonly property real magLen: root.magLen(root.minStart + index * (root.slotWidth + root.minSlotExtra), root.slotWidth + root.minSlotExtra)
+                Layout.preferredWidth: root.dockVertical ? parent.width : magLen
+                Layout.preferredHeight: root.dockVertical ? magLen : root.capsuleHeight
                 Layout.alignment: Qt.AlignBottom
 
                 Rectangle {
@@ -995,8 +1132,9 @@ PanelWindow {
                 id: slot
                 required property var modelData
                 required property int index
-                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth
-                Layout.preferredHeight: root.dockVertical ? root.slotWidth : parent.height
+                readonly property real magLen: root.magLen(root.rowBase + slot.index * root.slotWidth, root.slotWidth)
+                Layout.preferredWidth: root.dockVertical ? parent.width : slot.magLen
+                Layout.preferredHeight: root.dockVertical ? slot.magLen : parent.height
 
                 property real dragXOffset: 0
                 property real shiftOffset: {
@@ -1026,30 +1164,16 @@ PanelWindow {
                         : 0
                 }
 
-                z: slot.index === root.dragSourceIndex ? 100 : (slot.growSize > 0 ? 10 : 0)
+                z: slot.index === root.dragSourceIndex ? 100 : (slot.magScale > 1.001 ? 10 : 0)
 
                 readonly property var app: slot.modelData
 
-                readonly property real virtualCursorIndex: root.instantHoveredIndex !== -1
-                    ? root.instantHoveredIndex + root.instantHoveredFraction - 0.5 : -1
-                readonly property real distanceToCursor: slot.virtualCursorIndex !== -1
-                    ? Math.abs(slot.index - slot.virtualCursorIndex) : -1
-                readonly property real zoomMultiplier: {
-                    const d = slot.distanceToCursor;
-                    if (d === -1) return 0.0;
-                    if (d <= 0.5) return 1.0 - d;
-                    else if (d < 1.5) return 0.5 * (1.5 - d);
-                    return 0.0;
-                }
-                property int growSize: Math.round(slot.zoomMultiplier * root.iconZoomFactor)
-                readonly property real magScale: 1.0 + slot.growSize / root.iconBase
+                // magnified tile length / tile length (Dock fisheye)
+                readonly property real magScale: slot.magLen / root.slotWidth
                 property real bounceScale: 1.0
                 property real bounceLift: 0.0
                 property bool launching: false
 
-                Behavior on growSize {
-                    NumberAnimation { duration: 30; easing.type: Easing.InOutQuad }
-                }
 
                 onLaunchingChanged: {
                     if (launching) {
@@ -1340,8 +1464,10 @@ PanelWindow {
             component ShotSlot: Item {
                 id: sslot
                 required property var modelData
-                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth
-                Layout.preferredHeight: root.dockVertical ? root.slotWidth : root.capsuleHeight
+                required property int index
+                readonly property real magLen: root.magLen(root.shotStart + index * root.slotWidth, root.slotWidth)
+                Layout.preferredWidth: root.dockVertical ? parent.width : magLen
+                Layout.preferredHeight: root.dockVertical ? magLen : root.capsuleHeight
                 Layout.alignment: Qt.AlignBottom
 
                 opacity: 0
@@ -1465,22 +1591,23 @@ PanelWindow {
                         // ── فولدر الداون لودس (ستاك ماك) ──
             Item {
                 id: dlSlot
-                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth
-                Layout.preferredHeight: root.dockVertical ? root.slotWidth : root.capsuleHeight
+                readonly property real magLen: root.magLen(root.dlStart, root.slotWidth)
+                Layout.preferredWidth: root.dockVertical ? parent.width : magLen
+                Layout.preferredHeight: root.dockVertical ? magLen : root.capsuleHeight
                 Layout.alignment: Qt.AlignBottom
 
                 Image {
                     id: dlIcon
                     anchors.horizontalCenter: root.dockVertical ? null : parent.horizontalCenter
                     anchors.bottom: root.dockVertical ? null : parent.bottom
-                    anchors.bottomMargin: root.dockVertical ? 0 : 14
+                    anchors.bottomMargin: root.dockVertical ? 0 : root.dockIconPad
                     anchors.verticalCenter: root.dockVertical ? parent.verticalCenter : null
                     anchors.left: root.dockVertical && root.dockLeft ? parent.left : null
                     anchors.right: root.dockVertical && !root.dockLeft ? parent.right : null
-                    anchors.leftMargin: root.dockVertical && root.dockLeft ? 14 : 0
-                    anchors.rightMargin: root.dockVertical && !root.dockLeft ? 14 : 0
-                    width: root.iconBase
-                    height: root.iconBase
+                    anchors.leftMargin: root.dockVertical && root.dockLeft ? root.dockIconPad : 0
+                    anchors.rightMargin: root.dockVertical && !root.dockLeft ? root.dockIconPad : 0
+                    width: root.iconBase * parent.magLen / root.slotWidth
+                    height: root.iconBase * parent.magLen / root.slotWidth
                     source: DockApps.folderSource()
                     asynchronous: true
                     mipmap: true
@@ -1527,22 +1654,23 @@ PanelWindow {
                         // ── كود سلة المهملات المطوّر ──
             Item {
                 id: trashSlot
-                Layout.preferredWidth: root.dockVertical ? parent.width : root.slotWidth
-                Layout.preferredHeight: root.dockVertical ? root.slotWidth : root.capsuleHeight
+                readonly property real magLen: root.magLen(root.trashStart, root.slotWidth)
+                Layout.preferredWidth: root.dockVertical ? parent.width : magLen
+                Layout.preferredHeight: root.dockVertical ? magLen : root.capsuleHeight
                 Layout.alignment: Qt.AlignBottom
 
                 Image {
                     id: trashIcon
                     anchors.horizontalCenter: root.dockVertical ? null : parent.horizontalCenter
                     anchors.bottom: root.dockVertical ? null : parent.bottom
-                    anchors.bottomMargin: root.dockVertical ? 0 : 14
+                    anchors.bottomMargin: root.dockVertical ? 0 : root.dockIconPad
                     anchors.verticalCenter: root.dockVertical ? parent.verticalCenter : null
                     anchors.left: root.dockVertical && root.dockLeft ? parent.left : null
                     anchors.right: root.dockVertical && !root.dockLeft ? parent.right : null
-                    anchors.leftMargin: root.dockVertical && root.dockLeft ? 14 : 0
-                    anchors.rightMargin: root.dockVertical && !root.dockLeft ? 14 : 0
-                    width: root.iconBase
-                    height: root.iconBase
+                    anchors.leftMargin: root.dockVertical && root.dockLeft ? root.dockIconPad : 0
+                    anchors.rightMargin: root.dockVertical && !root.dockLeft ? root.dockIconPad : 0
+                    width: root.iconBase * parent.magLen / root.slotWidth
+                    height: root.iconBase * parent.magLen / root.slotWidth
                     source: DockApps.iconSource(root.isTrashFull ? "user-trash-full.png" : "Trash.png")
                     asynchronous: true
                     mipmap: true

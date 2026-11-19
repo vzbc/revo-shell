@@ -29,7 +29,7 @@ Column {
             switchOn: ht.hoverText
             showInfo: true
             onToggled: ht.hoverText = checked
-            onInfoClicked: console.log("Hover Text info — TODO")
+            onInfoClicked: Shell.run("xdg-open https://support.apple.com/guide/mac-help/change-display-settings-for-accessibility-unac089/mac >/dev/null 2>&1 &")
         }
         DetailRow {
             separator: true
@@ -39,7 +39,7 @@ Column {
             switchOn: ht.hoverColor
             showInfo: true
             onToggled: ht.hoverColor = checked
-            onInfoClicked: console.log("Hover Color info — TODO")
+            onInfoClicked: Shell.run("xdg-open https://support.apple.com/guide/mac-help/change-display-settings-for-accessibility-unac089/mac >/dev/null 2>&1 &")
         }
         DetailRow {
             separator: true
@@ -49,7 +49,7 @@ Column {
             switchOn: ht.hoverTyping
             showInfo: true
             onToggled: ht.hoverTyping = checked
-            onInfoClicked: console.log("Hover Typing info — TODO")
+            onInfoClicked: Shell.run("xdg-open https://support.apple.com/guide/mac-help/change-display-settings-for-accessibility-unac089/mac >/dev/null 2>&1 &")
         }
     }
 }

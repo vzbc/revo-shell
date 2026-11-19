@@ -27,10 +27,10 @@ Column {
 
     // Storage bar
     Rectangle {
-        x: 12
-        width: parent.width - 24
+        x: Theme.cardMargin
+        width: parent.width - 2 * Theme.cardMargin
         height: 18
-        radius: 9
+        radius: Theme.cardRadius
         color: Theme.trackBg
         clip: true
 
