@@ -18,6 +18,8 @@ Item {
     property bool isSlider: false
     property real sliderValue: 0
     property real sliderMax: 1
+    property string sliderMinLabel: ""
+    property string sliderMaxLabel: ""
     property string buttonLabel: ""
 
     signal clicked
@@ -28,7 +30,7 @@ Item {
 
     x: 0
     width: parent ? parent.width : 100
-    height: subtitle.length > 0 ? 62 : Theme.detailRowHeight
+    height: subtitle.length > 0 ? 62 : (sliderMinLabel.length > 0 ? 58 : Theme.detailRowHeight)
 
     Rectangle {
         visible: row.separator
@@ -99,7 +101,7 @@ Item {
         id: valueText
         visible: row.value.length > 0 && row.pickerOptions.length === 0 && !row.isSlider
         anchors.right: parent.right
-        anchors.rightMargin: row.chevron ? 36 : 16
+        anchors.rightMargin: row.chevron ? 36 : (row.showInfo ? 40 : 16)
         anchors.verticalCenter: parent.verticalCenter
         text: row.value
         font.family: Theme.fontText
@@ -130,6 +132,8 @@ Item {
         from: 0
         to: 1
         value: row.sliderValue
+        minLabel: row.sliderMinLabel
+        maxLabel: row.sliderMaxLabel
         onMoved: (v) => row.moved(v)
     }
 

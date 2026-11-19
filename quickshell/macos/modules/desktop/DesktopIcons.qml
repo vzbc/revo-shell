@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import Qt.labs.folderlistmodel
 import Quickshell
+import Quickshell.Wayland
+import "../common"
 
 Scope {
     id: root
@@ -10,19 +12,34 @@ Scope {
         id: desktopWindow
         
         // ربط الشاشة باسمها الفعلي مباشرة بطريقة Quickshell الصحيحة
-        screen: Quickshell.screens.find(function(s) { return s.name === "eDP-1"; })
+        screen: Quickshell.screens.find(function(s) { return s.name === "eDP-1"; }) || Quickshell.screens[0]
         
-        anchors.fill: parent
+        anchors { top: true; bottom: true; left: true; right: true }
         
         // إعدادات الطبقة لضمان البقاء في الخلفية بشكل مستقر تماماً
-        WlrLayershell.exclusionMode: WlrLayershell.ExclusionMode.Ignore
-        WlrLayershell.layer: WlrLayershell.Layer.Background
+        exclusionMode: ExclusionMode.Ignore
+        WlrLayershell.layer: WlrLayer.Bottom   // above the wallpaper daemon, below windows
         WlrLayershell.namespace: "desktop_icons"
         
         color: "transparent" // شفافة لكي تظهر خلفية جهازك الأساسية
 
+        // Desktop & Dock › "Click wallpaper to reveal desktop": a click on the bare
+        // wallpaper (this layer only gets clicks where no window is) toggles
+        // show-desktop; "Only in Stage Manager" = off (there is no Stage Manager)
+        MouseArea {
+            anchors.fill: parent
+            z: -1
+            onClicked: {
+                const mode = String(((Appearance.userCfg || {}).desktop || {}).clickWallpaper || "Always")
+                if (mode === "Always")
+                    Quickshell.execDetached(["bash", Quickshell.env("HOME") + "/.config/hypr/scripts/show_desktop.sh"])
+            }
+        }
+
         GridView {
             id: grid
+            // Desktop & Dock › Show Items › On Desktop
+            visible: ((Appearance.userCfg || {}).desktop || {}).showOnDesktop === true
             anchors.fill: parent
             anchors.topMargin: 80     // مسافة كافية لكي لا تتداخل الأيقونات مع الـ TopBar في الأعلى
             anchors.bottomMargin: 120  // مسافة كافية لكي لا تتداخل مع الـ Dock في الأسفل
@@ -35,7 +52,7 @@ Scope {
             model: FolderListModel {
                 id: folderModel
                 // مسار صريح ومباشر لمجلد سطح المكتب الخاص بك لتجنب مشاكل القراءة
-                folder: "file:///home/revo/Desktop"
+                folder: "file://" + Quickshell.env("HOME") + "/Desktop"
                 showDotAndDotDot: false
             }
 

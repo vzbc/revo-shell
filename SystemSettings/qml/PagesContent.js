@@ -168,14 +168,13 @@ var content = {
     ],
     "gen.softwareUpdate.auto": [
         { header: "Automatically", rows: [
-            { t: "Check for updates", sw: true, on: true },
-            { t: "Download new updates when available", sw: true, on: true },
-            { t: "Install macOS updates", sw: true, on: true },
-            { t: "Install application updates from the App Store", sw: true, on: true },
-            { t: "Install Security Responses and system files", sw: true, on: true }
-        ] },
-        { note: "Updates require your Mac to be connected to power." }
+            { t: "Download new updates when available", sw: true, cfg: "updates.download", def: true },
+            { t: "Install macOS updates", sw: true, cfg: "updates.installMacOS", def: false },
+            { t: "Install application updates from the App Store", sw: true, cfg: "updates.installApps", def: false },
+            { t: "Install system data files and security updates", sw: true, cfg: "updates.installSecurity", def: true }
+        ] }
     ],
+
 
     "gen.storage": [
         { rows: [

@@ -52,7 +52,7 @@ Column {
 
     GroupCard {
         DetailRow {
-            title: "AirDrop & Handoff"
+            title: "AirDrop & Continuity"
             iconFile: "dt_airdrop"
             chevron: true
             onClicked: page.navigate("gen.airDrop")

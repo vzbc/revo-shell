@@ -98,7 +98,10 @@ Singleton {
                     });
                 }
             }
-            root.minimizedItems = items;
+            // Desktop & Dock › "Minimize windows into application icon": no separate
+            // tiles — clicking the app icon restores them (hasmin/clickrestore)
+            const intoIcon = ((Appearance.userCfg || {}).dock || {}).minimizeIntoIcon === true;
+            root.minimizedItems = intoIcon ? [] : items;
         } catch (e) {
             root.minimizedItems = [];
         }

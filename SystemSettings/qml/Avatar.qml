@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Effects
 
 Item {
     id: root
@@ -21,9 +22,9 @@ Item {
         height: root.size
         radius: width / 2
         color: Theme.dark ? "#3a3a3c" : "#e9e9eb"
-        clip: true
         visible: root.customReady
 
+        // clip: true only clips to the bounding box — mask it to a real circle
         Image {
             id: customImg
             anchors.fill: parent
@@ -33,6 +34,21 @@ Item {
             cache: false
             sourceSize.width: root.size * 2
             sourceSize.height: root.size * 2
+            layer.enabled: true
+            layer.effect: MultiEffect {
+                maskEnabled: true
+                maskSource: circleMask
+                maskThresholdMin: 0.5
+                maskSpreadAtMin: 1.0
+            }
+        }
+        Rectangle {
+            id: circleMask
+            anchors.fill: parent
+            radius: width / 2
+            visible: false
+            layer.enabled: true
+            layer.smooth: true
         }
     }
 

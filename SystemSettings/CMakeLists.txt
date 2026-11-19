@@ -35,6 +35,26 @@ qt_add_resources(systemsettings "icons"
     FILES ${ICON_FILES}
 )
 
+# helper scripts run by pages (copied to ~/.cache/systemsettings on use)
+set_source_files_properties(scripts/battery_history.py PROPERTIES QT_RESOURCE_ALIAS "battery_history.py")
+set_source_files_properties(scripts/steam_profile.py PROPERTIES QT_RESOURCE_ALIAS "steam_profile.py")
+qt_add_resources(systemsettings "scripts"
+    PREFIX "/scripts"
+    FILES scripts/battery_history.py scripts/steam_profile.py
+)
+
+# Trackpad gesture movies (Apple's Trackpad.mov, one animated WebP per chapter)
+file(GLOB TRACKPAD_MEDIA CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/media/trackpad/*.webp")
+foreach(clip IN LISTS TRACKPAD_MEDIA)
+    get_filename_component(clip_name "${clip}" NAME)
+    set_source_files_properties("${clip}" PROPERTIES QT_RESOURCE_ALIAS "trackpad/${clip_name}")
+endforeach()
+qt_add_resources(systemsettings "media"
+    PREFIX "/media"
+    BIG_RESOURCES
+    FILES ${TRACKPAD_MEDIA}
+)
+
 qt_add_qml_module(systemsettings
     URI org.macos.systemsettings
     VERSION 1.0
@@ -87,6 +107,12 @@ qt_add_qml_module(systemsettings
         qml/pages/DisplaysPage.qml
         qml/pages/LockScreenPage.qml
         qml/pages/SiriPage.qml
+        qml/pages/TrackpadPage.qml
+        qml/pages/AboutPage.qml
+        qml/pages/SoftwareUpdatePage.qml
+        qml/pages/GameCenterPage.qml
+        qml/pages/ScreenTimePage.qml
+        qml/MacSegmented.qml
 )
 
 target_link_libraries(systemsettings PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Multimedia)

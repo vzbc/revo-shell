@@ -1805,7 +1805,7 @@ PanelWindow {
                 // Battery Settings
                 PopItem {
                     label: "Battery Settings\u2026"
-                    onClick: () => { root.batteryOpen = false; Apps.launch("pearos-settings"); }
+                    onClick: () => { root.batteryOpen = false; Apps.launch("$HOME/.local/bin/systemsettings"); }
                 }
             }
         }
@@ -1855,7 +1855,7 @@ PanelWindow {
                 component ASep: Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; Layout.topMargin: 4; Layout.bottomMargin: 4; color: Qt.rgba(1, 1, 1, 0.12) }
                 AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/icon.svg"); label: "About This Mac"; onClick: () => ShellController.openAbout() }
                 ASep {}
-                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/settings.svg"); label: "System Settings…"; onClick: () => Apps.launch("pearos-settings") }
+                AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/settings.svg"); label: "System Settings…"; onClick: () => Apps.launch("$HOME/.local/bin/systemsettings") }
                 AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/store.svg"); label: "App Store…"; onClick: () => Apps.launch("pearos-appstore") }
                 ASep {}
                 AMItem { icon: Qt.resolvedUrl(Quickshell.shellDir + "/media/icons/dropdown/clock.svg"); label: "Recent Items"; sublabel: "▶" }

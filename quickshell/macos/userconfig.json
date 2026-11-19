@@ -1,61 +1,67 @@
 {
-    "accentColor": "#0A6CFF",
-    "appearance": {
-        "accentName": "blue",
-        "highlightName": "#0A6CFF",
-        "scrollBars": "When scrolling",
-        "sidebarIconSize": "Medium"
-    },
-    "avatarPath": "/home/revo/.local/share/systemsettings/avatar-1790780655549.png",
-    "bar": {
-        "showBackground": false
-    },
-    "battery": {
-        "displayOff": "Never",
-        "lowPower": "Never"
-    },
-    "darkMode": true,
-    "dock": {
-        "titleBarAction": "Zoom"
-    },
-    "dockAnimateHide": true,
-    "dockAutohide": false,
-    "dockIconSize": 48,
-    "dockIndicators": true,
-    "dockMagnification": true,
-    "dockPosition": "bottom",
-    "dockShowAnimation": true,
-    "dockZoom": 74,
-    "folderColor": "",
-    "highlightColor": "#0A6CFF",
-    "iconStyle": "Default",
-    "iconStyleMode": "Always",
-    "iconTint": "#0D3570",
-    "liquidGlass": "Clear",
-    "liquidGlassIntensity": 0,
-    "menubar": {
-        "battery": true,
-        "bluetooth": true,
-        "clock": true,
-        "controlcenter": true,
-        "display": true,
-        "enabledApps": "ChatGPTHelper|DockFlow|Elgato Stream Deck|LookAway|Notion Calendar|PastePal|Rize|Substage|Umbra|Creative Cloud",
-        "mirror": false,
-        "siri": false,
-        "sound": true,
-        "spotlight": true,
-        "timeMachine": false,
-        "tray": true,
-        "weather": false,
-        "wifi": true
-    },
-    "menubarBattery": true,
-    "menubarBluetooth": true,
-    "menubarClock": true,
-    "menubarDisplay": true,
-    "menubarSpotlight": true,
-    "menubarTray": true,
-    "menubarWifi": true,
-    "reduceMotion": true,
-    "spotlightEnable": true
+  "accentColor": "#0A6CFF",
+  "appearance": {
+    "accentName": "blue",
+    "highlightName": "#0A6CFF",
+    "scrollBars": "When scrolling",
+    "sidebarIconSize": "Medium"
+  },
+  "avatarPath": "/home/revo/.local/share/systemsettings/avatar-1790780655549.png",
+  "bar": {
+    "showBackground": false
+  },
+  "battery": {
+    "displayOff": "Never",
+    "lowPower": "Never"
+  },
+  "darkMode": true,
+  "dock": {
+    "titleBarAction": "Zoom"
+  },
+  "dockAnimateHide": true,
+  "dockAutohide": false,
+  "dockIconSize": 48,
+  "dockIndicators": true,
+  "dockMagnification": true,
+  "dockPosition": "bottom",
+  "dockShowAnimation": true,
+  "dockZoom": 74,
+  "folderColor": "",
+  "highlightColor": "#0A6CFF",
+  "iconStyle": "Default",
+  "iconStyleMode": "Always",
+  "iconTint": "#0D3570",
+  "liquidGlass": "Clear",
+  "liquidGlassIntensity": 0,
+  "menubar": {
+    "battery": true,
+    "bluetooth": true,
+    "clock": true,
+    "controlcenter": true,
+    "display": true,
+    "enabledApps": "ChatGPTHelper|DockFlow|Elgato Stream Deck|LookAway|Notion Calendar|PastePal|Rize|Substage|Umbra|Creative Cloud",
+    "mirror": false,
+    "siri": false,
+    "sound": true,
+    "spotlight": true,
+    "timeMachine": false,
+    "tray": true,
+    "weather": false,
+    "wifi": true
+  },
+  "menubarBattery": true,
+  "menubarBluetooth": true,
+  "menubarClock": true,
+  "menubarDisplay": true,
+  "menubarSpotlight": true,
+  "menubarTray": true,
+  "menubarWifi": true,
+  "reduceMotion": true,
+  "spotlightEnable": true,
+  "hotCorners": {
+    "tl": "-",
+    "tr": "-",
+    "bl": "-",
+    "br": "-"
+  }
 }

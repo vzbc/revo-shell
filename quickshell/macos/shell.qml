@@ -15,6 +15,7 @@ import "./modules/desktop"
 import "./modules/settings"
 import "./modules/launcher"
 import "./modules/siri"
+import "./modules/hotcorners"
 
 ShellRoot {
     id: root
@@ -32,6 +33,7 @@ ShellRoot {
     ControlCenter {}
     Settings {}
     Siri {}
+    HotCorners {}
 
     // eqsh LockScreen (ext-session-lock) replaces the old PanelWindow lock
     Loader {

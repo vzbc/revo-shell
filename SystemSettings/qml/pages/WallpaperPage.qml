@@ -1,10 +1,10 @@
 import QtQuick
-import QtQuick.Controls
-import QtQuick.Dialogs
-import QtMultimedia
+import QtQuick.Effects
 import ".."
-import "../Pages.js" as Pages
 
+// Wallpaper (macOS 27, Wallpaper.appex). The desktop picture is drawn by
+// awww: the current one comes from `awww query`, a click applies it with a
+// fade and also tells the shell (eqsh wallpaper IPC) and the config.
 Column {
     id: page
 
@@ -16,365 +16,150 @@ Column {
     readonly property var bumpU: Shell.userCfg
     readonly property var bumpE: Shell.eqCfg
     property int rev: 0
-
-    function eget(k, d) { bumpU; bumpE; return Shell.eget(k, d) }
-    function uget(k, d) { bumpU; bumpE; return Shell.uget(k, d) }
+    function ug(k, d) { bumpU; rev; return Shell.uget(k, d) }
+    function us(k, v) { Shell.uset(k, v); rev++ }
 
     width: parent ? parent.width : 640
     spacing: 12
 
-    // ---------------------------------------------------------------- library
-    property var allImgs: []
-    property var dyn: []
-    property var photos: []
-    property var wide: []
-    property var tall: []
+    property string current: ""
+    property var groups: []          // [{ title, dir, items }]
+    property var expanded: ({})
+    readonly property var colors: ["#1C1C1E", "#3A3A3C", "#8E8E93", "#E5E5EA", "#0A84FF", "#5E5CE6",
+                                   "#BF5AF2", "#FF375F", "#FF453A", "#FF9F0A", "#FFD60A", "#30D158",
+                                   "#64D2FF", "#2C3E50", "#7D5A50"]
 
-    readonly property var folders: {
-        var out = []
-        var roots = [HOME_DIR + "/Pictures/Wallpapers",
-                     HOME_DIR + "/Pictures",
-                     Shell.eget("wallpaper.folder", "").toString().replace(/^file:\/\//, "").replace(/\/$/, ""),
-                     HOME_DIR + "/.local/share/equora/wallpapers"]
-        var seen = {}
-        for (var i = 0; i < roots.length; i++) {
-            var r = roots[i]
-            if (!r || seen[r])
-                continue
-            seen[r] = true
-            var files = Shell.listFiles(r, "")
-            if (files.length > 0)
-                out.push({ name: r.split("/").filter(Boolean).pop() || r, dir: r, files: files })
+    function load() {
+        const q = Shell.execOut("awww query 2>/dev/null | head -1", 2000)
+        const m = q.match(/image:\s*(.+)$/)
+        current = m ? m[1].trim() : String(Shell.eget("wallpaper.path", ""))
+        const dirs = [{ title: "Wallpapers", dir: HOME_DIR + "/.config/wallpapers" },
+                      { title: "Pictures", dir: HOME_DIR + "/Pictures/Wallpapers" }]
+        const extra = ug("wallpaper.folders", [])
+        for (let i = 0; i < (extra || []).length; i++)
+            dirs.push({ title: String(extra[i]).split("/").pop(), dir: extra[i] })
+        const out = []
+        for (const d of dirs) {
+            const items = Shell.listImages(d.dir).filter(x => !x.animated)
+            if (items.length) out.push({ title: d.title, dir: d.dir, items: items })
         }
-        return out
+        groups = out
     }
-
-    function build() {
-        var roots = [HOME_DIR + "/Pictures/Wallpapers",
-                     Shell.eget("wallpaper.folder", "").toString().replace(/^file:\/\//, "").replace(/\/$/, ""),
-                     HOME_DIR + "/.local/share/equora/wallpapers"]
-        var seen = {}
-        var all = []
-        for (var i = 0; i < roots.length; i++) {
-            var r = roots[i]
-            if (!r || seen[r])
-                continue
-            seen[r] = true
-            var imgs = Shell.listImages(r)
-            for (var j = 0; j < imgs.length; j++)
-                all.push(imgs[j])
-        }
-        var d = [], p = [], w = [], t = []
-        var cap = 400
-        for (var k = 0; k < all.length; k++) {
-            var m = all[k]
-            if (m.animated === true) { if (d.length < cap) d.push(m); continue }
-            if (p.length < cap) p.push(m)
-            if (m.w > m.h * 1.05) { if (w.length < cap) w.push(m) }
-            else if (m.h > m.w * 1.05) { if (t.length < cap) t.push(m) }
-        }
-        allImgs = all
-        dyn = d
-        photos = p
-        wide = w
-        tall = t
-        console.log("WALLPAPER_LIB all=" + all.length + " dyn=" + d.length + " photos=" + p.length
-                    + " wide=" + w.length + " tall=" + t.length)
-    }
-
-    readonly property var sections: {
-        var s = [
-            { title: "Dynamic Wallpapers", files: dyn, add: false,
-              hint: "Dynamic wallpapers (GIF, video) appear here." },
-            { title: "Photos", files: photos, add: true, hint: "" },
-            { title: "Landscape", files: wide, add: false,
-              hint: "Landscape wallpapers appear here." }
-        ]
-        if (tall.length > 0)
-            s.push({ title: "Portraits", files: tall, add: false, hint: "" })
-        return s
-    }
-
-    readonly property string current: {
-        bumpE
-        var p = String(eget("wallpaper.path", ""))
-        if (p.length > 0)
-            return p
-        if (photos.length > 0)
-            return photos[0].path
-        return ""
-    }
+    Component.onCompleted: load()
 
     function apply(path) {
+        Shell.run("awww img --transition-type fade --transition-duration 0.8 " + JSON.stringify(path) + " >/dev/null 2>&1")
         Shell.eset("wallpaper.path", path)
-        Shell.eset("wallpaper.folder", "file://" + path.split("/").slice(0, -1).join("/") + "/")
         Shell.ipc("wallpaper", "change", [path])
-        rev++
-        build()
+        current = path
     }
-
     function applyColor(c) {
+        Shell.run("awww clear " + c.replace("#", "") + " >/dev/null 2>&1")
         Shell.eset("wallpaper.color", c)
-        Shell.eset("wallpaper.path", "")
-        Shell.ipc("wallpaper", "change", [c])
-        rev++
+        current = c
+    }
+    function nameOf(p) {
+        if (!p) return "Wallpaper"
+        if (p.charAt(0) === "#") return "Color"
+        return p.split("/").pop().replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ")
     }
 
-    function isVideo(p) {
-        var e = p.toLowerCase().split("?")[0]
-        return e.endsWith(".mp4") || e.endsWith(".webm") || e.endsWith(".mkv") || e.endsWith(".mov")
-    }
-    function isGif(p) { return p.toLowerCase().split("?")[0].endsWith(".gif") }
-    function nameOf(p) { return p.split("/").pop().replace(/\.[^.]+$/, "").replace(/[-_]/g, " ") }
-
-    function modeOf() { return String(eget("wallpaper.mode", "Still")) }
-
-    Component.onCompleted: {
-        build()
-        if (Shell.eget("wallpaper.mode", "").toString().length === 0)
-            Shell.eset("wallpaper.mode", "Still")
-    }
-
-    FileDialog {
-        id: addPhotoDlg
-        title: "Choose Wallpaper"
-        fileMode: FileDialog.OpenFile
-        nameFilters: ["Images (*.jpg *.jpeg *.png *.webp *.bmp *.gif *.JPG)",
-                      "Movies (*.mp4 *.webm *.mov *.mkv)", "All files (*)"]
-        onAccepted: {
-            var p = selectedFile.toString().replace("file://", "")
-            page.apply(p)
-        }
-    }
-
-    FolderDialog {
-        id: addFolderDlg
-        title: "Choose Wallpaper Folder"
-        onAccepted: {
-            var d = selectedFolder.toString().replace("file://", "")
-            Shell.eset("wallpaper.folder", d.replace(/\/$/, "") + "/")
-            rev++
-            page.build()
-        }
-    }
-
-    Placard {
-        iconFile: "sb_wallpaper"
-        title: "Wallpaper"
-    }
-
-    // ---------------------------------------------------------------- preview
-    Item {
-        width: parent.width
-        height: Math.round(width * 0.44)
-
+    component Thumb: Item {
+        id: th
+        property string src: ""
+        property bool selected: false
+        signal picked
+        width: 80; height: 50
         Rectangle {
-            id: frame
             anchors.fill: parent
-            radius: 12
-            color: Theme.dark ? "#101014" : "#e8eaef"
-            border.width: 1
-            border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.12)
-            clip: true
+            anchors.margins: -3
+            radius: 10
+            color: "transparent"
+            border.width: 2.5
+            border.color: Theme.accent
+            visible: th.selected
         }
-
-        Rectangle {
-            anchors.fill: frame
-            color: eget("wallpaper.color", "#6967b0")
-            opacity: preview.status === Image.Ready || preview.active ? 0
-                     : (stillPreview.status === Image.Ready && stillPreview.visible ? 0 : 1)
-            Behavior on opacity { NumberAnimation { duration: 260 } }
-            HueGradient { anchors.fill: parent }
-        }
-
-        AnimatedImage {
-            id: preview
-            property bool active: page.current.length > 0 && page.isGif(page.current)
-            anchors.fill: frame
-            anchors.margins: 1
-            source: active ? "file://" + page.current : ""
-            fillMode: Image.PreserveAspectCrop
-            asynchronous: true
-            visible: active && status === Image.Ready
-            playing: visible
-        }
-
-        Video {
-            id: vidPreview
-            property bool active: page.current.length > 0 && page.isVideo(page.current)
-            anchors.fill: frame
-            anchors.margins: 1
-            source: active ? "file://" + page.current : ""
-            fillMode: VideoOutput.PreserveAspectCrop
-            visible: active && playbackState === MediaPlayer.PlayingState
-            loops: MediaPlayer.Infinite
-            autoPlay: active
-            muted: true
-        }
-
         Image {
-            id: stillPreview
-            property bool active: page.current.length > 0 && !page.isGif(page.current) && !page.isVideo(page.current)
-            anchors.fill: frame
-            anchors.margins: 1
-            source: active ? "file://" + page.current : ""
+            id: img
+            anchors.fill: parent
+            source: th.src ? "file://" + th.src : ""
+            sourceSize.width: 200
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
-            visible: active && status === Image.Ready
+            visible: false
         }
-
+        Rectangle { id: mask; anchors.fill: parent; radius: 7; visible: false; layer.enabled: true }
+        MultiEffect {
+            anchors.fill: img
+            source: img
+            maskEnabled: true
+            maskSource: mask
+            maskThresholdMin: 0.5
+            maskSpreadAtMin: 1.0
+        }
         Rectangle {
-            anchors.left: parent.left
-            anchors.bottom: parent.bottom
-            anchors.margins: 12
-            width: nameText.implicitWidth + 20
-            height: 24
-            radius: 12
-            color: Qt.rgba(0, 0, 0, 0.55)
-
-            Text {
-                id: nameText
-                anchors.centerIn: parent
-                text: page.current.length > 0 ? page.nameOf(page.current) : "Choose a Wallpaper"
-                font.family: Theme.fontText
-                font.pixelSize: 12
-                color: "white"
-            }
+            anchors.fill: parent; radius: 7; color: "transparent"
+            border.width: 1; border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.10)
         }
+        MouseArea { anchors.fill: parent; onClicked: th.picked() }
     }
 
-    // ---------------------------------------------------------------- options
-    SectionHeader { text: "Wallpaper" }
+    // -------------------------------------------------------- current
+    Rectangle {
+        x: Theme.cardMargin
+        width: parent.width - 2 * Theme.cardMargin
+        height: 132
+        radius: Theme.cardRadius
+        color: Theme.cardBg
+        border.width: 1
+        border.color: Theme.cardStroke
 
-    Row {
-        width: parent.width
-        spacing: 12
-
-        GroupCard {
-            width: (parent.width - 12) / 2
-            height: modeBox.height + 24
-
-            Item {
-                id: modeBox
-                x: Theme.cardMargin
-                y: 12
-                width: parent.width - 2 * Theme.cardMargin
-                height: 74
-
-                Text {
-                    x: 4
-                    y: 0
-                    text: "Mode"
-                    font { family: Theme.fontText; pixelSize: 11 }
-                    color: Theme.textSecondary
-                }
-
-                Row {
-                    x: 4
-                    y: 22
-                    spacing: 6
-
-                    Repeater {
-                        model: [
-                            { label: "Dynamic", glyph: "\u25D1" },
-                            { label: "Still", glyph: "\u25AD" },
-                            { label: "Shuffle", glyph: "\u21C4" },
-                            { label: "Video", glyph: "\u25B6" }
-                        ]
-
-                        delegate: Rectangle {
-                            id: mode
-                            required property var modelData
-                            width: modeLbl.implicitWidth + 26
-                            height: 46
-                            radius: 8
-                            color: page.modeOf() === mode.modelData.label ? Theme.accent
-                                 : Theme.dark ? "#3A3A3C" : "#E9E9EB"
-                            border.width: 1
-                            border.color: Qt.rgba(0, 0, 0, 0.06)
-
-                            Text {
-                                id: modeLbl
-                                anchors.centerIn: parent
-                                text: mode.modelData.glyph + "  " + mode.modelData.label
-                                font { family: Theme.fontText; pixelSize: 12 }
-                                color: page.modeOf() === mode.modelData.label ? "white" : Theme.textPrimary
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    Shell.eset("wallpaper.mode", mode.modelData.label)
-                                    rev++
-                                }
-                            }
-                        }
-                    }
-                }
+        Item {
+            id: big
+            x: 16; anchors.verticalCenter: parent.verticalCenter
+            width: 160; height: 100
+            Rectangle {
+                anchors.fill: parent; radius: 9
+                color: page.current.charAt(0) === "#" ? page.current : "transparent"
+            }
+            Image {
+                id: bigImg
+                anchors.fill: parent
+                source: page.current && page.current.charAt(0) !== "#" ? "file://" + page.current : ""
+                sourceSize.width: 400
+                fillMode: Image.PreserveAspectCrop
+                asynchronous: true
+                visible: false
+            }
+            Rectangle { id: bigMask; anchors.fill: parent; radius: 9; visible: false; layer.enabled: true }
+            MultiEffect {
+                anchors.fill: bigImg; source: bigImg
+                maskEnabled: true; maskSource: bigMask; maskThresholdMin: 0.5; maskSpreadAtMin: 1.0
+            }
+            // the large lock-screen clock, as previewed on macOS 27
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                y: 14
+                visible: String(page.ug("wallpaper.largeClock", "On Screen Saver and Lock Screen")) !== "Never"
+                text: Qt.formatTime(new Date(), "h:mm")
+                font.family: Theme.fontDisplay; font.pixelSize: 26; font.weight: Font.DemiBold
+                color: "white"; opacity: 0.92
+                style: Text.Raised; styleColor: Qt.rgba(0, 0, 0, 0.25)
             }
         }
-
-        GroupCard {
-            width: (parent.width - 12) / 2
-            height: colorBox.height + 24
-
-            Item {
-                id: colorBox
-                x: Theme.cardMargin
-                y: 12
-                width: parent.width - 2 * Theme.cardMargin
-                height: 74
-
-                Text {
-                    x: 4
-                    y: 0
-                    text: "Colour"
-                    font { family: Theme.fontText; pixelSize: 11 }
-                    color: Theme.textSecondary
-                }
-
-                Flow {
-                    x: 4
-                    y: 22
-                    width: parent.width - 8
-                    spacing: 8
-
-                    Repeater {
-                        model: {
-                            var c = eget("wallpaper.colors", [])
-                            var out = []
-                            for (var i = 0; i < c.length; i++) {
-                                var v = String(c[i])
-                                if (v === "add" || v.charAt(0) !== "#")
-                                    continue
-                                out.push(v)
-                            }
-                            if (out.length === 0)
-                                out = ["#6967B0", "#3E7CB1", "#8AB17D", "#D9A441", "#C46A6A"]
-                            return out
-                        }
-
-                        delegate: Rectangle {
-                            id: swatch
-                            required property var modelData
-                            width: 34
-                            height: 34
-                            radius: 17
-                            color: modelData
-                            border.width: 3
-                            border.color: String(eget("wallpaper.path", "")).length === 0
-                                          && String(eget("wallpaper.color", "")) === modelData
-                                          ? Theme.accent : Qt.rgba(1, 1, 1, 0.30)
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: page.applyColor(swatch.modelData)
-                            }
-                        }
-                    }
-                }
+        Column {
+            anchors.left: big.right; anchors.leftMargin: 16
+            anchors.right: parent.right; anchors.rightMargin: 16
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: 4
+            Text {
+                width: parent.width; elide: Text.ElideRight
+                text: page.nameOf(page.current)
+                font.family: Theme.fontText; font.pixelSize: 15; font.weight: Font.DemiBold; color: Theme.textPrimary
+            }
+            Text {
+                text: page.current.charAt(0) === "#" ? "Color" : "Picture"
+                font.family: Theme.fontText; font.pixelSize: 12; color: Theme.textSecondary
             }
         }
     }
@@ -383,219 +168,128 @@ Column {
         DetailRow {
             title: "Show on all Spaces"
             showSwitch: true
-            switchOn: eget("wallpaper.allSpaces", true) === true
-            onToggled: (c) => { Shell.eset("wallpaper.allSpaces", c); rev++ }
+            switchOn: page.ug("wallpaper.allSpaces", true) === true
+            onToggled: (c) => page.us("wallpaper.allSpaces", c)
         }
         DetailRow {
             separator: true
-            title: "Show colour on desktop"
-            showSwitch: true
-            switchOn: eget("wallpaper.desktopEnable", true) === true
-            onToggled: (c) => { Shell.eset("wallpaper.desktopEnable", c); Shell.eset("desktopEnable", c); rev++ }
-        }
-        DetailRow {
-            separator: true
-            title: "Folder"
-            pickerOptions: page.folders.map(function (f) { return f.name })
-            value: page.folders.length > 0 ? page.folders[Math.min(page.selFolderIdx(), page.folders.length - 1)].name : "\u2014"
-            onPicked: (v) => {
-                for (var i = 0; i < page.folders.length; i++) {
-                    if (page.folders[i].name === v) {
-                        Shell.eset("wallpaper.folder", "file://" + page.folders[i].dir + "/")
-                        page.build()
-                        rev++
-                        break
-                    }
-                }
-            }
+            title: "Show large clock"
+            pickerOptions: ["On Screen Saver and Lock Screen", "On Lock Screen", "Never"]
+            value: String(page.ug("wallpaper.largeClock", "On Screen Saver and Lock Screen"))
+            onPicked: (v) => page.us("wallpaper.largeClock", v)
         }
     }
-
     Row {
-        width: parent.width
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.cardMargin
         spacing: 8
-
-        MacButton {
-            text: "Add Photo\u2026"
-            primary: true
-            onClicked: addPhotoDlg.open()
-        }
-        MacButton {
-            text: "Add Folder\u2026"
-            onClicked: addFolderDlg.open()
-        }
+        MacButton { text: "Clock Appearance…"; onClicked: page.navigate("lockScreen") }
+        MacButton { text: "Screen Saver…"; onClicked: page.navigate("lockScreen") }
     }
 
-    function selFolderIdx() {
-        var f = String(eget("wallpaper.folder", "")).replace(/^file:\/\//, "").replace(/\/$/, "")
-        for (var i = 0; i < folders.length; i++)
-            if (folders[i].dir === f)
-                return i
-        return 0
-    }
-
-    // ---------------------------------------------------------------- strips
+    // --------------------------------------------------------- groups
     Repeater {
-        model: page.sections
-
+        model: page.groups
         delegate: Column {
-            id: sec
+            id: grp
             required property var modelData
-            required property int index
+            readonly property bool open: page.expanded[modelData.dir] === true
+            readonly property int cols: 5
             width: page.width
-            spacing: 6
+            spacing: 8
 
-            Item { width: 1; height: 6 }
-
-            SectionHeader {
-                width: parent.width
-                suffix: " (" + sec.modelData.files.length + ")"
-                buttonLabel: sec.modelData.add ? "Add Photo\u2026" : ""
-                onButtonClicked: addPhotoDlg.open()
-            }
-
-            GroupCard {
-                width: parent.width - 2 * Theme.cardMargin
-                height: sec.modelData.files.length > 0 ? strip.implicitHeight + 24 : 56
-
+            Item {
+                width: parent.width; height: 26
                 Text {
-                    visible: sec.modelData.files.length === 0
-                    x: 16
-                    y: (parent.height - height) / 2
-                    width: parent.width - 32
-                    horizontalAlignment: Text.AlignHCenter
-                    text: sec.modelData.hint
-                    font { family: Theme.fontText; pixelSize: 12 }
-                    color: Theme.textSecondary
+                    x: Theme.cardMargin + 4; anchors.verticalCenter: parent.verticalCenter
+                    text: grp.modelData.title
+                    font.family: Theme.fontText; font.pixelSize: 13; font.weight: Font.Bold; color: Theme.textPrimary
                 }
-
-                Item {
-                    id: strip
-                    visible: sec.modelData.files.length > 0
-                    x: Theme.cardMargin
-                    y: 12
-                    width: parent.width - 2 * Theme.cardMargin
-                    height: 96
-
-                    Flickable {
-                        id: flick
-                        anchors.fill: parent
-                        contentWidth: cells.width
-                        contentHeight: height
-                        clip: true
-                        boundsBehavior: Flickable.StopAtBounds
-                        interactive: cells.width > width
-                        flickableDirection: Flickable.HorizontalFlick
-
-                        Row {
-                            id: cells
-                            spacing: 8
-                            height: parent.height
-
-                            Repeater {
-                                model: sec.modelData.files
-
-                                delegate: Item {
-                                    id: cell
-                                    required property var modelData
-                                    width: 148
-                                    height: 96
-
-                                    Rectangle {
-                                        anchors.fill: parent
-                                        radius: 7
-                                        color: Theme.dark ? "#1c1c20" : "#f2f3f6"
-                                        clip: true
-
-                                        AnimatedImage {
-                                            anchors.fill: parent
-                                            source: page.isGif(cell.modelData.path) ? "file://" + cell.modelData.path : ""
-                                            fillMode: Image.PreserveAspectCrop
-                                            sourceSize: Qt.size(296, 192)
-                                            asynchronous: true
-                                            visible: status === Image.Ready
-                                        }
-                                        Image {
-                                            anchors.fill: parent
-                                            source: !page.isGif(cell.modelData.path) && !page.isVideo(cell.modelData.path)
-                                                    ? "file://" + cell.modelData.path : ""
-                                            fillMode: Image.PreserveAspectCrop
-                                            sourceSize: Qt.size(296, 192)
-                                            asynchronous: true
-                                            visible: status === Image.Ready
-                                        }
-
-                                        Rectangle {
-                                            visible: page.isVideo(cell.modelData.path)
-                                            anchors.centerIn: parent
-                                            width: 26
-                                            height: 26
-                                            radius: 13
-                                            color: Qt.rgba(0, 0, 0, 0.55)
-                                            Text {
-                                                anchors.centerIn: parent
-                                                text: "\u25B6"
-                                                color: "white"
-                                                font.pixelSize: 11
-                                            }
-                                        }
-
-                                        Rectangle {
-                                            anchors.fill: parent
-                                            radius: 7
-                                            color: "transparent"
-                                            border.width: 2
-                                            border.color: page.current === cell.modelData.path
-                                                          ? Theme.accent : "transparent"
-                                        }
-                                    }
-
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: page.apply(cell.modelData.path)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Component.onCompleted:
-                        console.log("WP_STRIP " + sec.modelData.title
-                                   + " files=" + sec.modelData.files.length
-                                   + " w=" + width + " h=" + height
-                                   + " contentW=" + flick.contentWidth)
-
-                    // right-edge scroll affordance
-                    Rectangle {
-                        visible: flick.contentWidth > flick.width && flick.atXEnd === false
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 26
-                        height: 54
-                        radius: 13
-                        gradient: Gradient {
-                            GradientStop { position: 0.0; color: Qt.rgba(0, 0, 0, 0.0) }
-                            GradientStop { position: 1.0; color: Theme.dark ? Qt.rgba(0, 0, 0, 0.55) : Qt.rgba(1, 1, 1, 0.75) }
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "\u203A"
-                            font { pixelSize: 22; bold: true }
-                            color: Theme.dark ? "white" : "#333333"
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: flick.flick(flick.width, 0)
-                        }
+                MacButton {
+                    anchors.right: parent.right; anchors.rightMargin: Theme.cardMargin
+                    anchors.verticalCenter: parent.verticalCenter
+                    visible: grp.modelData.items.length > grp.cols
+                    text: grp.open ? "Show Less" : "Show All (" + grp.modelData.items.length + ")"
+                    onClicked: { const e = Object.assign({}, page.expanded); e[grp.modelData.dir] = !grp.open; page.expanded = e }
+                }
+            }
+            Grid {
+                x: Theme.cardMargin + 4
+                columns: grp.cols
+                readonly property real cellW: (page.width - 2 * (Theme.cardMargin + 4) - (grp.cols - 1) * 12) / grp.cols
+                columnSpacing: 12; rowSpacing: 12
+                Repeater {
+                    model: grp.open ? grp.modelData.items : grp.modelData.items.slice(0, grp.cols)
+                    delegate: Thumb {
+                        required property var modelData
+                        width: parent.cellW
+                        height: Math.round(parent.cellW * 10 / 16)
+                        src: modelData.path
+                        selected: modelData.path === page.current
+                        onPicked: page.apply(modelData.path)
                     }
                 }
             }
         }
     }
 
+    // ---------------------------------------------------------- colors
+    Item {
+        width: parent.width; height: 26
+        Text {
+            x: Theme.cardMargin + 4; anchors.verticalCenter: parent.verticalCenter
+            text: "Colors"
+            font.family: Theme.fontText; font.pixelSize: 13; font.weight: Font.Bold; color: Theme.textPrimary
+        }
+    }
+    Grid {
+        x: Theme.cardMargin + 4
+        columns: 5
+        readonly property real cellW: (page.width - 2 * (Theme.cardMargin + 4) - 4 * 12) / 5
+        columnSpacing: 12; rowSpacing: 12
+        Repeater {
+            model: page.colors
+            delegate: Item {
+                required property var modelData
+                width: parent.cellW; height: Math.round(parent.cellW * 10 / 16)
+                Rectangle {
+                    anchors.fill: parent; anchors.margins: -3; radius: 10; color: "transparent"
+                    border.width: 2.5; border.color: Theme.accent
+                    visible: page.current.toUpperCase() === modelData.toUpperCase()
+                }
+                Rectangle {
+                    anchors.fill: parent; radius: 7; color: modelData
+                    border.width: 1; border.color: Theme.dark ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.10)
+                }
+                MouseArea { anchors.fill: parent; onClicked: page.applyColor(modelData) }
+            }
+        }
+    }
+
+    Item { width: 1; height: 2 }
+    Row {
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.cardMargin
+        spacing: 8
+        MacButton {
+            text: "Add Photo…"
+            onClicked: {
+                const f = Shell.execOut("zenity --file-selection --title='Add Photo' --file-filter='Images | *.png *.jpg *.jpeg *.webp *.heic' 2>/dev/null", 600000).trim()
+                if (f) page.apply(f)
+            }
+        }
+        MacButton {
+            text: "Choose Folder…"
+            onClicked: {
+                const d = Shell.execOut("zenity --file-selection --directory --title='Choose Folder' 2>/dev/null", 600000).trim()
+                if (d) {
+                    const list = (page.ug("wallpaper.folders", []) || []).slice()
+                    if (list.indexOf(d) < 0) list.push(d)
+                    page.us("wallpaper.folders", list)
+                    page.load()
+                }
+            }
+        }
+    }
     Item { width: 1; height: 6 }
 }

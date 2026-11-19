@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Io
+import "../common"
 
 Scope {
     id: root
@@ -19,6 +20,9 @@ Scope {
     property vector2d tip: Qt.vector2d(0, 0)
     property double progress: 0
     property var srcToplevel: null
+    // System Settings › Desktop & Dock › Minimize windows using: Genie / Scale
+    readonly property bool scaleFx: String(((Appearance.userCfg || {}).dock || {}).minimizeEffect || "genie") === "scale"
+    readonly property real scaleW: 56   // window ends at about the Dock icon size
 
     onStateChanged: {
         capDelay.stop();
@@ -40,11 +44,18 @@ Scope {
     }
 
     function rowK(v) {
+        if (scaleFx)
+            return sstep(progress);   // Scale Effect: the whole window shrinks at once
         return sstep((progress - 0.45 * (1 - v)) / 0.55);
     }
 
     function rowY(v) {
         const y0 = wrect.y + v * wrect.height;
+        if (scaleFx) {
+            const th = scaleW * wrect.height / Math.max(1, wrect.width);
+            const y1 = tip.y - th / 2 + v * th;
+            return y0 + (y1 - y0) * rowK(v);
+        }
         return y0 + (tip.y - y0) * rowK(v);
     }
 
@@ -54,7 +65,8 @@ Scope {
     }
 
     function rowHW(v) {
-        return wrect.width / 2 + (8 - wrect.width / 2) * rowK(v);
+        const end = scaleFx ? scaleW / 2 : 8;
+        return wrect.width / 2 + (end - wrect.width / 2) * rowK(v);
     }
 
     function rowGeom(i) {
