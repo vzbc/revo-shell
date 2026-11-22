@@ -185,7 +185,7 @@ Rectangle {
 			Item {
 				id: wallArtBox
 				// float in the gap between the clock (+ Atoll status row) and the media panel
-				readonly property real gapTop: clock.y + clock.height + 48
+				readonly property real gapTop: lockPills.y + lockPills.height + 32
 				readonly property real gapBottom: mediaGlass.y - 32
 				anchors.horizontalCenter: parent.horizontalCenter
 				width: Math.max(0, Math.min(parent.width * 0.3, gapBottom - gapTop))
@@ -193,7 +193,7 @@ Rectangle {
 				y: gapTop + (gapBottom - gapTop - height) / 2
 				visible: width >= 120
 				readonly property real gapH: gapBottom - gapTop
-				opacity: (mediaRoot && mediaRoot.lyricsOn) ? 0 : 1
+				opacity: (mediaRoot && mediaRoot.lyricsOn) || lockPane.open ? 0 : 1
 				Behavior on opacity { NumberAnimation { duration: 360; easing.type: Easing.InOutCubic } }
 				scale: mediaGlass.artworkFullscreen ? (MusicPlayerProvider.isPlaying ? 1 : 0.94) : 0.9
 				Behavior on scale { NumberAnimation { duration: 520; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
@@ -409,14 +409,46 @@ Rectangle {
 				item.stateText = Qt.binding(() => atollLock.stateText);
 				item.clockBottom = Qt.binding(() => clock.y + clock.height);
 				item.unlocking = Qt.binding(() => fadeOutAnim.running);
+				if (item.showRow !== undefined) item.showRow = false;
 			}
+		}
+
+		// Sapphire-style info pills under the clock (weather, next event, AQI,
+		// sunrise/sunset, keep-awake)
+		LockInfoPills {
+			id: lockPills
+			anchors.horizontalCenter: parent.horizontalCenter
+			y: clock.y + clock.height + 16
+			z: 15
+		}
+
+		// Sapphire-style mini widgets under the media panel (battery, headphones,
+		// Do Not Disturb, Atoll timer)
+		LockMiniWidgets {
+			anchors.horizontalCenter: parent.horizontalCenter
+			anchors.top: mediaGlass.bottom
+			anchors.topMargin: 18
+			z: 15
+			atoll: {
+				const t = atollLock.stateText;
+				if (!t) return null;
+				try { const o = JSON.parse(t); return o.running ? o : null } catch (e) { return null }
+			}
+		}
+
+		// Sapphire full-screen music pane (expand button on the media panel)
+		LockMusicPane {
+			id: lockPane
+			anchors.fill: parent
+			z: 40
+			backdrop: backgroundImageBlur
 		}
 
 		CFClippingRect {
 			id: mediaGlass
 			anchors.bottom: inputArea.top
 			anchors.horizontalCenter: inputArea.horizontalCenter
-			anchors.bottomMargin: 80
+			anchors.bottomMargin: 100
 			property bool atollExpanded: false
 			// Atoll artwork wallpaper: on automatically while a song is detected
 			// (right-click the cover to turn it off/on for this lock)
@@ -782,6 +814,37 @@ Rectangle {
 							mediaRoot.lyricsOn = !mediaRoot.lyricsOn;
 							MusicPlayerProvider.lyricsWanted = true;
 						}
+					}
+				}
+
+				// expand → Sapphire full-screen music pane
+				Item {
+					id: expandBtn
+					anchors.left: parent.left
+					anchors.leftMargin: 14 * mediaRoot.u
+					anchors.top: scrub.bottom
+					anchors.topMargin: 12 * mediaRoot.u
+					width: 32 * mediaRoot.u; height: 34 * mediaRoot.u
+					Rectangle {
+						anchors.centerIn: parent
+						width: 30 * mediaRoot.u; height: width; radius: 9 * mediaRoot.u
+						color: Qt.rgba(1, 1, 1, expMa.containsMouse ? 0.14 : 0)
+						scale: expMa.pressed ? 0.88 : 1
+						Behavior on color { ColorAnimation { duration: 220 } }
+						Behavior on scale { NumberAnimation { duration: 240; easing.type: Easing.OutQuint } }
+						Image {
+							anchors.centerIn: parent
+							width: 15 * mediaRoot.u; height: width
+							source: Qt.resolvedUrl("icons/expand.png")
+							sourceSize: Qt.size(64, 64); smooth: true; mipmap: true
+						}
+					}
+					MouseArea {
+						id: expMa
+						anchors.fill: parent; anchors.margins: -4
+						hoverEnabled: true
+						cursorShape: Qt.PointingHandCursor
+						onClicked: lockPane.open = true
 					}
 				}
 
