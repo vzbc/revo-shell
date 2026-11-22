@@ -15,26 +15,49 @@ Singleton {
     readonly property string iconScript: Qt.resolvedUrl("../scripts/dock_icon.sh").toString().replace(/^file:\/\//, "")
     readonly property string killScript: Qt.resolvedUrl("../scripts/kill_app.sh").toString().replace(/^file:\/\//, "")
 
+    // Pinned apps come from ~/.config/revo-shell/dock.json (written by
+    // scripts/dock_setup.py from the apps installed on this machine, and
+    // rewritten here whenever you pin / unpin / reorder). Until it exists the
+    // Dock shows this minimal set and generates the file once, automatically.
     property var pinned: [
         { name: "Finder", icon: "Finder.png", desktop: "org.gnome.Nautilus", exec: "nautilus", appIds: ["org.gnome.Nautilus", "nautilus"] },
-        { name: "Launchpad", icon: "Apps.png", desktop: "macos-launcher", exec: "qs ipc -p /home/revo/.config/quickshell/macos call launchpad toggle", appIds: ["macos-launcher", "Launcher"] },
-                { name: "Safari", icon: "Safari.png", desktop: "org.gnome.Pafari", exec: "pafari", appIds: ["org.gnome.Pafari", "pafari"] },
-        { name: "Telegram", icon: "Telegram.png", desktop: "org.telegram.desktop", exec: "telegram-desktop", appIds: ["org.telegram.desktop", "telegram-desktop"] },
-        { name: "Steam", icon: "Steam.png", desktop: "steam", exec: "steam", appIds: ["steam", "com.valvesoftware.Steam"] },
-        { name: "Photos", icon: "Photos.png", desktop: "org.kde.gwenview", exec: "gwenview", appIds: ["org.kde.gwenview", "gwenview"] },
-        { name: "iMessage", icon: "im-message.png", desktop: "com.github.eneshecan.Whatsie", exec: "whatsie", appIds: ["com.github.eneshecan.Whatsie", "whatsie"] },
-        { name: "Calendar", icon: "Calendar.png", desktop: "org.gnome.Calendar", exec: "gnome-calendar", appIds: ["org.gnome.Calendar"] },
-        { name: "Prism Launcher", icon: "Prism Launcher.png", desktop: "org.prismlauncher.PrismLauncher", exec: "prismlauncher", appIds: ["org.prismlauncher.PrismLauncher", "prismlauncher"] },
-        { name: "Paragon", icon: "Pargon.png", desktop: "paragon-launcher", exec: "bash /home/revo/.local/share/applications/paragon-launch.sh", appIds: ["paragon-launcher", "paragon_launcher"] },
-        { name: "Adobe Premiere Pro 2026", icon: "paragon.png", desktop: "adobe-premiere-pro", exec: "env __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia WINEDEBUG=-all WINE_LARGE_ADDRESS_AWARE=1 prime-run wine \"/home/revo/PortProton/prefixes/DEFAULT/drive_c/Program Files/Adobe/Adobe Premiere Pro 2026/Adobe Premiere Pro.exe\"", appIds: ["adobe-premiere-pro"] },
-        { name: "After Effects", icon: "After Effects.png", desktop: "After Effects", exec: "env \"/home/revo/PortProton/data/scripts/start.sh\" \"/home/revo/Adobe After Effects 2022/Support Files/AfterFX.exe\"", appIds: ["afterfx.exe", "wine", "portproton"] },
-        { name: "Zen Browser", icon: "zen-browser.png", desktop: "io.github.zen_browser.zen", exec: "zen-browser", appIds: ["io.github.zen_browser.zen", "zen", "zen-alpha"] },
-{ name: "Vesktop", icon: "discord.png", desktop: "dev.vencord.Vesktop", exec: "vesktop --enable-features=UseOzonePlatform,WebRTCPipeWireCapturer --ozone-platform=wayland --disable-features=WebRtcAllowUnifiedPlanSeamlessUpgrade,GpuRasterization --disable-gpu-memory-buffer-video-frames --disable-gpu-compositing", appIds: ["dev.vencord.Vesktop", "vesktop"] },
-{ name: "Music", icon: "spotify-client.png", desktop: "liner", exec: "~/Downloads/Liner-0.2.10.AppImage", appIds: ["liner"] },        { name: "VS Code", icon: "code.png", desktop: "code-oss", exec: "code", appIds: ["code-oss", "code", "com.visualstudio.code"] },
+        { name: "Launchpad", icon: "Apps.png", desktop: "macos-launcher", exec: "qs ipc -p $HOME/.config/quickshell/macos call launchpad toggle", appIds: ["macos-launcher", "Launcher"] },
         { name: "Terminal", icon: "Terminal.png", desktop: "kitty", exec: "kitty", appIds: ["kitty"] },
-        { name: "App Store", icon: "App Store.png", desktop: "pearos-appstore", exec: "pearos-appstore", appIds: ["pearos-appstore"] },
         { name: "System Settings", icon: "System Settings.png", desktop: "systemsettings", exec: "$HOME/.local/bin/systemsettings", appIds: ["systemsettings", "macos-settings", "pearos-settings", "pearos-settings-app"] },
     ]
+
+    readonly property string dockFile: Quickshell.env("HOME") + "/.config/revo-shell/dock.json"
+    readonly property string dockSetup: Qt.resolvedUrl("../scripts/dock_setup.py").toString().replace(/^file:\/\//, "")
+    property bool _dockLoaded: false
+    FileView {
+        id: _dockFile
+        path: root.dockFile
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            try {
+                const d = JSON.parse(text());
+                if (d && Array.isArray(d.pinned) && d.pinned.length) {
+                    root.pinned = d.pinned.filter(p => p && p.name && Array.isArray(p.appIds));
+                }
+            } catch (e) {
+                console.warn("dock.json unreadable:", e);
+            }
+            root._dockLoaded = true;
+        }
+        onLoadFailed: (err) => {
+            if (err === FileViewError.FileNotFound && !_dockGen.running) _dockGen.running = true;
+        }
+    }
+    Process {
+        id: _dockGen
+        command: ["python3", "-I", root.dockSetup, "--auto", "--keep"]
+        stdout: StdioCollector { onStreamFinished: _dockFile.reload() }
+    }
+    function saveDock() {
+        if (!root._dockLoaded) return;
+        _dockFile.setText(JSON.stringify({ version: 1, pinned: root.pinned }, null, 2));
+    }
 
     property bool trashEmpty: true
 
@@ -184,12 +207,14 @@ Singleton {
             appIds: app.appIds || [app.name]
         });
         root.pinned = root.pinned;
+        root.saveDock();
         // Remove from running apps if present
         root.runningApps = root.runningApps.filter(r => r.appIds[0] !== app.appIds[0]);
     }
 
     function unpinApp(app) {
         root.pinned = root.pinned.filter(p => p.appIds[0] !== app.appIds[0]);
+        root.saveDock();
     }
 
     function isPinned(appId) {
@@ -208,6 +233,7 @@ Singleton {
         arr.splice(fromIndex, 1);
         arr.splice(toIndex, 0, item);
         root.pinned = arr;
+        root.saveDock();
     }
 
     function _scanBadges() {

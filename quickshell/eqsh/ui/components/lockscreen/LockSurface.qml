@@ -5,6 +5,7 @@ import QtQuick.Controls.Material
 import QtQuick.Effects
 import QtQuick.Controls.Fusion
 import Quickshell.Wayland
+import Quickshell.Io
 import Quickshell.Widgets
 import Quickshell.Hyprland
 import Quickshell
@@ -95,6 +96,103 @@ Rectangle {
 			anchors.fill: parent
 			color: Config.lockScreen.dimColor
 			opacity: Config.lockScreen.dimOpacity
+		}
+
+		// Atoll "artwork as wallpaper" (right-click the cover in the media panel):
+		// the cover, blurred and toned like Atoll's FullScreenArtworkWindowManager
+		// (gaussian 28, sat 0.92, brightness -0.03, 8 % dark wash, white 5 % ->
+		// black 16 % gradient) replaces the wallpaper, with the artwork floating in
+		// the middle and drifting with the pointer. It lives inside the background,
+		// so the clock and the media glass refract it.
+		Item {
+			id: artworkWallpaper
+			anchors.fill: parent
+			z: 10   // above the wallpaper image the BackgroundImage Loader creates
+			visible: opacity > 0.01
+			opacity: mediaGlass.artworkFullscreen && MusicPlayerProvider.isAvailable ? 1 : 0
+			Behavior on opacity { NumberAnimation { duration: 450; easing.type: Easing.InOutCubic } }
+			property real driftX: 0
+			property real driftY: 0
+			Behavior on driftX { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+			Behavior on driftY { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+
+			Rectangle { anchors.fill: parent; color: "black" }
+			Image {
+				id: wallArtSrc
+				anchors.fill: parent
+				anchors.margins: -48
+				source: MusicPlayerProvider.thumbnail
+				fillMode: Image.PreserveAspectCrop
+				sourceSize.width: 640
+				asynchronous: true
+				visible: false
+			}
+			MultiEffect {
+				anchors.fill: wallArtSrc
+				source: wallArtSrc
+				blurEnabled: true; blur: 1; blurMax: 64; blurMultiplier: 0.7
+				autoPaddingEnabled: false
+				saturation: -0.08; brightness: -0.03; contrast: -0.02
+				transform: Translate { x: artworkWallpaper.driftX * 0.5; y: artworkWallpaper.driftY * 0.5 }
+			}
+			Rectangle { anchors.fill: parent; color: Qt.rgba(0.02, 0.02, 0.02, 0.08) }
+			Rectangle {
+				anchors.fill: parent
+				gradient: Gradient {
+					GradientStop { position: 0.0; color: Qt.rgba(1, 1, 1, 0.05) }
+					GradientStop { position: 0.5; color: "transparent" }
+					GradientStop { position: 1.0; color: Qt.rgba(0, 0, 0, 0.16) }
+				}
+			}
+			Item {
+				id: wallArtBox
+				// float in the gap between the clock (+ Atoll status row) and the media panel
+				readonly property real gapTop: clock.y + clock.height + 48
+				readonly property real gapBottom: mediaGlass.y - 32
+				anchors.horizontalCenter: parent.horizontalCenter
+				width: Math.max(0, Math.min(parent.width * 0.3, gapBottom - gapTop))
+				height: width
+				y: gapTop + (gapBottom - gapTop - height) / 2
+				visible: width >= 120
+				scale: mediaGlass.artworkFullscreen ? 1 : 0.9
+				Behavior on scale { NumberAnimation { duration: 520; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
+				transform: Translate { x: artworkWallpaper.driftX; y: artworkWallpaper.driftY }
+				RectangularShadow {
+					anchors.fill: parent
+					radius: wallArt.radius
+					blur: 52
+					offset.y: 22
+					color: Qt.rgba(0, 0, 0, 0.34)
+				}
+				ClippingRectangle {
+					id: wallArt
+					anchors.fill: parent
+					radius: width * 0.06
+					color: Qt.rgba(1, 1, 1, 0.06)
+					Image {
+						anchors.fill: parent
+						source: MusicPlayerProvider.thumbnail
+						fillMode: Image.PreserveAspectCrop
+						smooth: true; mipmap: true; asynchronous: true
+					}
+					Rectangle {
+						anchors.fill: parent; radius: wallArt.radius; color: "transparent"
+						border.width: 1; border.color: Qt.rgba(1, 1, 1, 0.18)
+					}
+				}
+			}
+			HoverHandler {
+				enabled: artworkWallpaper.visible
+				onPointChanged: {
+					artworkWallpaper.driftX = (point.position.x / artworkWallpaper.width - 0.5) * 18
+					artworkWallpaper.driftY = (point.position.y / artworkWallpaper.height - 0.5) * 18
+				}
+				onHoveredChanged: if (!hovered) { artworkWallpaper.driftX = 0; artworkWallpaper.driftY = 0 }
+			}
+			TapHandler {
+				enabled: artworkWallpaper.visible
+				onTapped: mediaGlass.artworkFullscreen = false
+			}
 		}
 	}
 
@@ -247,14 +345,43 @@ Rectangle {
 			text: Time.getTime(Config.lockScreen.timeFormat)
 		}
 
+		// Atoll (optional app): while it runs it keeps ~/.cache/atoll/state.json
+		// fresh; then its lock notch + status row are drawn over the clock area.
+		FileView {
+			id: atollState
+			path: Quickshell.env("HOME") + "/.cache/atoll/state.json"
+			watchChanges: true
+			onFileChanged: reload()
+		}
+		Loader {
+			id: atollLock
+			anchors.fill: parent
+			z: 20
+			readonly property string stateText: atollState.loaded ? atollState.text() : ""
+			active: stateText.indexOf('"running":true') >= 0
+			source: "file://" + Quickshell.env("HOME") + "/.config/quickshell/atoll/lock/AtollLock.qml"
+			onStatusChanged: if (status === Loader.Error) console.warn("Atoll lock layer failed to load")
+			onLoaded: {
+				console.info("Atoll lock layer loaded");
+				item.stateText = Qt.binding(() => atollLock.stateText);
+				item.clockBottom = Qt.binding(() => clock.y + clock.height);
+				item.unlocking = Qt.binding(() => fadeOutAnim.running);
+			}
+		}
+
 		CFClippingRect {
 			id: mediaGlass
 			anchors.bottom: inputArea.top
 			anchors.horizontalCenter: inputArea.horizontalCenter
 			anchors.bottomMargin: 80
-			width: 460
-			height: 250
-			radius: 34
+			property bool atollExpanded: false
+			property bool artworkFullscreen: false
+			width: atollExpanded ? 720 : 420
+			height: atollExpanded ? 340 : 180
+			radius: atollExpanded ? 52 : 28
+			Behavior on width { NumberAnimation { duration: 280; easing.type: Easing.InOutCubic } }
+			Behavior on height { NumberAnimation { duration: 280; easing.type: Easing.InOutCubic } }
+			Behavior on radius { NumberAnimation { duration: 280; easing.type: Easing.InOutCubic } }
 			GlassMaterial {
 				id: mediaGlassInternal
 				anchors.fill: parent
@@ -267,21 +394,22 @@ Rectangle {
 					NumberAnimation { duration: 400; easing.type: Easing.OutBack; easing.overshoot: 3 }
 				}
 				pos: Qt.point(1, 1)
-				size: Qt.point(458, 248)
+				size: Qt.point(mediaGlass.width - 2, mediaGlass.height - 2)
 				source: mediaBlurSource
 				blurSource: mediaBlurSource
 				bloomSource: mediaBlurSource
-				glassRefractionDim: 30
-				glassRefractionMag: 0
+				glassRefractionDim: 24
+				glassRefractionMag: 18
 				property real rimLightOpacity: 0.0
 				rimLightColor: Qt.vector4d(1, 1, 1, rimLightOpacity)
+				Behavior on glassRefractionMag { NumberAnimation { duration: 420; easing.type: Easing.OutCubic } }
 				ParallelAnimation {
 					id: mediaGlassShow2Animation
 					PropertyAnimation {
 						target: mediaGlassInternal
 						property: "glassRefractionMag"
 						from: 0
-						to: 100
+						to: 24
 						duration: 1000
 					}
 					PropertyAnimation {
@@ -297,7 +425,7 @@ Rectangle {
 					mediaGlassShow2Animation.restart()
 				}
 				glassRefractionAberration: 10
-				radius: 30
+				radius: mediaGlass.radius
 				//glassTintColor: Qt.alpha(AccentColor.preferredAccentTextColor == "white" ? "#1e1e1e" : "#ffffff", 0.5)
 			}	
 		}
@@ -313,19 +441,35 @@ Rectangle {
 				id: mediaRoot
 				anchors.fill: parent
 				// layout unit: 1.0 at a 150 px tall bubble (MacLock uses height/1200)
-				readonly property real u: Math.max(0.6, height / 150)
+				readonly property real u: artMode ? 1.45 : Math.max(0.6, height / 150)
 				readonly property var pl: MusicPlayerProvider.activePlayer
+				property bool artMode: false
+				property bool artworkFullscreen: false
+				property real artShiftX: 0
+				property real artShiftY: 0
+				property color artColor: "#A6D5FF"
+				onArtModeChanged: mediaGlass.atollExpanded = artMode
+				// Atoll: the expanded panel collapses after 5 s without interaction
+				HoverHandler { id: mediaHover }
+				Timer {
+					interval: 5000
+					running: mediaRoot.artMode && !mediaHover.hovered
+					onTriggered: mediaRoot.artMode = false
+				}
 
 				// cover art (MacLock style: rounded square, note while loading, tap to expand)
 				ClippingRectangle {
 					id: art
 					anchors.left: parent.left
-					anchors.leftMargin: 16 * u
+					anchors.leftMargin: 16 * mediaRoot.u
 					anchors.top: parent.top
-					anchors.topMargin: 14 * u
-					width: 58 * u
+					anchors.topMargin: mediaRoot.artMode ? (mediaRoot.height - height) / 2 : 14 * mediaRoot.u
+					width: mediaRoot.artMode ? Math.min(230, mediaRoot.height * 0.8) : 58 * mediaRoot.u
 					height: width
-					radius: 11 * u
+					radius: width * 0.26
+					// Atoll dims the artwork while paused
+					opacity: MusicPlayerProvider.isPlaying ? 1 : 0.4
+					Behavior on opacity { NumberAnimation { duration: 200 } }
 					color: Qt.rgba(1, 1, 1, 0.12)
 					Image {
 						id: coverImg
@@ -335,40 +479,73 @@ Rectangle {
 						smooth: true
 						mipmap: true
 						asynchronous: true
+						onStatusChanged: if (status === Image.Ready) coverColor.requestPaint()
+						transform: [
+							Scale { origin.x: coverImg.width / 2; origin.y: coverImg.height / 2; xScale: 1.08; yScale: 1.08 },
+							Translate { x: mediaRoot.artShiftX; y: mediaRoot.artShiftY }
+						]
 					}
 					Rectangle {
 						anchors.fill: parent
-						radius: parent.radius
+						radius: art.radius
 						color: "transparent"
 						border.width: 1
 						border.color: Qt.rgba(1, 1, 1, 0.14)
 					}
-					TapHandler { onTapped: parent.artMode = !parent.artMode }
-					HoverHandler { cursorShape: Qt.PointingHandCursor }
+					TapHandler { onTapped: mediaRoot.artMode = !mediaRoot.artMode }
+					TapHandler {
+						acceptedButtons: Qt.RightButton
+						onTapped: mediaGlass.artworkFullscreen = !mediaGlass.artworkFullscreen
+					}
+					HoverHandler {
+						cursorShape: Qt.PointingHandCursor
+						onPointChanged: {
+							mediaRoot.artShiftX = (point.position.x / art.width - 0.5) * 7 * mediaRoot.u
+							mediaRoot.artShiftY = (point.position.y / art.height - 0.5) * 7 * mediaRoot.u
+						}
+						onHoveredChanged: if (!hovered) { mediaRoot.artShiftX = 0; mediaRoot.artShiftY = 0 }
+					}
 					Text {
 						anchors.centerIn: parent
 						text: "\u266A"
-						font.pixelSize: 24 * u
+						font.pixelSize: 24 * mediaRoot.u
 						color: Qt.rgba(1, 1, 1, 0.6)
 						visible: coverImg.status !== Image.Ready
 					}
+					Canvas {
+						id: coverColor
+						width: 8; height: 8; visible: false
+						onPaint: {
+							const ctx = getContext("2d")
+							ctx.clearRect(0, 0, 8, 8)
+							if (coverImg.status !== Image.Ready) return
+							ctx.drawImage(coverImg, 0, 0, 8, 8)
+							const d = ctx.getImageData(0, 0, 8, 8).data
+							let r = 0, g = 0, b = 0
+							for (let i = 0; i < d.length; i += 4) { r += d[i]; g += d[i + 1]; b += d[i + 2] }
+							mediaRoot.artColor = Qt.rgba(r / 64 / 255, g / 64 / 255, b / 64 / 255, 1)
+						}
+					}
+					Behavior on width { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
 				}
 
 				// title + artist
 				Column {
 					id: txtCol
 					anchors.left: art.right
-					anchors.leftMargin: 14 * u
+					anchors.leftMargin: mediaRoot.artMode ? 40 : 14 * mediaRoot.u
 					anchors.right: parent.right
-					anchors.rightMargin: 14 * u
+					anchors.rightMargin: 42 * mediaRoot.u
 					anchors.verticalCenter: art.verticalCenter
-					spacing: 2 * u
+					// expanded: title, scrubber and controls form one column beside the art
+					anchors.verticalCenterOffset: mediaRoot.artMode ? -36 * mediaRoot.u : 0
+					spacing: 2 * mediaRoot.u
 					CFText {
 						width: parent.width
 						text: MusicPlayerProvider.title
 						elide: Text.ElideRight
 						font.weight: 600
-						font.pixelSize: 15 * u
+						font.pixelSize: 15 * mediaRoot.u
 					}
 					Text {
 						width: parent.width
@@ -376,47 +553,69 @@ Rectangle {
 						color: Qt.rgba(1, 1, 1, 0.66)
 						elide: Text.ElideRight
 						font.weight: 400
-						font.pixelSize: 13 * u
+						font.pixelSize: 13 * mediaRoot.u
+					}
+				}
+				Row {
+					anchors.right: parent.right
+					anchors.rightMargin: 16 * mediaRoot.u
+					anchors.verticalCenter: art.verticalCenter
+					visible: MusicPlayerProvider.isPlaying
+					spacing: 3 * mediaRoot.u
+					Repeater {
+						model: 4
+						delegate: Rectangle {
+							required property int index
+							width: 3 * mediaRoot.u; height: (7 + (index % 3) * 3) * mediaRoot.u
+							radius: width / 2; color: mediaRoot.artColor
+							SequentialAnimation on height {
+								running: MusicPlayerProvider.isPlaying; loops: Animation.Infinite
+								NumberAnimation { to: (12 + (index % 2) * 5) * mediaRoot.u; duration: 240 + index * 75; easing.type: Easing.InOutSine }
+								NumberAnimation { to: (5 + (index % 3) * 3) * mediaRoot.u; duration: 300 + index * 55; easing.type: Easing.InOutSine }
+							}
+						}
 					}
 				}
 
 				// scrubber (time / bar / remaining)
 				Item {
 					id: scrub
-					anchors.left: parent.left
-					anchors.leftMargin: 16 * u
+					anchors.left: mediaRoot.artMode ? txtCol.left : parent.left
+					anchors.leftMargin: mediaRoot.artMode ? 0 : 16 * mediaRoot.u
 					anchors.right: parent.right
-					anchors.rightMargin: 16 * u
+					anchors.rightMargin: 16 * mediaRoot.u
 					anchors.top: txtCol.bottom
-					anchors.topMargin: 12 * u
-					height: 16 * u
+					anchors.topMargin: 12 * mediaRoot.u
+					height: 16 * mediaRoot.u
 					readonly property real len: MusicPlayerProvider.duration || 0
-					readonly property real frac: len > 0 ? Math.max(0, Math.min(1, MusicPlayerProvider.position / len)) : 0
+					property real dragPos: -1
+					readonly property real shownPos: dragPos >= 0 ? dragPos : MusicPlayerProvider.position
+					readonly property real frac: len > 0 ? Math.max(0, Math.min(1, shownPos / len)) : 0
 					function fmt(sec) { var s = Math.max(0, Math.floor(sec)); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
 					CFText {
 						id: tL
 						anchors.left: parent.left
 						anchors.verticalCenter: parent.verticalCenter
-						text: scrub.fmt(MusicPlayerProvider.position)
+						text: scrub.fmt(scrub.shownPos)
 						color: Qt.rgba(1, 1, 1, 0.6)
-						font.pixelSize: 11 * u
+						font.pixelSize: 11 * mediaRoot.u
 					}
 					CFText {
 						id: tR
 						anchors.right: parent.right
 						anchors.verticalCenter: parent.verticalCenter
-						text: scrub.len > 0 ? "-" + scrub.fmt(scrub.len - MusicPlayerProvider.position) : "--:--"
+						text: scrub.len > 0 ? "-" + scrub.fmt(scrub.len - scrub.shownPos) : "--:--"
 						color: Qt.rgba(1, 1, 1, 0.6)
-						font.pixelSize: 11 * u
+						font.pixelSize: 11 * mediaRoot.u
 					}
 					Item {
 						id: bar
 						anchors.left: tL.right
-						anchors.leftMargin: 10 * u
+						anchors.leftMargin: 10 * mediaRoot.u
 						anchors.right: tR.left
-						anchors.rightMargin: 10 * u
+						anchors.rightMargin: 10 * mediaRoot.u
 						anchors.verticalCenter: parent.verticalCenter
-						height: 5 * u
+						height: 5 * mediaRoot.u
 						Rectangle { anchors.fill: parent; radius: height / 2; color: Qt.rgba(1, 1, 1, 0.22) }
 						Rectangle {
 							height: parent.height; radius: height / 2
@@ -428,10 +627,12 @@ Rectangle {
 							anchors.fill: parent; anchors.margins: -8
 							hoverEnabled: true
 							cursorShape: Qt.PointingHandCursor
-							onClicked: mouse => {
-								if (scrub.len > 0 && parent.pl) {
-									parent.pl.position = Math.max(0, Math.min(1, mouse.x / bar.width)) * scrub.len;
-								}
+							function at(x) { return Math.max(0, Math.min(1, (x - 8) / bar.width)) * scrub.len }
+							onPressed: mouse => { if (scrub.len > 0 && mediaRoot.pl) scrub.dragPos = at(mouse.x) }
+							onPositionChanged: mouse => { if (pressed && scrub.len > 0) scrub.dragPos = at(mouse.x) }
+							onReleased: {
+								if (scrub.dragPos >= 0 && mediaRoot.pl) mediaRoot.pl.position = scrub.dragPos
+								scrub.dragPos = -1
 							}
 						}
 					}
@@ -439,10 +640,10 @@ Rectangle {
 
 				// transport controls + lyrics button (MacLock layout)
 				Row {
-					anchors.horizontalCenter: parent.horizontalCenter
+					anchors.horizontalCenter: scrub.horizontalCenter
 					anchors.top: scrub.bottom
-					anchors.topMargin: 10 * u
-					spacing: 26 * u
+					anchors.topMargin: 10 * mediaRoot.u
+					spacing: 26 * mediaRoot.u
 					Repeater {
 						model: ["prev", "play", "next"]
 						delegate: Item {
@@ -490,14 +691,14 @@ Rectangle {
 				Item {
 					id: lyrBtn
 					anchors.right: parent.right
-					anchors.rightMargin: 14 * u
+					anchors.rightMargin: 14 * mediaRoot.u
 					anchors.top: scrub.bottom
-					anchors.topMargin: 12 * u
-					width: 32 * u; height: 34 * u
+					anchors.topMargin: 12 * mediaRoot.u
+					width: 32 * mediaRoot.u; height: 34 * mediaRoot.u
 					property bool active: parent.lyricsOn
 					Rectangle {
 						anchors.centerIn: parent
-						width: 30 * u; height: width; radius: 9 * u
+						width: 30 * mediaRoot.u; height: width; radius: 9 * mediaRoot.u
 						color: lyrBtn.active ? Qt.rgba(1, 1, 1, 0.92) : Qt.rgba(1, 1, 1, lyrMa.containsMouse ? 0.14 : 0)
 						scale: lyrMa.pressed ? 0.88 : 1
 						Behavior on color { ColorAnimation { duration: 220 } }
@@ -505,7 +706,7 @@ Rectangle {
 						Canvas {
 							id: quoteIcon
 							anchors.centerIn: parent
-							width: 18 * u; height: width
+							width: 18 * mediaRoot.u; height: width
 							property color ink: lyrBtn.active ? "#1c1c1e" : "white"
 							onInkChanged: requestPaint()
 							onWidthChanged: requestPaint()
@@ -536,11 +737,10 @@ Rectangle {
 
 				// ── lyrics overlay (MacLock Apple-Music style) ──
 				property bool lyricsOn: false
-				property bool artMode: false
 				Connections {
 					target: MusicPlayerProvider
 					function onLyricsWantedChanged() {
-						if (!MusicPlayerProvider.lyricsWanted && parent.lyricsOn) parent.lyricsOn = false;
+						if (!MusicPlayerProvider.lyricsWanted && mediaRoot.lyricsOn) mediaRoot.lyricsOn = false;
 					}
 				}
 				Rectangle {
@@ -561,7 +761,7 @@ Rectangle {
 					Column {
 						id: lyrCol
 						width: parent.width
-						spacing: 8 * u
+						spacing: 8 * mediaRoot.u
 						Repeater {
 							id: lyrRep
 							model: MusicPlayerProvider.lyricsLines
@@ -595,7 +795,7 @@ Rectangle {
 									wrapMode: Text.WordWrap
 									color: "white"
 									font.family: Fonts.sFProDisplayRegular.family
-									font.pixelSize: 15 * u
+									font.pixelSize: 15 * mediaRoot.u
 									font.weight: Font.Bold
 									lineHeight: 1.08
 									transformOrigin: Item.Left
@@ -608,12 +808,12 @@ Rectangle {
 								Row {
 									visible: ln.gap
 									anchors.verticalCenter: parent.verticalCenter
-									spacing: 4 * u
+									spacing: 4 * mediaRoot.u
 									Repeater {
 										model: 3
 										delegate: Rectangle {
 											required property int index
-											width: 5 * u; height: width; radius: width / 2
+											width: 5 * mediaRoot.u; height: width; radius: width / 2
 											color: "white"
 											opacity: ln.cur ? 0.95 : 0.35
 											SequentialAnimation on scale {
@@ -655,12 +855,13 @@ Rectangle {
 						}
 						color: Qt.rgba(1, 1, 1, 0.55)
 						font.family: Fonts.sFProDisplayRegular.family
-						font.pixelSize: 10 * u
+						font.pixelSize: 10 * mediaRoot.u
 						font.weight: Font.DemiBold
 					}
 				}
 			}
 		}
+
 
 
 		ShaderEffectSource {

@@ -29,6 +29,10 @@ Usage: ./install.sh [options]
 Options:
   --shells LIST     Shell ids, first = default shell (e.g. macos,ii,lucid).
                     Every shell is always installed; this only picks the default.
+  --dock MODE       Dock apps for the macOS shell: choose (pick from your installed
+                    apps), auto (sensible picks), keep (leave your current Dock).
+                    Default: ask on a terminal when you have no Dock yet, else keep.
+                    Change it later: ~/.config/quickshell/macos/scripts/dock_setup.py --choose
   --check           Read-only health check: hyprpm/repos, default shell, running
                     shell, QML errors in its log, leftover /home/revo paths.
                     Exit code 1 if anything is broken.
@@ -38,6 +42,7 @@ Environment:
   DRY_RUN=1         Print commands without changing the system
   DOTFILES_REPO_URL Override clone URL
   SHELLS=LIST       Same as --shells (env form)
+  DOCK=MODE         Same as --dock (env form)
   HYPRPM_TIMEOUT=S  Give up on a hyprpm plugin build after S seconds (default 600)
   WITH_HYPRGLASS=1  Also add the HyprGlass repo (off by default: its build hangs,
                     and hyprliquid is the engine the configs enable anyway)
@@ -55,6 +60,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --shells=*)
       SHELLS_FLAG="${1#*=}"
+      shift
+      ;;
+    --dock)
+      DOCK="${2:-}"
+      shift 2
+      ;;
+    --dock=*)
+      DOCK="${1#*=}"
       shift
       ;;
     --check|check)
@@ -519,6 +532,36 @@ count_dev_paths() {
   list_dev_path_files | tr -cd '\0' | wc -c | tr -d ' ' || printf '0'
 }
 
+# Dock apps for the macOS shell: built from the apps installed on THIS machine
+# (the repo's own Dock list is the author's apps — they'd be dead icons here).
+# Writes ~/.config/revo-shell/dock.json; the Dock keeps it updated on pin/unpin.
+setup_dock() {
+  local script="$HOME/.config/quickshell/macos/scripts/dock_setup.py"
+  local file="${XDG_CONFIG_HOME:-$HOME/.config}/revo-shell/dock.json"
+  [[ -f "$script" ]] || return 0
+  have python3 || { log "dock: python3 missing — the Dock will set itself up on first start"; return 0; }
+  local mode="${DOCK:-}"
+  if [[ -z "$mode" ]]; then
+    if [[ -f "$file" ]]; then
+      mode=keep
+    elif [[ -t 0 ]] && [[ -z "${NO_SHELL_PROMPT:-}" ]]; then
+      printf '\n[install] Dock: pick the apps for your Dock now? [Y/n] '
+      local ans=""; read -r ans || ans=""
+      [[ "$ans" =~ ^[Nn] ]] && mode=auto || mode=choose
+    else
+      mode=auto
+    fi
+  fi
+  case "$mode" in
+    keep)   [[ -f "$file" ]] && { log "dock: keeping $file"; return 0; }; mode=auto ;;
+    auto|choose) ;;
+    *) log "dock: unknown mode '$mode' (use choose|auto|keep) — using auto"; mode=auto ;;
+  esac
+  if [[ "$DRY_RUN" == "1" ]]; then log "DRY: python3 $script --$mode"; return 0; fi
+  if [[ "$mode" == "choose" ]] && [[ ! -t 0 ]]; then mode=auto; fi
+  python3 -I "$script" "--$mode" || log "dock setup failed (continuing) — the Dock will set itself up on first start"
+}
+
 fix_paths() {
   local home_esc f n=0
   home_esc="$(printf '%s' "$HOME" | sed 's/[\/&]/\\&/g')"
@@ -822,6 +865,7 @@ if [[ "$DRY_RUN" != "1" ]]; then
 fi
 
 fix_paths
+setup_dock
 
 # Default shell = first selected (same marker as GUI _set_default_shell)
 if [[ "$SELECTED_SHELLS_ALL" != "1" ]] && [[ ${#SELECTED_SHELLS[@]} -gt 0 ]]; then

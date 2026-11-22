@@ -87,6 +87,21 @@ empty** (wallpaper but no dock/bar, missing hyprpm repos):
 ./install.sh           # re-runs verify + health check (no --shells → re-applies your choice)
 ```
 
+### Dock apps (macOS shell)
+
+The Dock is built from the apps installed on **your** machine, not the author's.
+On a terminal the installer asks whether you want to pick them; otherwise it
+chooses sensible ones (browser, mail, chat, music, photos, editor…) and always
+adds Finder (your file manager), Launchpad, Terminal and System Settings.
+Your choice is saved in `~/.config/revo-shell/dock.json` and kept on reinstall;
+pinning, unpinning and reordering in the Dock update it too.
+
+```bash
+./install.sh --dock choose     # pick again from your installed apps (fzf if installed)
+./install.sh --dock auto       # automatic picks
+~/.config/quickshell/macos/scripts/dock_setup.py --choose   # anytime, without reinstalling
+```
+
 
 ## Update (existing installs)
 

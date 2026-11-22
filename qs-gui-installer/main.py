@@ -361,6 +361,7 @@ class InstallationWorker(QObject):
             # 4) Rewrite absolute /home/revo paths → current $HOME
             self.progress_changed.emit(80, "Fixing home paths…")
             self._fix_home_paths()
+            self._setup_dock()
 
             # set + start the default shell only once its files point at this $HOME
             if shell_id:
@@ -1224,6 +1225,21 @@ class InstallationWorker(QObject):
             )
         except Exception as e:
             logger.warning(f"immediate default shell start failed: {e}")
+
+    def _setup_dock(self) -> None:
+        """macOS shell Dock = apps installed on THIS machine (the repo's list is
+        the author's). Writes ~/.config/revo-shell/dock.json unless the user
+        already has one; pick other apps later with dock_setup.py --choose or by
+        pinning/unpinning in the Dock."""
+        try:
+            script = Path.home() / ".config" / "quickshell" / "macos" / "scripts" / "dock_setup.py"
+            if not script.is_file():
+                return
+            r = subprocess.run([sys.executable or "python3", "-I", str(script), "--auto", "--keep"],
+                               capture_output=True, text=True, timeout=120)
+            logger.info(f"dock: {(r.stdout or r.stderr).strip().splitlines()[0] if (r.stdout or r.stderr) else 'done'}")
+        except Exception as e:
+            logger.warning(f"dock setup skipped: {e}")
 
     def _install_siri27(self) -> None:
         """Siri backend for the macOS shell → ~/.local/share/siri27 (scripts +
