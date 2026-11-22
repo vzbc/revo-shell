@@ -22,7 +22,7 @@ Singleton {
             if (ps[i].trackTitle) return ps[i];
         return ps.length ? ps[ps.length - 1] : null;
     }
-    onActivePlayerChanged: if (activePlayer && activePlayer.trackTitle) lastPlayer = activePlayer
+    onActivePlayerChanged: { const p = activePlayer; if (p && p.trackTitle) Qt.callLater(() => { if (mpris.lastPlayer !== p) mpris.lastPlayer = p }) }
     property string title: mpris.activePlayer?.trackTitle || Translation.tr("Not Playing")
     property string artist: mpris.activePlayer?.trackArtist || ""
     property string album: mpris.activePlayer?.trackAlbum || ""

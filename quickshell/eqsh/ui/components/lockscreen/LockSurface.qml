@@ -410,7 +410,17 @@ Rectangle {
 				item.clockBottom = Qt.binding(() => clock.y + clock.height);
 				item.unlocking = Qt.binding(() => fadeOutAnim.running);
 				if (item.showRow !== undefined) item.showRow = false;
+				if (item.showNotch !== undefined) item.showNotch = Qt.binding(() => !lockFace.enabled);
 			}
+		}
+
+		// Face ID (Sapphire engine) in a Dynamic Island at the top centre
+		LockFaceID {
+			id: lockFace
+			anchors.fill: parent
+			z: 30
+			context: root.context
+			interactive: contentItem.showInteractive
 		}
 
 		// Sapphire-style info pills under the clock (weather, next event, AQI,
@@ -1231,7 +1241,7 @@ Rectangle {
 								CFText {
 									anchors.fill: parent
 									verticalAlignment: Text.AlignVCenter
-									text: passwordBox.text == "" ? root.context.showFailure ? Translation.tr("Incorrect Password") : Translation.tr("Enter Password") : ""
+									text: passwordBox.text == "" ? root.context.showFailure ? Translation.tr("Incorrect Password") : (root.context.faceVerified ? "Press Enter" : Translation.tr("Enter Password")) : ""
 									color: root.context.showFailure ? '#aaaaaa' : '#bbdedede'
 									anchors.leftMargin: 10
 									font.weight: 600
@@ -1257,6 +1267,7 @@ Rectangle {
 							onTextChanged: {
 								root.context.currentText = this.text;
 								passwordBoxContainer.opacity = 1;
+								lockFace.poke();
 							}
 
 							onAccepted: root.context.tryUnlock();

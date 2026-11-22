@@ -12,11 +12,22 @@ Scope {
 	property string currentText: ""
 	property bool unlockInProgress: false
 	property bool showFailure: false
+	// Face ID (Sapphire): set by LockFaceID when your face is recognised.
+	// "enter" mode: Enter on an empty password field unlocks.
+	property bool faceVerified: false
+
+	function faceUnlock() {
+		if (root.unlockInProgress) return;
+		root.unlocking();
+	}
 
 	onCurrentTextChanged: showFailure = false;
 
 	function tryUnlock() {
-		if (currentText === "") return;
+		if (currentText === "") {
+			if (root.faceVerified) root.faceUnlock();
+			return;
+		}
 
 		root.unlockInProgress = true;
 		pam.start();
