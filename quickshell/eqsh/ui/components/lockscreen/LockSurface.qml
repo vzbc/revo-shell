@@ -98,7 +98,7 @@ Rectangle {
 			opacity: Config.lockScreen.dimOpacity
 		}
 
-		// Atoll "artwork as wallpaper" (right-click the cover in the media panel):
+		// Atoll "artwork as wallpaper" (automatic while music is detected; right-click the cover toggles it):
 		// the cover, blurred and toned like Atoll's FullScreenArtworkWindowManager
 		// (gaussian 28, sat 0.92, brightness -0.03, 8 % dark wash, white 5 % ->
 		// black 16 % gradient) replaces the wallpaper, with the artwork floating in
@@ -117,23 +117,104 @@ Rectangle {
 			Behavior on driftY { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
 
 			Rectangle { anchors.fill: parent; color: "black" }
-			Image {
-				id: wallArtSrc
+
+			// moving artwork (Atoll plays the song's Apple Music / Spotify Canvas
+			// video here; those need the user's accounts, so on Linux the cover
+			// itself flows): blurred copies of the art turn and breathe slowly while
+			// music plays and freeze on pause; a new track crossfades in.
+			// Drawn at 400x250 and scaled up, so the heavy blur stays cheap.
+			component FlowSet: Item {
+				id: fs
+				property url src
+				property bool playing: false
+				readonly property bool ready: base.status === Image.Ready
 				anchors.fill: parent
-				anchors.margins: -48
-				source: MusicPlayerProvider.thumbnail
-				fillMode: Image.PreserveAspectCrop
-				sourceSize.width: 640
-				asynchronous: true
-				visible: false
+				Image {
+					id: base
+					anchors.centerIn: parent
+					width: parent.width * 1.25; height: width
+					source: fs.src; sourceSize.width: 256
+					fillMode: Image.PreserveAspectCrop; asynchronous: true; smooth: true
+					SequentialAnimation on scale {
+						loops: Animation.Infinite; paused: !fs.playing
+						NumberAnimation { from: 1.0; to: 1.12; duration: 9000; easing.type: Easing.InOutSine }
+						NumberAnimation { from: 1.12; to: 1.0; duration: 9000; easing.type: Easing.InOutSine }
+					}
+				}
+				Repeater {
+					model: [
+						{ x: 0.18, y: 0.20, s: 0.95, d: 38000, dir: 1,  o: 0.85 },
+						{ x: 0.82, y: 0.30, s: 0.85, d: 47000, dir: -1, o: 0.80 },
+						{ x: 0.30, y: 0.85, s: 1.05, d: 56000, dir: 1,  o: 0.75 },
+						{ x: 0.78, y: 0.88, s: 0.75, d: 33000, dir: -1, o: 0.70 }
+					]
+					delegate: Image {
+						required property var modelData
+						required property int index
+						width: fs.width * modelData.s; height: width
+						x: fs.width * modelData.x - width / 2
+						y: fs.height * modelData.y - height / 2
+						source: fs.src; sourceSize.width: 256
+						fillMode: Image.PreserveAspectCrop; asynchronous: true; smooth: true
+						opacity: modelData.o
+						rotation: index * 90
+						RotationAnimator on rotation {
+							from: index * 90; to: index * 90 + 360 * modelData.dir
+							duration: modelData.d; loops: Animation.Infinite
+							paused: !fs.playing
+						}
+					}
+				}
 			}
-			MultiEffect {
-				anchors.fill: wallArtSrc
-				source: wallArtSrc
-				blurEnabled: true; blur: 1; blurMax: 64; blurMultiplier: 0.7
-				autoPaddingEnabled: false
-				saturation: -0.08; brightness: -0.03; contrast: -0.02
-				transform: Translate { x: artworkWallpaper.driftX * 0.5; y: artworkWallpaper.driftY * 0.5 }
+			Item {
+				id: flowHost
+				anchors.fill: parent
+				property bool front: true          // which set is showing
+				property url shown: ""
+				readonly property url want: MusicPlayerProvider.thumbnail
+				readonly property bool playing: MusicPlayerProvider.isPlaying && artworkWallpaper.visible
+				function sync() {
+					if (want == shown) return;
+					if (front) setB.src = want; else setA.src = want;
+				}
+				onWantChanged: sync()
+				Component.onCompleted: { setA.src = want; shown = want }
+				Connections {
+					target: setA
+					function onReadyChanged() { if (setA.ready && setA.src == flowHost.want && !flowHost.front) { flowHost.front = true; flowHost.shown = setA.src } }
+				}
+				Connections {
+					target: setB
+					function onReadyChanged() { if (setB.ready && setB.src == flowHost.want && flowHost.front) { flowHost.front = false; flowHost.shown = setB.src } }
+				}
+				Item {
+					id: flow
+					width: 400; height: 250
+					transformOrigin: Item.TopLeft
+					scale: Math.max(flowHost.width / width, flowHost.height / height)
+					x: (flowHost.width - width * scale) / 2
+					y: (flowHost.height - height * scale) / 2
+					layer.enabled: artworkWallpaper.visible
+					layer.smooth: true
+					layer.effect: MultiEffect {
+						blurEnabled: true; blur: 1; blurMax: 40; blurMultiplier: 1.4
+						autoPaddingEnabled: false
+						saturation: 0.18; brightness: -0.06; contrast: 0.04
+					}
+					transform: Translate { x: artworkWallpaper.driftX * 0.04; y: artworkWallpaper.driftY * 0.04 }
+					FlowSet {
+						id: setA
+						playing: flowHost.playing
+						opacity: flowHost.front ? 1 : 0
+						Behavior on opacity { NumberAnimation { duration: 1200; easing.type: Easing.InOutQuad } }
+					}
+					FlowSet {
+						id: setB
+						playing: flowHost.playing
+						opacity: flowHost.front ? 0 : 1
+						Behavior on opacity { NumberAnimation { duration: 1200; easing.type: Easing.InOutQuad } }
+					}
+				}
 			}
 			Rectangle { anchors.fill: parent; color: Qt.rgba(0.02, 0.02, 0.02, 0.08) }
 			Rectangle {
@@ -154,9 +235,15 @@ Rectangle {
 				height: width
 				y: gapTop + (gapBottom - gapTop - height) / 2
 				visible: width >= 120
-				scale: mediaGlass.artworkFullscreen ? 1 : 0.9
+				scale: mediaGlass.artworkFullscreen ? (MusicPlayerProvider.isPlaying ? 1 : 0.94) : 0.9
 				Behavior on scale { NumberAnimation { duration: 520; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
-				transform: Translate { x: artworkWallpaper.driftX; y: artworkWallpaper.driftY }
+				property real bob: 0
+				SequentialAnimation on bob {
+					loops: Animation.Infinite; paused: !(MusicPlayerProvider.isPlaying && artworkWallpaper.visible)
+					NumberAnimation { from: -5; to: 5; duration: 3200; easing.type: Easing.InOutSine }
+					NumberAnimation { from: 5; to: -5; duration: 3200; easing.type: Easing.InOutSine }
+				}
+				transform: Translate { x: artworkWallpaper.driftX; y: artworkWallpaper.driftY + wallArtBox.bob }
 				RectangularShadow {
 					anchors.fill: parent
 					radius: wallArt.radius
@@ -188,10 +275,6 @@ Rectangle {
 					artworkWallpaper.driftY = (point.position.y / artworkWallpaper.height - 0.5) * 18
 				}
 				onHoveredChanged: if (!hovered) { artworkWallpaper.driftX = 0; artworkWallpaper.driftY = 0 }
-			}
-			TapHandler {
-				enabled: artworkWallpaper.visible
-				onTapped: mediaGlass.artworkFullscreen = false
 			}
 		}
 	}
@@ -375,7 +458,9 @@ Rectangle {
 			anchors.horizontalCenter: inputArea.horizontalCenter
 			anchors.bottomMargin: 80
 			property bool atollExpanded: false
-			property bool artworkFullscreen: false
+			// Atoll artwork wallpaper: on automatically while a song is detected
+			// (right-click the cover to turn it off/on for this lock)
+			property bool artworkFullscreen: MusicPlayerProvider.isAvailable && String(MusicPlayerProvider.thumbnail) !== ""
 			width: atollExpanded ? 720 : 420
 			height: atollExpanded ? 340 : 180
 			radius: atollExpanded ? 52 : 28
