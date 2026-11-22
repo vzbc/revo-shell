@@ -8,6 +8,7 @@ Scope {
 	signal unlocked()
 	signal unlocking()
 	signal failed()
+	signal passwordAccepted()        // a correct password (not Face ID) unlocked the session
 
 	property string currentText: ""
 	property bool unlockInProgress: false
@@ -46,6 +47,7 @@ Scope {
 
 		onCompleted: result => {
 			if (result == PamResult.Success) {
+				root.passwordAccepted();
 				root.unlocking();
 			} else {
 				root.currentText = "";

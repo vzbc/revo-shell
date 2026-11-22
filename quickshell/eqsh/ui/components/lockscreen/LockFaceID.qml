@@ -90,6 +90,13 @@ Item {
 		}
 	}
 	HoverHandler { onPointChanged: fid.poke() }
+	// password unlock after a near miss: teach Face ID those frames (like iPhone)
+	Connections {
+		target: fid.context
+		function onPasswordAccepted() {
+			if (fid.hasProfile) Quickshell.execDetached(["python3", "-I", fid.engine, "learn"])
+		}
+	}
 
 	// ------------------------------------------------------------ island
 	readonly property real iw: state_ === "scanning" || state_ === "success" || state_ === "fail" ? 140
