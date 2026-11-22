@@ -745,7 +745,7 @@ Rectangle {
 					anchors.top: scrub.bottom
 					anchors.topMargin: 12 * mediaRoot.u
 					width: 32 * mediaRoot.u; height: 34 * mediaRoot.u
-					property bool active: parent.lyricsOn
+					property bool active: mediaRoot.lyricsOn
 					Rectangle {
 						anchors.centerIn: parent
 						width: 30 * mediaRoot.u; height: width; radius: 9 * mediaRoot.u
@@ -779,7 +779,7 @@ Rectangle {
 						hoverEnabled: true
 						cursorShape: Qt.PointingHandCursor
 						onClicked: {
-							parent.lyricsOn = !parent.lyricsOn;
+							mediaRoot.lyricsOn = !mediaRoot.lyricsOn;
 							MusicPlayerProvider.lyricsWanted = true;
 						}
 					}
