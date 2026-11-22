@@ -192,6 +192,9 @@ Rectangle {
 				height: width
 				y: gapTop + (gapBottom - gapTop - height) / 2
 				visible: width >= 120
+				readonly property real gapH: gapBottom - gapTop
+				opacity: (mediaRoot && mediaRoot.lyricsOn) ? 0 : 1
+				Behavior on opacity { NumberAnimation { duration: 360; easing.type: Easing.InOutCubic } }
 				scale: mediaGlass.artworkFullscreen ? (MusicPlayerProvider.isPlaying ? 1 : 0.94) : 0.9
 				Behavior on scale { NumberAnimation { duration: 520; easing.type: Easing.OutBack; easing.overshoot: 1.1 } }
 				property real bob: 0
@@ -419,7 +422,10 @@ Rectangle {
 			// (right-click the cover to turn it off/on for this lock)
 			property bool artworkFullscreen: MusicPlayerProvider.isAvailable && String(MusicPlayerProvider.thumbnail) !== ""
 			width: atollExpanded ? 720 : 420
-			height: atollExpanded ? 340 : 180
+			// Atoll inline lyrics: the panel grows by 64 / 96 px while a synced line shows
+			readonly property bool inlineLyrics: MusicPlayerProvider.isAvailable && MusicPlayerProvider.lyricsSynced
+				&& MusicPlayerProvider.lyricsLines.length > 0 && !(mediaRoot && mediaRoot.lyricsOn)
+			height: (atollExpanded ? 340 : 180) + (inlineLyrics ? (atollExpanded ? 96 : 64) : 0)
 			radius: atollExpanded ? 52 : 28
 			Behavior on width { NumberAnimation { duration: 280; easing.type: Easing.InOutCubic } }
 			Behavior on height { NumberAnimation { duration: 280; easing.type: Easing.InOutCubic } }
@@ -478,6 +484,7 @@ Rectangle {
 			visible: MusicPlayerProvider.isAvailable
 			anchors.fill: mediaGlass
 			anchors.margins: 22
+			Component.onCompleted: MusicPlayerProvider.lyricsWanted = true
 			Component.onDestruction: MusicPlayerProvider.lyricsWanted = false
 			Item {
 				id: mediaRoot
@@ -682,6 +689,7 @@ Rectangle {
 
 				// transport controls + lyrics button (MacLock layout)
 				Row {
+					id: ctlRow
 					anchors.horizontalCenter: scrub.horizontalCenter
 					anchors.top: scrub.bottom
 					anchors.topMargin: 10 * mediaRoot.u
@@ -772,7 +780,62 @@ Rectangle {
 						cursorShape: Qt.PointingHandCursor
 						onClicked: {
 							parent.lyricsOn = !parent.lyricsOn;
-							MusicPlayerProvider.lyricsWanted = parent.lyricsOn;
+							MusicPlayerProvider.lyricsWanted = true;
+						}
+					}
+				}
+
+				// ── Atoll inline lyric: the line being sung, under the controls;
+				//    a new line slides in from below while the old one leaves upward
+				Item {
+					id: inlineLyric
+					anchors.left: scrub.left
+					anchors.right: parent.right
+					anchors.rightMargin: 16 * mediaRoot.u
+					anchors.top: ctlRow.bottom
+					anchors.topMargin: (mediaRoot.artMode ? 12 : 8) * mediaRoot.u
+					height: 40 * mediaRoot.u
+					clip: true
+					visible: mediaGlass.inlineLyrics
+					opacity: visible ? 1 : 0
+					Behavior on opacity { NumberAnimation { duration: 240 } }
+					readonly property string want: MusicPlayerProvider.lyricsCurrent
+					property string shown: ""
+					onWantChanged: swapAnim.restart()
+					Component.onCompleted: shown = want
+					SequentialAnimation {
+						id: swapAnim
+						ParallelAnimation {
+							NumberAnimation { target: lyrRow; property: "y"; to: -10 * mediaRoot.u; duration: 140; easing.type: Easing.InCubic }
+							NumberAnimation { target: lyrRow; property: "opacity"; to: 0; duration: 140 }
+						}
+						ScriptAction { script: { inlineLyric.shown = inlineLyric.want; lyrRow.y = 10 * mediaRoot.u } }
+						ParallelAnimation {
+							NumberAnimation { target: lyrRow; property: "y"; to: 0; duration: 320; easing.type: Easing.OutCubic }
+							NumberAnimation { target: lyrRow; property: "opacity"; to: 1; duration: 320 }
+						}
+					}
+					Row {
+						id: lyrRow
+						width: parent.width
+						spacing: 8 * mediaRoot.u
+						visible: inlineLyric.shown !== ""
+						Text {
+							text: "\u266A"
+							color: Qt.rgba(1, 1, 1, 0.7)
+							font.pixelSize: (mediaRoot.artMode ? 14 : 12) * mediaRoot.u
+							font.weight: Font.DemiBold
+						}
+						Text {
+							width: parent.width - 24 * mediaRoot.u
+							text: inlineLyric.shown
+							color: Qt.rgba(1, 1, 1, 0.88)
+							font.family: Fonts.sFProDisplayRegular.family
+							font.pixelSize: (mediaRoot.artMode ? 14 : 12) * mediaRoot.u
+							font.weight: Font.DemiBold
+							wrapMode: Text.WordWrap
+							maximumLineCount: 2
+							elide: Text.ElideRight
 						}
 					}
 				}
@@ -787,23 +850,31 @@ Rectangle {
 				}
 				Rectangle {
 					id: lyricsOverlay
-					anchors.fill: parent
-					radius: 15
-					color: Qt.rgba(0, 0, 0, 0.45)
-					visible: parent.lyricsOn
+					// Atoll's detached lyrics: shown in place of the floating artwork
+					// (between the clock and the panel), scaled up from the panel units
+					parent: contentItem
+					readonly property real k: Math.max(1.6, Math.min(2.4, wallArtBox.gapH / 220))
+					width: Math.min(contentItem.width * 0.5, 820)
+					height: Math.max(160, wallArtBox.gapH)
+					x: (contentItem.width - width) / 2
+					y: wallArtBox.gapTop
+					radius: 0
+					color: "transparent"
+					visible: opacity > 0.01
+					opacity: mediaRoot.lyricsOn ? 1 : 0
+					Behavior on opacity { NumberAnimation { duration: 360; easing.type: Easing.InOutCubic } }
 					clip: true
 					readonly property real lyrTarget: {
 						var L = MusicPlayerProvider.lyricsLines;
 						if (!MusicPlayerProvider.lyricsSynced || L.length === 0) return -height * 0.30;
-						var p = MusicPlayerProvider.position + 0.25, c = -1;
-						for (var i = 0; i < L.length; i++) { if (L[i].t <= p) c = i; else break; }
+						var c = MusicPlayerProvider.lyricsIndex;
 						var it = c >= 0 ? lyrRep.itemAt(c) : null;
 						return it ? it.y - height * 0.30 : -height * 0.30;
 					}
 					Column {
 						id: lyrCol
 						width: parent.width
-						spacing: 8 * mediaRoot.u
+						spacing: 8 * lyricsOverlay.k
 						Repeater {
 							id: lyrRep
 							model: MusicPlayerProvider.lyricsLines
@@ -811,23 +882,17 @@ Rectangle {
 								id: ln
 								required property var modelData
 								required property int index
-								readonly property int rel: {
-									var L = MusicPlayerProvider.lyricsLines;
-									if (!MusicPlayerProvider.lyricsSynced || L.length === 0) return 0;
-									var p = MusicPlayerProvider.position + 0.25, c = -1;
-									for (var i = 0; i < L.length; i++) { if (L[i].t <= p) c = i; else break; }
-									return index - c;
-								}
-								readonly property bool cur: MusicPlayerProvider.lyricsSynced && index === lyrRep.currentIndex
+								readonly property int rel: MusicPlayerProvider.lyricsSynced ? index - MusicPlayerProvider.lyricsIndex : 0
+								readonly property bool cur: MusicPlayerProvider.lyricsSynced && rel === 0
 								readonly property bool gap: (modelData.text || "") === ""
 								width: lyrCol.width
-								height: gap ? 14 * u : lt.implicitHeight
+								height: gap ? 14 * lyricsOverlay.k : lt.implicitHeight
 								transform: Translate {
 									id: lnTr
 									y: -lyricsOverlay.lyrTarget
 									Behavior on y { NumberAnimation { duration: 500 + Math.max(0, Math.min(8, ln.rel)) * 20; easing.type: Easing.OutQuint } }
 								}
-								opacity: !MusicPlayerProvider.lyricsSynced ? 0.9 : (cur ? 1 : (Math.abs(rel) === 1 ? 0.42 : 0.26))
+								opacity: !MusicPlayerProvider.lyricsSynced ? 0.9 : (cur ? 1 : (Math.abs(rel) === 1 ? 0.36 : 0.2))
 								Behavior on opacity { NumberAnimation { duration: 380 } }
 								Text {
 									id: lt
@@ -837,11 +902,11 @@ Rectangle {
 									wrapMode: Text.WordWrap
 									color: "white"
 									font.family: Fonts.sFProDisplayRegular.family
-									font.pixelSize: 15 * mediaRoot.u
+									font.pixelSize: 17 * lyricsOverlay.k
 									font.weight: Font.Bold
 									lineHeight: 1.08
 									transformOrigin: Item.Left
-									scale: ln.cur || !MusicPlayerProvider.lyricsSynced ? 1 : 0.965
+									scale: ln.cur || !MusicPlayerProvider.lyricsSynced ? 1 : 0.92
 									Behavior on scale { NumberAnimation { duration: 420; easing.type: Easing.OutQuint } }
 									layer.enabled: MusicPlayerProvider.lyricsSynced && !ln.cur && Math.abs(ln.rel) <= 6
 									layer.sourceRect: Qt.rect(-12, -8, width + 24, height + 16)
@@ -850,12 +915,12 @@ Rectangle {
 								Row {
 									visible: ln.gap
 									anchors.verticalCenter: parent.verticalCenter
-									spacing: 4 * mediaRoot.u
+									spacing: 4 * lyricsOverlay.k
 									Repeater {
 										model: 3
 										delegate: Rectangle {
 											required property int index
-											width: 5 * mediaRoot.u; height: width; radius: width / 2
+											width: 5 * lyricsOverlay.k; height: width; radius: width / 2
 											color: "white"
 											opacity: ln.cur ? 0.95 : 0.35
 											SequentialAnimation on scale {
@@ -897,7 +962,7 @@ Rectangle {
 						}
 						color: Qt.rgba(1, 1, 1, 0.55)
 						font.family: Fonts.sFProDisplayRegular.family
-						font.pixelSize: 10 * mediaRoot.u
+						font.pixelSize: 10 * lyricsOverlay.k
 						font.weight: Font.DemiBold
 					}
 				}

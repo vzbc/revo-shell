@@ -31,14 +31,31 @@ Singleton {
     property int duration: mpris.activePlayer?.length || 0
     property int position: mpris.activePlayer?.position || 0
     property bool isAvailable: (mpris.activePlayer?.trackTitle || false) ? true : false
+    // 4x a second so synced lyrics follow the song closely
     Timer {
-        interval: 1000
+        interval: 250
         repeat: true
-        running: true
+        running: !!mpris.activePlayer
         onTriggered: {
             mpris.position = mpris.activePlayer?.position || 0
         }
     }
+    property real exactPosition: 0      // fractional seconds for lyrics
+    Timer {
+        interval: 250
+        repeat: true
+        running: !!mpris.activePlayer
+        onTriggered: mpris.exactPosition = mpris.activePlayer ? mpris.activePlayer.position : 0
+    }
+    // index of the line being sung (-1 before the first line / unsynced)
+    readonly property int lyricsIndex: {
+        if (!lyricsSynced || lyricsLines.length === 0) return -1;
+        const t = exactPosition + 0.25;
+        let c = -1;
+        for (let i = 0; i < lyricsLines.length; i++) { if (lyricsLines[i].t <= t) c = i; else break; }
+        return c;
+    }
+    readonly property string lyricsCurrent: lyricsIndex >= 0 ? (lyricsLines[lyricsIndex].text || "") : ""
     property bool available: false
 
     // ── lyrics (LRCLIB, fetched on demand while the lock screen lyrics view is open) ──
@@ -114,7 +131,7 @@ Singleton {
                     for (i = 0; i < pl.length; i++) out.push({ t: -1, text: pl[i].trim() });
                     mpris.lyricsLines = out; mpris.lyricsSynced = false; mpris.lyricsState = "ok";
                 } else if (o.retry) {
-                    if (mpris.lyricsTries < 4) { mpris.lyricsTries++; mpris.lyricsState = "loading"; mpris.lyricsRetry.restart(); }
+                    if (mpris.lyricsTries < 4) { mpris.lyricsTries++; mpris.lyricsState = "loading"; lyricsRetry.restart(); }
                     else { mpris.lyricsLines = []; mpris.lyricsState = "offline"; }
                 } else if (o.instrumental) {
                     mpris.lyricsLines = []; mpris.lyricsState = "none";
