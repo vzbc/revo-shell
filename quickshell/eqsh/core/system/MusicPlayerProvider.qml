@@ -8,8 +8,21 @@ import Quickshell.Services.Mpris
 
 Singleton {
     id: mpris
-    property var players: Mpris.players.values
-    property var activePlayer: mpris.players[mpris.players.length - 1] || null
+    // playerctld is a proxy that also registers on MPRIS (often empty, and it
+    // may sort last), so it never counts as a player of its own.
+    property var players: Mpris.players.values.filter(p => String(p.dbusName || "").indexOf("playerctld") < 0)
+    // the playing player wins; otherwise the last one used, otherwise any with a track
+    property var lastPlayer: null
+    property var activePlayer: {
+        const ps = mpris.players;
+        for (let i = ps.length - 1; i >= 0; i--)
+            if (ps[i].isPlaying) return ps[i];
+        if (mpris.lastPlayer && ps.indexOf(mpris.lastPlayer) >= 0) return mpris.lastPlayer;
+        for (let i = ps.length - 1; i >= 0; i--)
+            if (ps[i].trackTitle) return ps[i];
+        return ps.length ? ps[ps.length - 1] : null;
+    }
+    onActivePlayerChanged: if (activePlayer && activePlayer.trackTitle) lastPlayer = activePlayer
     property string title: mpris.activePlayer?.trackTitle || Translation.tr("Not Playing")
     property string artist: mpris.activePlayer?.trackArtist || ""
     property string album: mpris.activePlayer?.trackAlbum || ""
