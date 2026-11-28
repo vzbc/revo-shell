@@ -128,7 +128,7 @@ Rectangle {
 				anchors.fill: parent
 				property bool front: true          // which set is showing
 				property url shown: ""
-				readonly property url want: MusicPlayerProvider.thumbnail
+				readonly property url want: MusicPlayerProvider.artwork
 				readonly property bool playing: MusicPlayerProvider.isPlaying && artworkWallpaper.visible
 				function sync() {
 					if (want == shown) return;
@@ -218,7 +218,7 @@ Rectangle {
 					color: Qt.rgba(1, 1, 1, 0.06)
 					Image {
 						anchors.fill: parent
-						source: MusicPlayerProvider.thumbnail
+						source: MusicPlayerProvider.artwork
 						fillMode: Image.PreserveAspectCrop
 						smooth: true; mipmap: true; asynchronous: true
 					}
@@ -566,7 +566,7 @@ Rectangle {
 						id: coverImg
 						anchors.fill: parent
 						fillMode: Image.PreserveAspectCrop
-						source: MusicPlayerProvider.thumbnail
+						source: MusicPlayerProvider.artwork
 						smooth: true
 						mipmap: true
 						asynchronous: true

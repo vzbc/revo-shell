@@ -155,7 +155,7 @@ Item {
 			color: Qt.rgba(1, 1, 1, 0.08)
 			Image {
 				anchors.fill: parent
-				source: MusicPlayerProvider.thumbnail
+				source: MusicPlayerProvider.artwork
 				fillMode: Image.PreserveAspectCrop
 				asynchronous: true; smooth: true; mipmap: true
 			}

@@ -27,6 +27,34 @@ Singleton {
     property string artist: mpris.activePlayer?.trackArtist || ""
     property string album: mpris.activePlayer?.trackAlbum || ""
     property url thumbnail: mpris.activePlayer?.trackArtUrl || ""
+    // a sharper cover for the big lock-screen artwork (hiresart.py): browsers hand MPRIS a
+    // 150 px PNG and Spotify 300 px; this is a CDN's large size, a local 1024 px upscale,
+    // or the iTunes/Deezer cover, falling back to the player's own thumbnail meanwhile.
+    property url artwork: thumbnail
+    property url artHires: ""
+    property string artFor: ""
+    readonly property string artKey: String(thumbnail) + "|" + artist + "|" + mpris.activePlayer?.trackTitle
+    onArtKeyChanged: artDelay.restart()
+    Timer {
+        id: artDelay; interval: 300
+        onTriggered: {
+            mpris.artHires = ""; mpris.artFor = mpris.artKey
+            mpris.artwork = Qt.binding(() => mpris.artHires != "" ? mpris.artHires : mpris.thumbnail)
+            if (!mpris.activePlayer?.trackTitle) return
+            artProc.running = false
+            artProc.command = ["python3", Quickshell.shellDir + "/core/system/hiresart.py", String(mpris.thumbnail),
+                               mpris.artist, mpris.activePlayer.trackTitle, mpris.album]
+            artProc.running = true
+        }
+    }
+    Process {
+        id: artProc
+        property string key: ""
+        onStarted: key = mpris.artFor
+        stdout: SplitParser {
+            onRead: line => { if (artProc.key === mpris.artKey && line.trim() !== "") mpris.artHires = line.trim() }
+        }
+    }
     property bool isPlaying: mpris.activePlayer?.isPlaying || false
     property int duration: mpris.activePlayer?.length || 0
     property int position: mpris.activePlayer?.position || 0
@@ -179,6 +207,7 @@ Singleton {
                 "artist": mpris.artist,
                 "album": mpris.album,
                 "thumbnail": mpris.thumbnail,
+                "artwork": mpris.artwork,
                 "isPlaying": mpris.isPlaying,
                 "duration": mpris.duration,
                 "position": mpris.position

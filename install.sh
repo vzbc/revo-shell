@@ -839,8 +839,26 @@ if [[ "$SELECTED_SHELLS_ALL" == "1" && "$SHELLS_EXPLICIT" != "1" && -f "$HOME/.c
   log "no --shells: keeping your default shell ($(tr -d ' \n' < "$HOME/.config/hypr/.revo_default_shell"))"
 fi
 
+# The repo ships a catch-all monitor config (every screen at its own best mode).
+# A user's own monitor setup survives a reinstall, except the old one this repo
+# used to ship (eDP-1 forced to 2560x1600@120), which letterboxed 1080p panels.
+keep_user_monitors() {
+  local f old
+  for f in monitors.conf monitors.lua; do
+    old="$BACKUP_ROOT/hypr/configs/$f"
+    [[ -f "$old" ]] || continue
+    if grep -q '2560x1600@120' "$old" && grep -q 'eDP-1' "$old" && [[ $(grep -cE '^[[:space:]]*(monitor[[:space:]]*=|hl\.monitor)' "$old") -le 1 ]]; then
+      log "monitors: replacing the old forced 2560x1600 $f with the auto config"
+      continue
+    fi
+    log "monitors: keeping your $f"
+    run "cp -a '$old' '$HOME/.config/hypr/configs/$f'" || true
+  done
+}
+
 # ── Deploy FIRST (files must land even if package install fails) ──
 copy_tree "$ROOT/hypr" "$HOME/.config/hypr"
+keep_user_monitors
 deploy_quickshell
 copy_tree "$ROOT/wallpapers" "$HOME/Pictures/Wallpapers"
 copy_tree "$ROOT/rofi" "$HOME/.config/rofi"
