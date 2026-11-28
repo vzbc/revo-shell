@@ -380,6 +380,7 @@ class InstallationWorker(QObject):
             self.progress_changed.emit(95, "Enabling services & permissions…")
             self._enable_services()
             self._finalize_installation()
+            self._install_updater()
 
             total = (
                 dotfiles_result.get('files_installed', 0)
@@ -985,6 +986,7 @@ class InstallationWorker(QObject):
                     tf.extractall(stage, filter=self._payload_extract_filter)
                 except TypeError:
                     tf.extractall(stage)
+                commit = str(tf.pax_headers.get("comment", "")).strip()   # GitHub puts the commit here
             # codeload wraps files in {repo}-{branch}/ — hoist if needed
             if not (stage / "hypr").is_dir():
                 subs = [p for p in stage.iterdir() if p.is_dir()]
@@ -994,6 +996,8 @@ class InstallationWorker(QObject):
                         child.rename(stage / child.name)
                     sub.rmdir()
             if (stage / "hypr").is_dir() and (stage / "quickshell").is_dir():
+                if re.fullmatch(r"[0-9a-f]{40}", commit or ""):
+                    (stage / ".revo-commit").write_text(commit + "\n")
                 logger.info(f"Archive extracted → {stage}")
                 return stage
             logger.error("Archive extracted but hypr/quickshell missing")
@@ -1043,6 +1047,41 @@ class InstallationWorker(QObject):
                         pass
         return count
 
+    def _install_updater(self) -> None:
+        """~/.local/bin/revo-shell-update (update.sh) + the installed commit in
+        ~/.local/state/revo-shell/commit: System Settings › Software Update and
+        `revo-shell-update --check` compare it with the repo to offer updates
+        for every shell (this staging copy is deleted after the install)."""
+        repo_dir = self._staged_repo
+        if not repo_dir or not (repo_dir / "update.sh").is_file():
+            return
+        try:
+            commit = ""
+            marker = repo_dir / ".revo-commit"
+            if marker.is_file():
+                commit = marker.read_text().strip()
+            elif (repo_dir / ".git").exists():
+                r = subprocess.run(["git", "-C", str(repo_dir), "rev-parse", "HEAD"],
+                                   capture_output=True, text=True, timeout=10)
+                commit = r.stdout.strip()
+            bin_dir = Path.home() / ".local" / "bin"
+            bin_dir.mkdir(parents=True, exist_ok=True)
+            dest = bin_dir / "revo-shell-update"
+            if dest.is_symlink() or dest.exists():
+                dest.unlink()
+            if self._staged_is_local and (repo_dir / ".git").exists():
+                dest.symlink_to(repo_dir / "update.sh")        # a checkout pulls itself
+            else:
+                shutil.copy2(str(repo_dir / "update.sh"), str(dest))
+                os.chmod(str(dest), 0o755)
+            if re.fullmatch(r"[0-9a-f]{40}", commit):
+                state = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "revo-shell"
+                state.mkdir(parents=True, exist_ok=True)
+                (state / "commit").write_text(commit + "\n")
+            logger.info(f"Updater installed: {dest} (commit {commit[:7] or 'unknown'})")
+        except Exception as e:
+            logger.warning(f"updater install failed: {e}")
+
     def _install_dotfiles(self) -> Dict:
         """Install wallpapers + monorepo root assets from staged monorepo."""
         try:
@@ -1081,7 +1120,27 @@ class InstallationWorker(QObject):
                 return {'success': False, 'files_installed': 0}
 
             hyprland_dest = Path.home() / ".config" / "hypr"
+            # The repo ships a catch-all monitor config (each screen at its own best
+            # mode); keep a user's own one, except the old forced eDP-1 2560x1600
+            # this repo used to ship (it letterboxed 1080p panels: black edges).
+            kept = {}
+            for name in ("monitors.conf", "monitors.lua"):
+                f = hyprland_dest / "configs" / name
+                try:
+                    txt = f.read_text()
+                except OSError:
+                    continue
+                rules = re.findall(r"^\s*(?:monitor\s*=|hl\.monitor)", txt, re.M)
+                if "2560x1600@120" in txt and "eDP-1" in txt and len(rules) <= 1:
+                    continue
+                kept[f] = txt
             files_installed = self._copy_tree(hypr_src, hyprland_dest)
+            for f, txt in kept.items():
+                try:
+                    f.write_text(txt)
+                    logger.info(f"Kept your {f.name}")
+                except OSError as e:
+                    logger.warning(f"could not restore {f}: {e}")
             return {'success': True, 'files_installed': files_installed}
         except Exception as e:
             logger.error(f"Hyprland configs installation failed: {e}")

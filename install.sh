@@ -885,6 +885,31 @@ fi
 fix_paths
 setup_dock
 
+# The updater (update.sh) as ~/.local/bin/revo-shell-update, plus the commit
+# this install came from (~/.local/state/revo-shell/commit), so System Settings
+# › Software Update and `revo-shell-update --check` can tell when the repo has
+# new changes for every shell. A git checkout is linked (it pulls itself);
+# anything else gets a copy, which downloads the latest commit when run.
+install_updater() {
+  local bin="$HOME/.local/bin/revo-shell-update" state="${XDG_STATE_HOME:-$HOME/.local/state}/revo-shell" sha=""
+  [[ -f "$ROOT/update.sh" ]] || return 0
+  run "mkdir -p '$HOME/.local/bin' '$state'"
+  if [[ -e "$ROOT/.git" ]] && have git; then
+    run "ln -sfn '$ROOT/update.sh' '$bin'"
+    sha="$(git -C "$ROOT" rev-parse HEAD 2>/dev/null || true)"
+  else
+    run "rm -f '$bin' && install -m 755 '$ROOT/update.sh' '$bin'"
+    [[ -s "$ROOT/.revo-commit" ]] && sha="$(tr -d ' \n' < "$ROOT/.revo-commit")"
+  fi
+  if [[ "$sha" =~ ^[0-9a-f]{40}$ ]]; then
+    run "printf '%s\\n' '$sha' > '$state/commit'"
+    log "updater: revo-shell-update (installed commit ${sha:0:7})"
+  else
+    log "updater: revo-shell-update (installed commit unknown — the first update re-applies everything)"
+  fi
+}
+install_updater
+
 # Default shell = first selected (same marker as GUI _set_default_shell)
 if [[ "$SELECTED_SHELLS_ALL" != "1" ]] && [[ ${#SELECTED_SHELLS[@]} -gt 0 ]]; then
   set_default_shell "${SELECTED_SHELLS[0]}"
